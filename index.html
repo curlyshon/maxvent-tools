@@ -2,1173 +2,386 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maxvent Tools — Цех Maxvent</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Maxvent Tools</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-        @media print {
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            body { background: #fff !important; color: #000 !important; }
-        }
+        /* Предотвращение горизонтального скролла на мобильных */
+        html, body { max-width: 100%; overflow-x: hidden; }
+        /* Кастомный тонкий скроллбар */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased select-none">
 
-    <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
-    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 no-print">
-        <div class="flex items-center gap-3">
-            <div class="bg-blue-600 text-white font-black px-2.5 py-1 text-sm rounded tracking-wider">MV</div>
-            <div>
-                <h1 class="font-bold text-lg leading-tight tracking-tight text-white">MAXVENT TOOLS</h1>
-                <p class="text-xs text-slate-400">Производственная система цеха Maxvent</p>
+    <!-- ============================================================== -->
+    <!-- ЭКРАН 1: АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ                           -->
+    <!-- ============================================================== -->
+    <div id="authScreen" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
+            <div class="text-center space-y-2">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white font-black text-xl mb-1 shadow-lg shadow-blue-600/30">MV</div>
+                <h1 class="text-lg font-bold tracking-tight text-white">Добро пожаловать в Maxvent Tools</h1>
+                <p class="text-xs text-slate-400">Пожалуйста авторизуйтесь</p>
             </div>
-        </div>
 
-        <!-- Переключатель проектов -->
-        <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded">
-                <span class="text-xs text-slate-400">Заказ:</span>
-                <select id="projectSelect" onchange="changeProject(this.value)" class="bg-transparent text-sm font-medium text-white focus:outline-none cursor-pointer">
-                    <!-- Заполняется JS -->
-                </select>
+            <!-- Вкладки Вход / Регистрация -->
+            <div class="flex border-b border-slate-800 text-xs">
+                <button onclick="setAuthMode('login')" id="authTabLogin" class="flex-1 py-2 font-semibold border-b-2 border-blue-500 text-blue-400">Вход</button>
+                <button onclick="setAuthMode('reg')" id="authTabReg" class="flex-1 py-2 font-semibold border-b-2 border-transparent text-slate-400">Регистрация</button>
             </div>
-            <button onclick="openNewProjectModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-2 rounded transition font-medium">
-                + Новый проект
-            </button>
-            <button onclick="toggleArchiveCurrentProject()" id="archiveBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs px-3 py-2 rounded transition">
-                В архив
-            </button>
-        </div>
-    </header>
 
-    <!-- ВКЛАДКИ НАВИГАЦИИ -->
-    <nav class="bg-slate-900/60 border-b border-slate-800 px-6 flex gap-2 overflow-x-auto no-print">
-        <button onclick="switchTab('items')" id="tabBtn-items" class="py-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400">
-            1. Изделия и заказ
-        </button>
-        <button onclick="switchTab('flange')" id="tabBtn-flange" class="py-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200">
-            2. Шинка (Сборка и рез 1D)
-        </button>
-        <button onclick="switchTab('nesting')" id="tabBtn-nesting" class="py-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200">
-            3. Раскрой листа (2D)
-        </button>
-        <button onclick="switchTab('finance')" id="tabBtn-finance" class="py-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200">
-            4. Финансы (₸)
-        </button>
-        <button onclick="switchTab('pdf')" id="tabBtn-pdf" class="py-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200">
-            5. Спецификация для клиента
-        </button>
-    </nav>
-
-    <!-- ОСНОВНАЯ РАБОЧАЯ ОБЛАСТЬ -->
-    <main class="flex-1 p-6 max-w-7xl w-full mx-auto">
-
-        <!-- ========================================== -->
-        <!-- ВКЛАДКА 1: ДОБАВЛЕНИЕ И СПИСОК ИЗДЕЛИЙ      -->
-        <!-- ========================================== -->
-        <div id="tab-items" class="space-y-6">
-            <!-- Сводная плашка проекта -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-900 border border-slate-800 p-4 rounded-lg">
-                <div>
-                    <div class="text-xs text-slate-400">Всего позиций</div>
-                    <div id="summaryItemsCount" class="text-xl font-bold mono text-white">0 шт</div>
+            <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div id="regNameField" class="hidden">
+                    <label class="block text-xs text-slate-400 mb-1">Ваше имя / Фамилия</label>
+                    <input type="text" id="authName" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="Иван Смирнов">
                 </div>
                 <div>
-                    <div class="text-xs text-slate-400">Общая площадь</div>
-                    <div id="summaryTotalArea" class="text-xl font-bold mono text-white">0.00 м²</div>
+                    <label class="block text-xs text-slate-400 mb-1">Логин</label>
+                    <input type="text" id="authLogin" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="логин">
                 </div>
                 <div>
-                    <div class="text-xs text-slate-400">Сумма заказа</div>
-                    <div id="summaryTotalPrice" class="text-xl font-bold mono text-blue-400">0 ₸</div>
+                    <label class="block text-xs text-slate-400 mb-1">Пароль</label>
+                    <input type="password" id="authPass" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="••••••••">
                 </div>
-                <div>
-                    <div class="text-xs text-slate-400">Остаток долга</div>
-                    <div id="summaryDebt" class="text-xl font-bold mono text-amber-400">0 ₸</div>
-                </div>
-            </div>
-
-            <!-- Форма добавления / редактирования -->
-            <div class="bg-slate-900 border border-slate-800 rounded-lg p-5">
-                <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
-                    <h2 id="formTitle" class="text-sm font-bold uppercase tracking-wider text-slate-200">Добавить изделие</h2>
-                    <button id="cancelEditBtn" onclick="resetItemForm()" class="hidden text-xs text-slate-400 hover:text-rose-400">Отмена редактирования</button>
-                </div>
-
-                <form id="itemForm" onsubmit="handleItemSubmit(event)" class="space-y-4">
-                    <input type="hidden" id="editItemId" value="">
-
-                    <!-- Категория и сечение -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Категория</label>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button type="button" onclick="setCategory('duct')" id="catBtn-duct" class="py-2 text-xs font-semibold rounded bg-blue-600 text-white">Воздуховод (м²)</button>
-                                <button type="button" onclick="setCategory('fitting')" id="catBtn-fitting" class="py-2 text-xs font-semibold rounded bg-slate-800 text-slate-300">Фасонина (шт)</button>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Форма сечения</label>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button type="button" onclick="setShape('rect')" id="shapeBtn-rect" class="py-2 text-xs font-semibold rounded bg-blue-600 text-white">Прямоугольное</button>
-                                <button type="button" onclick="setShape('round')" id="shapeBtn-round" class="py-2 text-xs font-semibold rounded bg-slate-800 text-slate-300">Круглое</button>
-                                <button type="button" onclick="setShape('mixed')" id="shapeBtn-mixed" class="py-2 text-xs font-semibold rounded bg-slate-800 text-slate-300">Переход</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Название изделия -->
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Наименование</label>
-                        <input type="text" id="itemTitle" required class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" value="Воздуховод прямой">
-                    </div>
-
-                    <!-- Габариты (Динамические поля) -->
-                    <div id="dimensionsBlock" class="p-4 bg-slate-950 border border-slate-800/80 rounded space-y-4">
-                        <!-- Заполняется функцией renderDimensionInputs() -->
-                    </div>
-
-                    <!-- Металл, количество, цена -->
-                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Металл</label>
-                            <select id="itemMetalType" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white focus:outline-none">
-                                <option value="Оцинковка">Оцинковка</option>
-                                <option value="Нержавейка">Нержавейка</option>
-                                <option value="Черная сталь">Черная сталь</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Толщина (мм)</label>
-                            <select id="itemThickness" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white focus:outline-none">
-                                <option value="0.5">0.5 мм</option>
-                                <option value="0.7">0.7 мм</option>
-                                <option value="1.0">1.0 мм</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Количество (шт)</label>
-                            <input type="number" id="itemQty" min="1" value="1" required class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm mono text-white focus:outline-none">
-                        </div>
-                        <div>
-                            <label id="priceLabel" class="block text-xs text-slate-400 mb-1">Тариф (₸ за м²)</label>
-                            <input type="number" id="itemPrice" min="0" value="4500" required class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm mono text-white focus:outline-none">
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end gap-3 pt-2">
-                        <button type="submit" id="submitItemBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded transition">
-                            Добавить в заказ
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Таблица добавленных изделий -->
-            <div class="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-800 flex justify-between items-center">
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-200">Позиции в текущем заказе</h3>
-                    <span id="itemsBadge" class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded mono">0 шт</span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-950/80 text-slate-400 border-b border-slate-800 uppercase tracking-wider font-semibold">
-                            <tr>
-                                <th class="py-3 px-4">№</th>
-                                <th class="py-3 px-4">Наименование</th>
-                                <th class="py-3 px-4">Сечение / Габариты</th>
-                                <th class="py-3 px-4">Шинка</th>
-                                <th class="py-3 px-4">Металл</th>
-                                <th class="py-3 px-4 text-right">Кол-во</th>
-                                <th class="py-3 px-4 text-right">Площадь</th>
-                                <th class="py-3 px-4 text-right">Сумма</th>
-                                <th class="py-3 px-4 text-center">Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody id="itemsTableBody" class="divide-y divide-slate-800/60 font-medium">
-                            <!-- Заполняется JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========================================== -->
-        <!-- ВКЛАДКА 2: ШИНКА (СБОРКА И РАСКРОЙ 1D)     -->
-        <!-- ========================================== -->
-        <div id="tab-flange" class="hidden space-y-6">
-            <!-- Сводка для сборщика -->
-            <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200">1. Наряд для сборщика (стороны изделий)</h2>
-                        <p class="text-xs text-slate-400">Сколько сторон какого размера подготовить под монтаж шины</p>
-                    </div>
-                    <button onclick="copyAssemblyText()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded text-slate-300">
-                        Копировать текст
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="assemblySummaryGrid">
-                    <!-- Заполняется JS: Воздуховоды и Фасонина отдельно -->
-                </div>
-            </div>
-
-            <!-- Калькулятор раскроя пачки (для нарезчика) -->
-            <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200">2. Раскрой шинки пачками по 10 хлыстов</h2>
-                        <p class="text-xs text-slate-400">1 рез по пачке = 10 готовых шинок. Размер заготовки = Сторона − 30 мм</p>
-                    </div>
-                    <button onclick="copySawText()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded text-slate-300">
-                        Копировать наряд на пилу
-                    </button>
-                </div>
-
-                <!-- Настройки реза и обрезки -->
-                <div class="bg-slate-950 p-4 rounded border border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Длина пачки (хлыста)</label>
-                        <input type="number" id="packLength" value="3000" class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs mono text-white">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Толщина диска пилы</label>
-                        <input type="number" id="kerf" value="2" class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs mono text-white">
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="calculateFlangeNesting()" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2 rounded uppercase tracking-wider">
-                            Пересчитать раскрой
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Результаты раскроя -->
-                <div id="flangeNestingResults" class="space-y-4">
-                    <!-- Заполняется JS -->
-                </div>
-            </div>
-        </div>
-
-        <!-- ========================================== -->
-        <!-- ВКЛАДКА 3: РАСКРОЙ ЛИСТА 2D               -->
-        <!-- ========================================== -->
-        <div id="tab-nesting" class="hidden space-y-6">
-            <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
-                <div class="border-b border-slate-800 pb-3 flex justify-between items-center">
-                    <div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200">Раскрой листового металла (Без вращения)</h2>
-                        <p class="text-xs text-slate-400">Прямоугольные (+41 мм) и круглые (+22 мм фальц). Раздельные очереди по толщинам.</p>
-                    </div>
-                </div>
-
-                <!-- Выбор очереди металла -->
-                <div class="flex flex-wrap gap-2" id="metalQueuesTabs">
-                    <!-- Заполняется JS (Оцинковка 0.5, Оцинковка 0.7 и т.д.) -->
-                </div>
-
-                <!-- Позиции в выбранной очереди -->
-                <div id="metalQueueContent" class="space-y-4">
-                    <!-- Таблица выбранных деталей и настройки листа -->
-                </div>
-
-                <!-- Результаты раскладки на листах -->
-                <div id="sheetNestingOutput" class="space-y-4 pt-4 border-t border-slate-800">
-                    <!-- Карты листов -->
-                </div>
-            </div>
-        </div>
-
-        <!-- ========================================== -->
-        <!-- ВКЛАДКА 4: ФИНАНСЫ (₸)                    -->
-        <!-- ========================================== -->
-        <div id="tab-finance" class="hidden space-y-6">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-lg">
-                    <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Общая сумма заказа</div>
-                    <div id="finTotalPrice" class="text-2xl font-bold mono text-white mt-1">0 ₸</div>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-lg">
-                    <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Фактически оплачено</div>
-                    <div id="finTotalPaid" class="text-2xl font-bold mono text-emerald-400 mt-1">0 ₸</div>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 p-5 rounded-lg">
-                    <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Остаток задолженности</div>
-                    <div id="finDebt" class="text-2xl font-bold mono text-amber-400 mt-1">0 ₸</div>
-                </div>
-            </div>
-
-            <!-- Добавить платеж -->
-            <div class="bg-slate-900 border border-slate-800 rounded-lg p-5">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-200 mb-4">Внести оплату</h3>
-                <form onsubmit="handlePaymentSubmit(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Сумма (₸)</label>
-                        <input type="number" id="payAmount" required min="1" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm mono text-white">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Тип платежа</label>
-                        <select id="payType" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white">
-                            <option value="Аванс">Аванс</option>
-                            <option value="Доплата">Доплата</option>
-                            <option value="Полный расчет">Полный расчет</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Примечание</label>
-                        <input type="text" id="payNote" placeholder="Kaspi / Наличные" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white">
-                    </div>
-                    <div class="flex items-end">
-                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-2.5 rounded uppercase tracking-wider">
-                            Зафиксировать платеж
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- История оплат -->
-            <div class="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-800">
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-200">История платежей по заказу</h3>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-950 text-slate-400 uppercase tracking-wider border-b border-slate-800">
-                            <tr>
-                                <th class="py-3 px-4">Дата</th>
-                                <th class="py-3 px-4">Тип</th>
-                                <th class="py-3 px-4">Сумма</th>
-                                <th class="py-3 px-4">Примечание</th>
-                                <th class="py-3 px-4 text-center">Удалить</th>
-                            </tr>
-                        </thead>
-                        <tbody id="paymentsTableBody" class="divide-y divide-slate-800 font-medium">
-                            <!-- Заполняется JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========================================== -->
-        <!-- ВКЛАДКА 5: КЛИЕНТСКАЯ СПЕЦИФИКАЦИЯ (PDF)   -->
-        <!-- ========================================== -->
-        <div id="tab-pdf" class="hidden space-y-6">
-            <div class="flex justify-between items-center no-print">
-                <p class="text-xs text-slate-400">Чистая спецификация для передачи клиенту (без внутренних шинок и раскроя цеха)</p>
-                <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded">
-                    Распечатать / Сохранить в PDF
+                <button type="submit" id="authSubmitBtn" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold text-sm py-3 rounded-lg shadow-lg shadow-blue-600/20 transition">
+                    Войти в систему
                 </button>
-            </div>
+            </form>
 
-            <div class="bg-white text-slate-900 p-8 rounded-lg shadow-lg max-w-4xl mx-auto space-y-6">
-                <!-- Шапка PDF -->
-                <div class="flex justify-between items-start border-b border-slate-300 pb-4">
-                    <div>
-                        <h2 class="text-xl font-bold tracking-tight text-slate-900">СПЕЦИФИКАЦИЯ ИЗДЕЛИЙ ВЕНТИЛЯЦИИ</h2>
-                        <div class="text-xs text-slate-600 mt-1">Поставщик: Производственный цех «Maxvent»</div>
-                    </div>
-                    <div class="text-right text-xs">
-                        <div><strong>Заказ:</strong> <span id="pdfProjectTitle"></span></div>
-                        <div><strong>Дата:</strong> <span id="pdfDate"></span></div>
-                    </div>
-                </div>
-
-                <!-- Таблица PDF -->
-                <table class="w-full text-left text-xs border border-slate-300">
-                    <thead class="bg-slate-100 uppercase tracking-wider border-b border-slate-300">
-                        <tr>
-                            <th class="py-2 px-3 border-r border-slate-300">№</th>
-                            <th class="py-2 px-3 border-r border-slate-300">Наименование</th>
-                            <th class="py-2 px-3 border-r border-slate-300">Сечение / Длина</th>
-                            <th class="py-2 px-3 border-r border-slate-300">Металл</th>
-                            <th class="py-2 px-3 border-r border-slate-300 text-right">Кол-во</th>
-                            <th class="py-2 px-3 border-r border-slate-300 text-right">Площадь м²</th>
-                            <th class="py-2 px-3 text-right">Сумма (₸)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pdfTableBody" class="divide-y divide-slate-300">
-                        <!-- Заполняется JS -->
-                    </tbody>
-                </table>
-
-                <!-- Итоги PDF -->
-                <div class="flex justify-between items-end pt-4 border-t border-slate-300">
-                    <div class="text-xs text-slate-500">
-                        Претензии по качеству принимаются в течение 14 дней с момента отгрузки.
-                    </div>
-                    <div class="text-right space-y-1">
-                        <div class="text-xs text-slate-600">Всего позиций: <span id="pdfTotalQty" class="font-bold">0 шт</span></div>
-                        <div class="text-xs text-slate-600">Общая площадь: <span id="pdfTotalArea" class="font-bold">0.00 м²</span></div>
-                        <div class="text-base font-bold text-slate-900">ИТОГО К ОПЛАТЕ: <span id="pdfTotalPrice" class="mono">0 ₸</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- МОДАЛЬНОЕ ОКНО: НОВЫЙ ПРОЕКТ -->
-    <div id="newProjectModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-        <div class="bg-slate-900 border border-slate-800 p-6 rounded-lg max-w-sm w-full space-y-4">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-200">Создать новый проект</h3>
-            <input type="text" id="newProjectName" placeholder="Название (например: ЖК Отырар)" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-white focus:outline-none">
-            <div class="flex justify-end gap-2">
-                <button onclick="closeNewProjectModal()" class="px-3 py-1.5 text-xs text-slate-400 hover:text-white">Отмена</button>
-                <button onclick="createNewProject()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 text-xs font-semibold rounded">Создать</button>
+            <div class="p-3 bg-slate-950/60 rounded-lg border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
+                <div><strong>Демо-доступ:</strong></div>
+                <div>Разработчик: логин <span class="mono text-blue-400">admin</span> / пароль <span class="mono text-blue-400">admin</span></div>
+                <div>Работник: логин <span class="mono text-slate-300">worker</span> / пароль <span class="mono text-slate-300">1234</span></div>
             </div>
         </div>
     </div>
 
-    <!-- JS СКРИПТ: ЯДРО MAXVENT TOOLS -->
-    <script>
-        // --- СОСТОЯНИЕ СИСТЕМЫ ---
-        let currentTab = 'items';
-        let currentFormState = { category: 'duct', shape: 'rect' };
-        let activeQueueKey = null;
+    <!-- ============================================================== -->
+    <!-- ШАПКА ПРИЛОЖЕНИЯ (ВСЕГДА ДОСТУПНА ПОСЛЕ АВТОРИЗАЦИИ)          -->
+    <!-- ============================================================== -->
+    <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="navigateTo('home')">
+                <div class="bg-blue-600 text-white font-black px-2 py-1 text-xs rounded tracking-wider shadow">MV</div>
+                <span class="font-bold text-sm tracking-tight text-white hidden sm:inline">MAXVENT TOOLS</span>
+            </div>
 
-        let appData = JSON.parse(localStorage.getItem('maxvent_data')) || {
-            activeProjectId: 1,
-            projects: [
-                {
-                    id: 1,
-                    title: "Объект: ТЦ Север (Приток 1)",
-                    status: "active",
-                    createdAt: "2026-10-12",
-                    items: [
-                        { id: 101, title: "Воздуховод прямой", category: "duct", shape: "rect", a: 400, b: 300, d: 0, l: 1250, flange1: true, flange2: true, metal: "Оцинковка", thickness: 0.5, qty: 5, price: 4500 },
-                        { id: 102, title: "Воздуховод прямой", category: "duct", shape: "rect", a: 250, b: 200, d: 0, l: 1250, flange1: true, flange2: true, metal: "Оцинковка", thickness: 0.5, qty: 3, price: 4500 },
-                        { id: 103, title: "Воздуховод круглый", category: "duct", shape: "round", a: 0, b: 0, d: 200, l: 1250, flange1: false, flange2: false, metal: "Оцинковка", thickness: 0.5, qty: 4, price: 4800 },
-                        { id: 104, title: "Отвод 90°", category: "fitting", shape: "rect", a: 400, b: 300, d: 0, l: 0, flange1: true, flange2: true, metal: "Оцинковка", thickness: 0.5, qty: 2, price: 3200 }
-                    ],
-                    payments: [
-                        { id: 201, date: "2026-10-12", amount: 50000, type: "Аванс", note: "Kaspi QR" }
-                    ]
-                }
-            ]
-        };
-
-        function saveData() {
-            localStorage.setItem('maxvent_data', JSON.stringify(appData));
-            updateUI();
-        }
-
-        function getActiveProject() {
-            return appData.projects.find(p => p.id === appData.activeProjectId) || appData.projects[0];
-        }
-
-        // --- НАВИГАЦИЯ И ВКЛАДКИ ---
-        function switchTab(tab) {
-            currentTab = tab;
-            ['items', 'flange', 'nesting', 'finance', 'pdf'].forEach(t => {
-                document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
-                const btn = document.getElementById('tabBtn-' + t);
-                if (t === tab) {
-                    btn.className = "py-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400";
-                } else {
-                    btn.className = "py-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200";
-                }
-            });
-
-            if (tab === 'flange') calculateFlangeNesting();
-            if (tab === 'nesting') renderNestingQueues();
-            if (tab === 'pdf') renderPDF();
-        }
-
-        // --- УПРАВЛЕНИЕ ПРОЕКТАМИ ---
-        function populateProjectSelector() {
-            const select = document.getElementById('projectSelect');
-            select.innerHTML = '';
-            appData.projects.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = (p.status === 'archived' ? '[АРХИВ] ' : '') + p.title;
-                opt.selected = p.id === appData.activeProjectId;
-                select.appendChild(opt);
-            });
-            const p = getActiveProject();
-            document.getElementById('archiveBtn').textContent = p.status === 'archived' ? 'Из архива' : 'В архив';
-        }
-
-        function changeProject(id) {
-            appData.activeProjectId = Number(id);
-            saveData();
-        }
-
-        function openNewProjectModal() { document.getElementById('newProjectModal').classList.remove('hidden'); }
-        function closeNewProjectModal() { document.getElementById('newProjectModal').classList.add('hidden'); }
-        function createNewProject() {
-            const name = document.getElementById('newProjectName').value.trim() || 'Новый проект';
-            const newProj = {
-                id: Date.now(),
-                title: name,
-                status: 'active',
-                createdAt: new Date().toISOString().split('T')[0],
-                items: [],
-                payments: []
-            };
-            appData.projects.push(newProj);
-            appData.activeProjectId = newProj.id;
-            closeNewProjectModal();
-            document.getElementById('newProjectName').value = '';
-            saveData();
-        }
-
-        function toggleArchiveCurrentProject() {
-            const p = getActiveProject();
-            p.status = p.status === 'active' ? 'archived' : 'active';
-            saveData();
-        }
-
-        // --- УПРАВЛЕНИЕ ФОРМОЙ ИЗДЕЛИЙ ---
-        function setCategory(cat) {
-            currentFormState.category = cat;
-            document.getElementById('catBtn-duct').className = cat === 'duct' ? 'py-2 text-xs font-semibold rounded bg-blue-600 text-white' : 'py-2 text-xs font-semibold rounded bg-slate-800 text-slate-300';
-            document.getElementById('catBtn-fitting').className = cat === 'fitting' ? 'py-2 text-xs font-semibold rounded bg-blue-600 text-white' : 'py-2 text-xs font-semibold rounded bg-slate-800 text-slate-300';
-            document.getElementById('priceLabel').textContent = cat === 'duct' ? 'Тариф (₸ за м²)' : 'Цена за шт (₸)';
-            renderDimensionInputs();
-        }
-
-        function setShape(sh) {
-            currentFormState.shape = sh;
-            ['rect', 'round', 'mixed'].forEach(s => {
-                document.getElementById('shapeBtn-' + s).className = s === sh ? 'py-2 text-xs font-semibold rounded bg-blue-600 text-white' : 'py-2 text-xs font-semibold rounded bg-slate-800 text-slate-300';
-            });
-            renderDimensionInputs();
-        }
-
-        function renderDimensionInputs() {
-            const block = document.getElementById('dimensionsBlock');
-            const { shape, category } = currentFormState;
-            let html = '';
-
-            if (shape === 'rect') {
-                html = `
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Ширина А (мм)</label>
-                            <input type="number" id="dimA" required class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs mono text-white" value="400">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Высота В (мм)</label>
-                            <input type="number" id="dimB" required class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs mono text-white" value="300">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Длина L (мм)</label>
-                            <input type="number" id="dimL" required class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs mono text-white" value="${category === 'duct' ? 1250 : 0}">
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-6 pt-2 text-xs">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="dimFlange1" checked class="rounded border-slate-800 text-blue-600">
-                            <span>Шинка Торец 1</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="dimFlange2" checked class="rounded border-slate-800 text-blue-600">
-                            <span>Шинка Торец 2</span>
-                        </label>
-                    </div>
-                `;
-            } else if (shape === 'round') {
-                html = `
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Диаметр Ø (мм)</label>
-                            <input type="number" id="dimD" required class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs mono text-white" value="200">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Длина L (мм)</label>
-                            <input type="number" id="dimL" required class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs mono text-white" value="${category === 'duct' ? 1250 : 0}">
-                        </div>
-                    </div>
-                `;
-            } else {
-                html = `
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Торец 1: Ширина А (мм)</label>
-                            <input type="number" id="dimA" required class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs mono text-white" value="400">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Торец 1: Высота В (мм)</label>
-                            <input type="number" id="dimB" required class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs mono text-white" value="300">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Торец 2: Диаметр Ø (мм)</label>
-                            <input type="number" id="dimD" required class="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs mono text-white" value="250">
-                        </div>
-                    </div>
-                    <div class="pt-2 text-xs">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="dimFlange1" checked class="rounded border-slate-800 text-blue-600">
-                            <span>Шинка на прямоугольном торце</span>
-                        </label>
-                    </div>
-                `;
-            }
-            block.innerHTML = html;
-        }
-
-        // Расчет площади развертки с припусками (+41 мм короба, +22 мм круглые)
-        function calculateItemArea(item) {
-            if (item.shape === 'rect') {
-                const perimeterMm = 2 * (Number(item.a) + Number(item.b)) + 41;
-                return (perimeterMm * Number(item.l || 1250)) / 1000000;
-            } else if (item.shape === 'round') {
-                const unfoldWidthMm = Math.PI * Number(item.d) + 22;
-                return (unfoldWidthMm * Number(item.l || 1250)) / 1000000;
-            } else {
-                return 0.8; // Базовая площадь перехода
-            }
-        }
-
-        function handleItemSubmit(e) {
-            e.preventDefault();
-            const proj = getActiveProject();
-            const editId = document.getElementById('editItemId').value;
-
-            const newItem = {
-                id: editId ? Number(editId) : Date.now(),
-                title: document.getElementById('itemTitle').value.trim(),
-                category: currentFormState.category,
-                shape: currentFormState.shape,
-                a: Number(document.getElementById('dimA')?.value || 0),
-                b: Number(document.getElementById('dimB')?.value || 0),
-                d: Number(document.getElementById('dimD')?.value || 0),
-                l: Number(document.getElementById('dimL')?.value || 0),
-                flange1: !!document.getElementById('dimFlange1')?.checked,
-                flange2: !!document.getElementById('dimFlange2')?.checked,
-                metal: document.getElementById('itemMetalType').value,
-                thickness: Number(document.getElementById('itemThickness').value),
-                qty: Number(document.getElementById('itemQty').value),
-                price: Number(document.getElementById('itemPrice').value)
-            };
-
-            if (editId) {
-                const idx = proj.items.findIndex(i => i.id === Number(editId));
-                if (idx !== -1) proj.items[idx] = newItem;
-            } else {
-                proj.items.push(newItem);
-            }
-
-            resetItemForm();
-            saveData();
-        }
-
-        function editItem(id) {
-            const proj = getActiveProject();
-            const it = proj.items.find(i => i.id === id);
-            if (!it) return;
-
-            document.getElementById('editItemId').value = it.id;
-            document.getElementById('formTitle').textContent = 'Редактировать позицию';
-            document.getElementById('cancelEditBtn').classList.remove('hidden');
-            document.getElementById('submitItemBtn').textContent = 'Сохранить изменения';
-
-            setCategory(it.category);
-            setShape(it.shape);
-
-            document.getElementById('itemTitle').value = it.title;
-            document.getElementById('itemMetalType').value = it.metal;
-            document.getElementById('itemThickness').value = it.thickness;
-            document.getElementById('itemQty').value = it.qty;
-            document.getElementById('itemPrice').value = it.price;
-
-            if (document.getElementById('dimA')) document.getElementById('dimA').value = it.a;
-            if (document.getElementById('dimB')) document.getElementById('dimB').value = it.b;
-            if (document.getElementById('dimD')) document.getElementById('dimD').value = it.d;
-            if (document.getElementById('dimL')) document.getElementById('dimL').value = it.l;
-            if (document.getElementById('dimFlange1')) document.getElementById('dimFlange1').checked = it.flange1;
-            if (document.getElementById('dimFlange2')) document.getElementById('dimFlange2').checked = it.flange2;
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function duplicateItem(id) {
-            const proj = getActiveProject();
-            const it = proj.items.find(i => i.id === id);
-            if (!it) return;
-            const copy = JSON.parse(JSON.stringify(it));
-            copy.id = Date.now();
-            proj.items.push(copy);
-            saveData();
-        }
-
-        function deleteItem(id) {
-            const proj = getActiveProject();
-            proj.items = proj.items.filter(i => i.id !== id);
-            saveData();
-        }
-
-        function resetItemForm() {
-            document.getElementById('editItemId').value = '';
-            document.getElementById('formTitle').textContent = 'Добавить изделие';
-            document.getElementById('cancelEditBtn').classList.add('hidden');
-            document.getElementById('submitItemBtn').textContent = 'Добавить в заказ';
-            document.getElementById('itemTitle').value = 'Воздуховод прямой';
-            renderDimensionInputs();
-        }
-
-        // --- ОБНОВЛЕНИЕ ТАБЛИЦ И СВОДКИ ---
-        function updateUI() {
-            populateProjectSelector();
-            const proj = getActiveProject();
-
-            let totalQty = 0;
-            let totalArea = 0;
-            let totalPrice = 0;
-
-            const tbody = document.getElementById('itemsTableBody');
-            tbody.innerHTML = '';
-
-            proj.items.forEach((it, idx) => {
-                const areaPerItem = calculateItemArea(it);
-                const itemTotalArea = areaPerItem * it.qty;
-                const cost = it.category === 'duct' ? Math.round(itemTotalArea * it.price) : Math.round(it.qty * it.price);
-
-                totalQty += it.qty;
-                totalArea += itemTotalArea;
-                totalPrice += cost;
-
-                let sizeText = '';
-                if (it.shape === 'rect') sizeText = `${it.a}×${it.b} (L=${it.l})`;
-                else if (it.shape === 'round') sizeText = `Ø${it.d} (L=${it.l})`;
-                else sizeText = `${it.a}×${it.b} → Ø${it.d}`;
-
-                const flanges = [];
-                if (it.flange1) flanges.push('Т1');
-                if (it.flange2) flanges.push('Т2');
-                const flangeText = flanges.length ? flanges.join(', ') : '—';
-
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-800/40";
-                tr.innerHTML = `
-                    <td class="py-3 px-4 text-slate-500 mono">${idx + 1}</td>
-                    <td class="py-3 px-4 font-semibold text-slate-200">${it.title}</td>
-                    <td class="py-3 px-4 mono text-slate-300">${sizeText}</td>
-                    <td class="py-3 px-4 text-blue-400 font-medium">${flangeText}</td>
-                    <td class="py-3 px-4 text-slate-400">${it.metal} ${it.thickness}</td>
-                    <td class="py-3 px-4 text-right mono font-bold text-slate-200">${it.qty}</td>
-                    <td class="py-3 px-4 text-right mono text-slate-300">${itemTotalArea.toFixed(2)}</td>
-                    <td class="py-3 px-4 text-right mono font-bold text-white">${cost.toLocaleString()} ₸</td>
-                    <td class="py-3 px-4 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button onclick="editItem(${it.id})" title="Редактировать" class="p-1 hover:text-blue-400 text-slate-400">✎</button>
-                            <button onclick="duplicateItem(${it.id})" title="Дублировать" class="p-1 hover:text-slate-200 text-slate-400">⧉</button>
-                            <button onclick="deleteItem(${it.id})" title="Удалить" class="p-1 hover:text-rose-400 text-slate-400">✕</button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            // Итоги оплат
-            let totalPaid = proj.payments.reduce((sum, p) => sum + p.amount, 0);
-            let debt = totalPrice - totalPaid;
-
-            document.getElementById('summaryItemsCount').textContent = totalQty + ' шт';
-            document.getElementById('summaryTotalArea').textContent = totalArea.toFixed(2) + ' м²';
-            document.getElementById('summaryTotalPrice').textContent = totalPrice.toLocaleString() + ' ₸';
-            document.getElementById('summaryDebt').textContent = debt.toLocaleString() + ' ₸';
-            document.getElementById('itemsBadge').textContent = totalQty + ' шт';
-
-            // Финансовая вкладка
-            document.getElementById('finTotalPrice').textContent = totalPrice.toLocaleString() + ' ₸';
-            document.getElementById('finTotalPaid').textContent = totalPaid.toLocaleString() + ' ₸';
-            document.getElementById('finDebt').textContent = debt.toLocaleString() + ' ₸';
-
-            const payTbody = document.getElementById('paymentsTableBody');
-            payTbody.innerHTML = '';
-            proj.payments.forEach(p => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="py-3 px-4 mono text-slate-400">${p.date}</td>
-                    <td class="py-3 px-4 text-slate-200">${p.type}</td>
-                    <td class="py-3 px-4 mono font-bold text-emerald-400">${p.amount.toLocaleString()} ₸</td>
-                    <td class="py-3 px-4 text-slate-400">${p.note || '—'}</td>
-                    <td class="py-3 px-4 text-center">
-                        <button onclick="deletePayment(${p.id})" class="text-slate-500 hover:text-rose-400">✕</button>
-                    </td>
-                `;
-                payTbody.appendChild(tr);
-            });
-        }
-
-        // --- ФИНАНСЫ ---
-        function handlePaymentSubmit(e) {
-            e.preventDefault();
-            const proj = getActiveProject();
-            const amt = Number(document.getElementById('payAmount').value);
-            if (!amt) return;
-
-            proj.payments.push({
-                id: Date.now(),
-                date: new Date().toISOString().split('T')[0],
-                amount: amt,
-                type: document.getElementById('payType').value,
-                note: document.getElementById('payNote').value.trim()
-            });
-
-            document.getElementById('payAmount').value = '';
-            document.getElementById('payNote').value = '';
-            saveData();
-        }
-
-        function deletePayment(id) {
-            const proj = getActiveProject();
-            proj.payments = proj.payments.filter(p => p.id !== id);
-            saveData();
-        }
-
-        // --- ВКЛАДКА 2: ШИНКА (СБОРКА И РЕЗ) ---
-        function calculateFlangeNesting() {
-            const proj = getActiveProject();
-            const ductSides = {};
-            const fittingSides = {};
-            const cutsNeeded = {}; // длина заготовки (размер - 30 мм) -> количество штук
-
-            proj.items.forEach(it => {
-                if (it.shape === 'rect' || it.shape === 'mixed') {
-                    const addSide = (w, h, isDuct) => {
-                        const key = `${w}×${h}`;
-                        const target = isDuct ? ductSides : fittingSides;
-                        target[key] = (target[key] || 0) + it.qty;
-
-                        // Для реза: 2 штуки (w-30) и 2 штуки (h-30)
-                        const cutW = Math.max(0, w - 30);
-                        const cutH = Math.max(0, h - 30);
-                        cutsNeeded[cutW] = (cutsNeeded[cutW] || 0) + (2 * it.qty);
-                        cutsNeeded[cutH] = (cutsNeeded[cutH] || 0) + (2 * it.qty);
-                    };
-
-                    const isDuct = it.category === 'duct';
-                    if (it.flange1) addSide(it.a, it.b, isDuct);
-                    if (it.flange2 && it.shape === 'rect') addSide(it.a, it.b, isDuct);
-                }
-            });
-
-            // Рендер сводки для сборщика
-            const summaryGrid = document.getElementById('assemblySummaryGrid');
-            summaryGrid.innerHTML = `
-                <div class="bg-slate-950 p-4 rounded border border-slate-800">
-                    <h4 class="text-xs uppercase font-bold text-blue-400 mb-3 tracking-wider">Воздуховоды (стороны):</h4>
-                    <ul class="text-xs space-y-1.5 mono">
-                        ${Object.keys(ductSides).length ? Object.entries(ductSides).map(([k, v]) => `<li>${k} — <strong>${v} сторон</strong> (${v/2} коробов)</li>`).join('') : '<li class="text-slate-500">Нет прямоугольных воздуховодов</li>'}
-                    </ul>
+            <!-- Правый блок: Профиль пользователя -->
+            <div class="flex items-center gap-2">
+                <div onclick="openProfileModal()" class="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 px-2.5 py-1.5 rounded-lg cursor-pointer transition">
+                    <div id="userAvatar" class="w-6 h-6 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center uppercase">A</div>
+                    <span id="userNameHeader" class="text-xs font-semibold text-slate-200 max-w-[120px] truncate">Админ</span>
+                    <span id="userRoleBadge" class="hidden text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-purple-900/60 text-purple-300 border border-purple-700/60">DEV</span>
                 </div>
-                <div class="bg-slate-950 p-4 rounded border border-slate-800">
-                    <h4 class="text-xs uppercase font-bold text-amber-400 mb-3 tracking-wider">Фасонина (стороны):</h4>
-                    <ul class="text-xs space-y-1.5 mono">
-                        ${Object.keys(fittingSides).length ? Object.entries(fittingSides).map(([k, v]) => `<li>${k} — <strong>${v} сторон</strong></li>`).join('') : '<li class="text-slate-500">Нет прямоугольной фасонины</li>'}
-                    </ul>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============================================================== -->
+    <!-- ЭКРАН 2: ГЛАВНОЕ МЕНЮ (ДОМАШНИЙ ЭКРАН)                        -->
+    <!-- ============================================================== -->
+    <section id="viewHome" class="flex-1 p-4 sm:p-6 max-w-6xl w-full mx-auto space-y-6">
+        <!-- Приветствие -->
+        <div class="bg-gradient-to-r from-slate-900 to-slate-900/60 border border-slate-800 p-5 rounded-2xl shadow-sm">
+            <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Maxvent Tools. Приятной работы</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Единая производственная панель вентиляционного цеха Maxvent</p>
+        </div>
+
+        <!-- Кнопки быстрых действий -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button onclick="openCreateProjectModal()" class="flex items-center justify-between p-4 bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white rounded-xl shadow-lg shadow-blue-600/20 transition">
+                <div class="text-left">
+                    <div class="text-xs uppercase tracking-wider font-semibold opacity-80">Новый заказ</div>
+                    <div class="text-sm font-bold mt-0.5">+ Создать проект</div>
                 </div>
-            `;
+                <span class="text-xl font-bold">→</span>
+            </button>
 
-            // Раскрой пачками по 10 хлыстов
-            const packLen = Number(document.getElementById('packLength').value) || 3000;
-            const kerf = Number(document.getElementById('kerf').value) || 2;
-
-            const packCuts = []; // массив резов по пачке
-            const singleCuts = []; // хвостики на штучный дорез
-
-            Object.entries(cutsNeeded).forEach(([lenStr, qty]) => {
-                const len = Number(lenStr);
-                const fullPacks = Math.floor(qty / 10);
-                const rem = qty % 10;
-
-                for (let i = 0; i < fullPacks; i++) {
-                    packCuts.push(len);
-                }
-                if (rem > 0) {
-                    singleCuts.push({ len, qty: rem });
-                }
-            });
-
-            // Жадная упаковка резов в пачки по 3000 мм
-            packCuts.sort((a, b) => b - a);
-            const packs = [];
-
-            packCuts.forEach(c => {
-                let placed = false;
-                for (let p of packs) {
-                    const used = p.cuts.reduce((sum, val) => sum + val + kerf, 0);
-                    if (used + c <= packLen) {
-                        p.cuts.push(c);
-                        placed = true;
-                        break;
-                    }
-                }
-                if (!placed) {
-                    packs.push({ cuts: [c] });
-                }
-            });
-
-            const resultsDiv = document.getElementById('flangeNestingResults');
-            let html = `
-                <div class="flex items-center gap-4 text-xs font-semibold text-slate-300">
-                    <span>Потребуется цельных пачек (по 10 хлыстов): <strong class="text-blue-400 mono text-sm">${packs.length} шт</strong></span>
-                    <span>Всего хлыстов: <strong class="text-white mono">${packs.length * 10} шт</strong> (3000 мм)</span>
+            <button onclick="toggleProjectsListSection()" class="flex items-center justify-between p-4 bg-slate-900 hover:bg-slate-800/80 active:scale-[0.99] border border-slate-800 text-white rounded-xl transition">
+                <div class="text-left">
+                    <div class="text-xs uppercase tracking-wider font-semibold text-slate-400">Объекты в работе</div>
+                    <div class="text-sm font-bold mt-0.5">📂 Проекты цеха</div>
                 </div>
-            `;
+                <span id="projectsCountPill" class="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full mono font-bold">0</span>
+            </button>
 
-            if (packs.length > 0) {
-                html += '<div class="space-y-3">';
-                packs.forEach((p, idx) => {
-                    const cutsTotal = p.cuts.reduce((a, b) => a + b + kerf, 0);
-                    const remainder = packLen - cutsTotal;
-                    html += `
-                        <div class="bg-slate-950 p-3 rounded border border-slate-800 space-y-2">
-                            <div class="flex justify-between text-xs">
-                                <span class="font-bold text-slate-200">Пачка №${idx + 1} (10 хлыстов)</span>
-                                <span class="text-slate-400">Деловой остаток пачки: <strong class="text-amber-400 mono">${remainder} мм</strong></span>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                ${p.cuts.map(c => `<span class="bg-blue-900/60 border border-blue-700/60 text-blue-200 px-2.5 py-1 text-xs rounded mono">Рез ${c} мм (10 шт)</span>`).join('')}
+            <button onclick="openStandaloneFlangeCalc()" class="flex items-center justify-between p-4 bg-slate-900 hover:bg-slate-800/80 active:scale-[0.99] border border-slate-800 text-white rounded-xl transition">
+                <div class="text-left">
+                    <div class="text-xs uppercase tracking-wider font-semibold text-slate-400">Быстрый расчет</div>
+                    <div class="text-sm font-bold mt-0.5">📏 Калькулятор шинки</div>
+                </div>
+                <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded">1D</span>
+            </button>
+        </div>
+
+        <!-- Блок проектов (список объектов + окно предпросмотра) -->
+        <div id="projectsSection" class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xs uppercase tracking-wider font-bold text-slate-400">Список проектов:</h3>
+                <div class="flex gap-1 text-[11px]">
+                    <button onclick="filterProjectsList('active')" id="filterProjActive" class="px-2.5 py-1 rounded font-semibold bg-blue-600 text-white">Активные</button>
+                    <button onclick="filterProjectsList('archived')" id="filterProjArchived" class="px-2.5 py-1 rounded font-semibold bg-slate-800 text-slate-400">Архив</button>
+                </div>
+            </div>
+
+            <!-- Сетка: Кнопки проектов слева, Карточка справа (на мобильных друг под другом) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                <!-- Список кнопок проектов -->
+                <div class="lg:col-span-5 space-y-2" id="projectsButtonsContainer">
+                    <!-- Заполняется JS -->
+                </div>
+
+                <!-- Карточка предпросмотра выбранного проекта -->
+                <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl hidden lg:block" id="projectPreviewCard">
+                    <div class="text-center py-12 text-slate-500 text-xs">Выберите проект из списка слева для просмотра деталей</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- ЭКРАН 3: РАБОЧИЙ ПРОЕКТ (ВНУТРИ ЗАКАЗА)                        -->
+    <!-- ============================================================== -->
+    <section id="viewProject" class="hidden flex-1 flex flex-col">
+        <!-- Шапка проекта -->
+        <div class="bg-slate-900/90 border-b border-slate-800 px-4 py-3 sticky top-[49px] z-30 backdrop-blur">
+            <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <button onclick="navigateTo('home')" class="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 px-2.5 py-1.5 rounded-lg">
+                        ← В меню
+                    </button>
+                    <div>
+                        <h2 id="projHeaderTitle" class="text-sm font-bold text-white tracking-tight leading-tight">Объект</h2>
+                        <span id="projHeaderBrigade" class="text-[11px] text-blue-400 font-medium">Бригада</span>
+                    </div>
+                </div>
+
+                <!-- Вкладки внутри проекта -->
+                <div class="flex gap-1 overflow-x-auto py-1 max-w-full">
+                    <button onclick="switchProjTab('items')" id="projTab-items" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white whitespace-nowrap">1. Изделия и заказ</button>
+                    <button onclick="switchProjTab('flange')" id="projTab-flange" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap">2. Шинка (1D)</button>
+                    <button onclick="switchProjTab('nesting')" id="projTab-nesting" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap">3. Раскрой (2D)</button>
+                    <button onclick="switchProjTab('finance')" id="projTab-finance" class="hidden px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap">4. Финансы (₸)</button>
+                    <button onclick="switchProjTab('pdf')" id="projTab-pdf" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap">5. Спецификация</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Контент вкладок проекта -->
+        <div class="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
+
+            <!-- ВНУТРЕННЯЯ ВКЛАДКА 1: ИЗДЕЛИЯ И ЗАКАЗ -->
+            <div id="projView-items" class="space-y-6">
+                <!-- 1. Сводка объемов (только количество и разбивка по металлам) -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-xl">
+                        <div class="text-[11px] text-slate-400 uppercase font-semibold">Воздуховоды</div>
+                        <div id="statDuctsCount" class="text-lg sm:text-xl font-bold mono text-white mt-0.5">0 шт</div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-xl">
+                        <div class="text-[11px] text-slate-400 uppercase font-semibold">Изделия</div>
+                        <div id="statFittingsCount" class="text-lg sm:text-xl font-bold mono text-blue-400 mt-0.5">0 шт</div>
+                    </div>
+                    <div class="col-span-2 bg-slate-900 border border-slate-800 p-3.5 rounded-xl">
+                        <div class="text-[11px] text-slate-400 uppercase font-semibold mb-1">Сводка по металлу:</div>
+                        <div id="statMetalsChips" class="flex flex-wrap gap-1.5 text-xs">
+                            <span class="text-slate-500 text-xs">Нет добавленных изделий</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Форма добавления изделия -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h3 id="formModeTitle" class="text-xs uppercase font-bold tracking-wider text-slate-200">Добавить в заказ</h3>
+                        <button onclick="cancelItemEdit()" id="btnCancelEdit" class="hidden text-xs text-rose-400 hover:underline">Отмена</button>
+                    </div>
+
+                    <form id="itemEntryForm" onsubmit="submitItemForm(event)" class="space-y-4">
+                        <input type="hidden" id="editingItemId" value="">
+
+                        <!-- Выбор категории: Воздуховод или Изделие -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" onclick="selectFormCategory('duct')" id="btnCatDuct" class="py-2.5 text-xs font-bold rounded-lg bg-blue-600 text-white transition">Воздуховод</button>
+                            <button type="button" onclick="selectFormCategory('fitting')" id="btnCatFitting" class="py-2.5 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 transition">Изделие</button>
+                        </div>
+
+                        <!-- Выбор сечения -->
+                        <div>
+                            <label class="block text-[11px] text-slate-400 uppercase font-semibold mb-1">Форма сечения</label>
+                            <div class="grid grid-cols-3 gap-2" id="shapeSelectorGroup">
+                                <button type="button" onclick="selectFormShape('rect')" id="btnShapeRect" class="py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white">Прямоугольное</button>
+                                <button type="button" onclick="selectFormShape('round')" id="btnShapeRound" class="py-2 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300">Круглое</button>
+                                <button type="button" onclick="selectFormShape('smooth')" id="btnShapeSmooth" class="py-2 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300">Плавное</button>
                             </div>
                         </div>
-                    `;
-                });
-                html += '</div>';
-            }
 
-            if (singleCuts.length > 0) {
-                html += `
-                    <div class="bg-amber-950/30 border border-amber-800/60 p-4 rounded text-xs space-y-2">
-                        <div class="font-bold text-amber-300 uppercase tracking-wider">Памятка: Хвостики на штучный дорез (некратные 10 шт):</div>
-                        <div class="flex flex-wrap gap-3">
-                            ${singleCuts.map(sc => `<span class="bg-amber-900/40 text-amber-200 px-2.5 py-1 rounded mono">${sc.len} мм — ${sc.qty} шт</span>`).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-
-            resultsDiv.innerHTML = html;
-        }
-
-        function copyAssemblyText() {
-            const p = getActiveProject();
-            let text = `НАРЯД НА СБОРКУ ШИНОРЕЙКИ — ${p.title}\n\nВОЗДУХОВОДЫ:\n`;
-            document.querySelectorAll('#assemblySummaryGrid ul')[0].querySelectorAll('li').forEach(li => text += `- ${li.textContent}\n`);
-            text += `\nФАСОНИНА:\n`;
-            document.querySelectorAll('#assemblySummaryGrid ul')[1].querySelectorAll('li').forEach(li => text += `- ${li.textContent}\n`);
-            navigator.clipboard.writeText(text);
-            alert('Сводка для сборщика скопирована в буфер обмена!');
-        }
-
-        function copySawText() {
-            const p = getActiveProject();
-            let text = `НАРЯД НА ПИЛУ (ПАЧКИ ПО 10 ШТ) — ${p.title}\n`;
-            document.querySelectorAll('#flangeNestingResults .bg-slate-950').forEach((el, idx) => {
-                text += `\n${idx + 1}. ${el.querySelector('.font-bold').textContent}: `;
-                el.querySelectorAll('.mono').forEach(m => text += `[${m.textContent}] `);
-            });
-            navigator.clipboard.writeText(text);
-            alert('Наряд для нарезчика скопирован в буфер обмена!');
-        }
-
-        // --- ВКЛАДКА 3: РАСКРОЙ ЛИСТА 2D ---
-        function renderNestingQueues() {
-            const proj = getActiveProject();
-            const queues = {};
-
-            proj.items.forEach(it => {
-                const key = `${it.metal} ${it.thickness} мм`;
-                if (!queues[key]) queues[key] = [];
-                queues[key].push(it);
-            });
-
-            const keys = Object.keys(queues);
-            const tabsDiv = document.getElementById('metalQueuesTabs');
-            tabsDiv.innerHTML = '';
-
-            if (keys.length === 0) {
-                document.getElementById('metalQueueContent').innerHTML = '<div class="text-xs text-slate-500">В заказе нет изделий для раскроя</div>';
-                document.getElementById('sheetNestingOutput').innerHTML = '';
-                return;
-            }
-
-            if (!activeQueueKey || !queues[activeQueueKey]) activeQueueKey = keys[0];
-
-            keys.forEach(k => {
-                const btn = document.createElement('button');
-                btn.className = `px-3 py-1.5 text-xs font-semibold rounded ${k === activeQueueKey ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300'}`;
-                btn.textContent = k;
-                btn.onclick = () => { activeQueueKey = k; renderNestingQueues(); };
-                tabsDiv.appendChild(btn);
-            });
-
-            const itemsInQueue = queues[activeQueueKey];
-            const contentDiv = document.getElementById('metalQueueContent');
-
-            let html = `
-                <div class="bg-slate-950 p-4 rounded border border-slate-800 space-y-3">
-                    <div class="flex justify-between items-center text-xs">
-                        <span class="font-bold text-slate-200">Позиции в очереди: ${activeQueueKey}</span>
-                        <div class="flex items-center gap-3">
-                            <label class="text-slate-400">Формат листа:</label>
-                            <select id="sheetFormatSelect" class="bg-slate-900 border border-slate-800 rounded px-2 py-1 text-white">
-                                <option value="2500x1250">Лист 2500 × 1250 мм</option>
-                                <option value="coil1250">Рулон (ширина 1250 мм)</option>
+                        <!-- Выбор типа изделия (только для категории "Изделие") -->
+                        <div id="fittingTypeSelectorBlock" class="hidden">
+                            <label class="block text-[11px] text-slate-400 uppercase font-semibold mb-1">Вид изделия</label>
+                            <select id="fittingTypeSelect" onchange="onFittingTypeChange()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                                <!-- Заполняется динамически -->
                             </select>
                         </div>
-                    </div>
-                    <div class="space-y-2">
-                        ${itemsInQueue.map(it => {
-                            let unfoldW = 0;
-                            let sizeName = '';
-                            if (it.shape === 'rect') {
-                                unfoldW = 2 * (it.a + it.b) + 41;
-                                sizeName = `${it.a}×${it.b}`;
-                            } else if (it.shape === 'round') {
-                                unfoldW = Math.round(Math.PI * it.d + 22);
-                                sizeName = `Ø${it.d}`;
-                            } else {
-                                unfoldW = 1000;
-                                sizeName = `${it.a}×${it.b}`;
-                            }
-                            return `
-                                <div class="flex items-center justify-between bg-slate-900 p-2.5 rounded border border-slate-800/80 text-xs">
-                                    <div class="flex items-center gap-3">
-                                        <input type="checkbox" id="nestCheck_${it.id}" checked class="rounded border-slate-800 text-blue-600">
-                                        <div>
-                                            <span class="font-bold text-slate-200">${it.title} (${sizeName})</span>
-                                            <span class="text-slate-400 ml-2">Развертка: <strong class="text-blue-400 mono">${unfoldW} ×${it.l || 1250} мм</strong></span>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-slate-400">В раскрой:</span>
-                                        <input type="number" id="nestQty_${it.id}" value="${it.qty}" min="1" max="${it.qty}" class="w-16 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-center mono text-white">
-                                        <span class="text-slate-500">из ${it.qty} шт</span>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                    <div class="pt-2 flex justify-end">
-                        <button onclick="calculate2DNesting()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded uppercase tracking-wider">
-                            Построить карту раскроя
-                        </button>
-                    </div>
-                </div>
-            `;
-            contentDiv.innerHTML = html;
-        }
 
-        function calculate2DNesting() {
-            const proj = getActiveProject();
-            const format = document.getElementById('sheetFormatSelect').value;
-            const sheetL = format === '2500x1250' ? 2500 : 999999;
-            const sheetW = 1250;
-
-            const parts = [];
-            proj.items.forEach(it => {
-                if (`${it.metal} ${it.thickness} мм` === activeQueueKey) {
-                    const isChecked = document.getElementById(`nestCheck_${it.id}`)?.checked;
-                    const qty = Number(document.getElementById(`nestQty_${it.id}`)?.value || 0);
-                    if (isChecked && qty > 0) {
-                        let unfoldL = it.shape === 'rect' ? (2 * (it.a + it.b) + 41) : Math.round(Math.PI * it.d + 22);
-                        let label = it.shape === 'rect' ? `${it.a}×${it.b}` : `Ø${it.d}`;
-                        for (let i = 0; i < qty; i++) {
-                            parts.push({ title: it.title, label, cutL: unfoldL, cutW: it.l || 1250 });
-                        }
-                    }
-                }
-            });
-
-            const sheets = [];
-            parts.forEach(p => {
-                let placed = false;
-                for (let s of sheets) {
-                    const used = s.parts.reduce((sum, item) => sum + item.cutL, 0);
-                    if (used + p.cutL <= sheetL) {
-                        s.parts.push(p);
-                        placed = true;
-                        break;
-                    }
-                }
-                if (!placed) {
-                    sheets.push({ parts: [p] });
-                }
-            });
-
-            const out = document.getElementById('sheetNestingOutput');
-            let html = `
-                <div class="flex items-center gap-4 text-xs font-semibold text-slate-300">
-                    <span>Потребуется цельных листов: <strong class="text-blue-400 mono text-sm">${sheets.length} шт</strong> (${format === '2500x1250' ? '2500×1250 мм' : 'Рулон'})</span>
-                </div>
-                <div class="space-y-4">
-            `;
-
-            sheets.forEach((s, idx) => {
-                const usedL = s.parts.reduce((sum, item) => sum + item.cutL, 0);
-                const remL = sheetL - usedL;
-                html += `
-                    <div class="bg-slate-950 p-4 rounded border border-slate-800 space-y-3">
-                        <div class="flex justify-between text-xs">
-                            <span class="font-bold text-slate-200">Лист №${idx + 1} (${activeQueueKey})</span>
-                            <span class="text-slate-400">Деловой остаток: <strong class="text-amber-400 mono">${format === '2500x1250' ? remL + ' × 1250 мм' : 'Рулон'}</strong></span>
+                        <!-- ДИНАМИЧЕСКИЙ БЛОК ПАРАМЕТРОВ ИЗДЕЛИЯ -->
+                        <div id="dynamicFieldsContainer" class="p-4 bg-slate-950 border border-slate-800/80 rounded-xl space-y-4">
+                            <!-- Заполняется функцией renderDynamicFields() -->
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                            ${s.parts.map(p => `
-                                <div class="bg-slate-900 border border-slate-800 p-3 rounded space-y-1">
-                                    <div class="text-xs font-bold text-white">${p.title}</div>
-                                    <div class="text-sm font-black mono text-blue-400">${p.label}</div>
-                                    <div class="text-xs mono text-slate-400">Заготовка: ${p.cutL} ×${p.cutW} мм</div>
-                                </div>
-                            `).join('')}
+
+                        <!-- Общие параметры: Металл, Толщина, Количество, Тариф (для дева) -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Металл</label>
+                                <select id="fieldMetal" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-white">
+                                    <option value="Оц.">Оц.</option>
+                                    <option value="Нерж.">Нерж.</option>
+                                    <option value="Краш.">Краш.</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Толщина (мм)</label>
+                                <select id="fieldThickness" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-white mono">
+                                    <option value="0.45">0.45 мм</option>
+                                    <option value="0.5">0.5 мм</option>
+                                    <option value="0.6">0.6 мм</option>
+                                    <option value="0.7">0.7 мм</option>
+                                    <option value="0.8">0.8 мм</option>
+                                    <option value="1.0">1.0 мм</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Количество (шт)</label>
+                                <input type="number" id="fieldQty" min="1" value="1" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs mono text-white">
+                            </div>
+                            <!-- Скрыто от рабочих, доступно разработчику -->
+                            <div id="fieldPriceContainer" class="hidden">
+                                <label class="block text-[11px] text-slate-400 mb-1" id="fieldPriceLabel">Тариф (₸)</label>
+                                <input type="number" id="fieldPrice" min="0" value="1000" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs mono text-white">
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end pt-2">
+                            <button type="submit" id="btnSubmitItem" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider px-8 py-3 rounded-xl shadow-lg shadow-blue-600/20 transition">
+                                Добавить в заказ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 3. Таблица "Спецификация изделий" с фильтрами по металлу и толщине -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm space-y-3 p-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-3">
+                        <h3 class="text-xs uppercase font-bold tracking-wider text-slate-200">Спецификация изделий</h3>
+                        
+                        <!-- Фильтры -->
+                        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto text-xs">
+                            <div class="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                                <span class="text-slate-400 text-[11px]">Металл:</span>
+                                <select id="filterSpecMetal" onchange="renderItemsSpecification()" class="bg-transparent text-white focus:outline-none text-xs">
+                                    <option value="all">Все</option>
+                                    <option value="Оц.">Оц.</option>
+                                    <option value="Нерж.">Нерж.</option>
+                                    <option value="Краш.">Краш.</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                                <span class="text-slate-400 text-[11px]">Толщина:</span>
+                                <select id="filterSpecThickness" onchange="renderItemsSpecification()" class="bg-transparent text-white focus:outline-none text-xs">
+                                    <option value="all">Все</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                `;
-            });
-            html += '</div>';
-            out.innerHTML = html;
-        }
 
-        // --- ВКЛАДКА 5: КЛИЕНТСКАЯ СПЕЦИФИКАЦИЯ (PDF) ---
-        function renderPDF() {
-            const p = getActiveProject();
-            document.getElementById('pdfProjectTitle').textContent = p.title;
-            document.getElementById('pdfDate').textContent = p.createdAt;
+                    <!-- Сгруппированный вывод изделий (на мобильных — адаптивные карточки без горизонтального скролла) -->
+                    <div id="itemsSpecContainer" class="space-y-4">
+                        <!-- Заполняется JS -->
+                    </div>
+                </div>
+            </div>
 
-            let totalQty = 0;
-            let totalArea = 0;
-            let totalPrice = 0;
+            <!-- ВНУТРЕННЯЯ ВКЛАДКА 2: ШИНКА В ПРОЕКТЕ (1D) -->
+            <div id="projView-flange" class="hidden space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+                    <h3 class="text-xs uppercase font-bold tracking-wider text-slate-200">Сводка сторон для сборки и нарезки шины</h3>
+                    <div id="projectFlangeResults" class="space-y-4"></div>
+                </div>
+            </div>
 
-            const tbody = document.getElementById('pdfTableBody');
-            tbody.innerHTML = '';
+            <!-- ВНУТРЕННЯЯ ВКЛАДКА 3: РАСКРОЙ ЛИСТА В ПРОЕКТЕ (2D) -->
+            <div id="projView-nesting" class="hidden space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+                    <h3 class="text-xs uppercase font-bold tracking-wider text-slate-200">Раскрой листового металла (Без вращения)</h3>
+                    <div id="projectNestingResults" class="space-y-4"></div>
+                </div>
+            </div>
 
-            p.items.forEach((it, idx) => {
-                const area = calculateItemArea(it) * it.qty;
-                const cost = it.category === 'duct' ? Math.round(area * it.price) : Math.round(it.qty * it.price);
+            <!-- ВНУТРЕННЯЯ ВКЛАДКА 4: ФИНАНСЫ (ТОЛЬКО ДЛЯ РАЗРАБОТЧИКА) -->
+            <div id="projView-finance" class="hidden space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4" id="projectFinanceContainer">
+                    <!-- Заполняется JS -->
+                </div>
+            </div>
 
-                totalQty += it.qty;
-                totalArea += area;
-                totalPrice += cost;
+            <!-- ВНУТРЕННЯЯ ВКЛАДКА 5: СПЕЦИФИКАЦИЯ (PDF) -->
+            <div id="projView-pdf" class="hidden space-y-4">
+                <div class="flex justify-end">
+                    <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+                        Печать / PDF
+                    </button>
+                </div>
+                <div id="pdfContentRender" class="bg-white text-slate-950 p-6 rounded-xl shadow space-y-4"></div>
+            </div>
 
-                let sizeText = it.shape === 'rect' ? `${it.a}×${it.b} (L=${it.l})` : (it.shape === 'round' ? `Ø${it.d} (L=${it.l})` : `${it.a}×${it.b} → Ø${it.d}`);
+        </div>
+    </section>
 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="py-2 px-3 border-r border-slate-300 mono text-center">${idx + 1}</td>
-                    <td class="py-2 px-3 border-r border-slate-300 font-bold">${it.title}</td>
-                    <td class="py-2 px-3 border-r border-slate-300 mono">${sizeText}</td>
-                    <td class="py-2 px-3 border-r border-slate-300">${it.metal} ${it.thickness}</td>
-                    <td class="py-2 px-3 border-r border-slate-300 text-right mono font-bold">${it.qty}</td>
-                    <td class="py-2 px-3 border-r border-slate-300 text-right mono">${area.toFixed(2)}</td>
-                    <td class="py-2 px-3 text-right mono font-bold">${cost.toLocaleString()} ₸</td>
-                `;
-                tbody.appendChild(tr);
-            });
+    <!-- ============================================================== -->
+    <!-- АВТОНОМНЫЙ КАЛЬКУЛЯТОР ШИНКИ (БЕЗ ПРИВЯЗКИ К ПРОЕКТАМ)         -->
+    <!-- ============================================================== -->
+    <div id="modalStandaloneFlange" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur p-4 overflow-y-auto">
+        <div class="max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-5 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                    <h3 class="text-sm font-bold text-white uppercase tracking-tight">Быстрый калькулятор шинки</h3>
+                    <p class="text-[11px] text-slate-400">Автономный расчет шинорейки пачками по 10 хлыстов</p>
+                </div>
+                <button onclick="closeStandaloneFlangeCalc()" class="text-slate-400 hover:text-white p-1 text-lg">✕</button>
+            </div>
 
-            document.getElementById('pdfTotalQty').textContent = totalQty + ' шт';
-            document.getElementById('pdfTotalArea').textContent = totalArea.toFixed(2) + ' м²';
-            document.getElementById('pdfTotalPrice').textContent = totalPrice.toLocaleString() + ' ₸';
-        }
+            <!-- Параметры пачки -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-1">Длина пачки (мм)</label>
+                    <input type="number" id="quickPackLen" value="3000" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs mono text-white">
+                </div>
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-1">Толщина диска (мм)</label>
+                    <input type="number" id="quickKerf" value="2" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs mono text-white">
+                </div>
+                <div class="col-span-2 sm:col-span-1">
+                    <label class="block text-[11px] text-slate-400 mb-1">Округление</label>
+                    <select id="quickRounding" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-white">
+                        <option value="down">Вниз (хвостики)</option>
+                        <option value="up">Вверх (в запас)</option>
+                    </select>
+                </div>
+            </div>
 
-        // --- ИНИЦИАЛИЗАЦИЯ ПРИ ЗАПУСКЕ ---
-        renderDimensionInputs();
-        updateUI();
-    </script>
-</body>
-</html>
+            <!-- Добавление размера -->
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-3">
+                <div class="text-[11px] uppercase tracking-wider font-bold text-slate-400">Добавить размер стороны:</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div>
+                        <input type="number" id="quickWidth" placeholder="Ширина (мм)" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs mono text-white">
+                    </div>
+                    <div>
+                        <input type="number" id="quickHeight" placeholder="Высота (мм)" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs mono text-white">
+                    </div>
+                    <div>
+                        <input type="number" id="quickSidesCount" placeholder="Кол-во сторон" value="2" class="w-full
