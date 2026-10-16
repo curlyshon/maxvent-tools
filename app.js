@@ -1,4 +1,6 @@
+// ==========================================
 // КОНФИГУРАЦИЯ SUPABASE
+// ==========================================
 const SUPABASE_URL = "https://anwuikxtqesewifvipaw.supabase.co/rest/v1";
 const SUPABASE_KEY = "sb_publishable_7ENnMe3mS3P4dIsNUC3YAQ_ATVta-In";
 
@@ -6,7 +8,6 @@ const POPULAR_RECT = [100, 150, 200, 225, 250, 285, 300, 350, 400, 450, 500, 550
 const POPULAR_DIAM = [100, 125, 140, 150, 160, 180, 200, 225, 250, 280, 300, 315, 355, 400, 450, 500];
 const POPULAR_LEN_SILENCER = [500, 600, 1000, 1250];
 
-// Полный список возможных параметров для конструктора изделий
 const ALL_PARAM_DEFS = [
     { code: 'deg', label: 'Градус (°)' },
     { code: 'deg135', label: 'Градус (по умолч. 135°)' },
@@ -34,7 +35,6 @@ const ALL_PARAM_DEFS = [
     { code: 'flange2', label: 'Шинка: Сторона 1 и Сторона 2' }
 ];
 
-// Каталог всех изделий строго по ТЗ
 const DEFAULT_FITTINGS = {
     rect: [
         { id: 'r_trans', name: 'Переход', params: ['w1', 'h1', 'w2', 'h2', 'len', 'flange2'], price: 1000 },
@@ -107,7 +107,9 @@ let session = {
     accordionState: {}
 };
 
-// --- ОБЛАЧНАЯ СИНХРОНИЗАЦИЯ SUPABASE ---
+// ==========================================
+// ОБЛАЧНАЯ СИНХРОНИЗАЦИЯ
+// ==========================================
 async function syncToCloud() {
     localStorage.setItem('maxvent_v3_db', JSON.stringify(db));
     localStorage.setItem('maxvent_v3_session', JSON.stringify({ user: session.user, devMode: session.devMode }));
@@ -172,7 +174,7 @@ function ensureDbIntegrity() {
     if (!Array.isArray(db.metals) || !db.metals.length) db.metals = ['Оц.', 'Нерж.', 'Краш.'];
     if (!Array.isArray(db.thicknesses) || !db.thicknesses.length) db.thicknesses = [0.45, 0.5, 0.6, 0.7, 0.8, 1.0];
     if (!Array.isArray(db.groups) || !db.groups.length) db.groups = ['Бригада №1', 'Бригада №2'];
-    db.fittings = JSON.parse(JSON.stringify(DEFAULT_FITTINGS));
+    if (!db.fittings || !db.fittings.rect) db.fittings = JSON.parse(JSON.stringify(DEFAULT_FITTINGS));
     if (!Array.isArray(db.projects)) db.projects = [];
     if (!db.standaloneFlange) db.standaloneFlange = { rows: [], scraps: [] };
 }
@@ -195,7 +197,9 @@ async function initApp() {
     checkAuthState();
 }
 
-// --- АВТОРИЗАЦИЯ ---
+// ==========================================
+// АВТОРИЗАЦИЯ
+// ==========================================
 let authMode = 'login';
 function setAuthMode(m) {
     authMode = m;
@@ -324,7 +328,9 @@ function refreshCurrentScreen() {
     }
 }
 
-// --- ГЛАВНОЕ МЕНЮ И ПРОЕКТЫ ---
+// ==========================================
+// ГЛАВНОЕ МЕНЮ И ПРОЕКТЫ
+// ==========================================
 function goToMainMenu() {
     document.getElementById('profileDropdown').classList.add('hidden');
     document.getElementById('projectScreen').classList.add('hidden');
@@ -457,7 +463,7 @@ function formatPreviewItems(items, isFitting) {
     const byGroup = {};
     items.forEach(it => {
         const subKey = isFitting ? it.title : 'Прямые участки';
-        const metalKey = `${it.metal}${it.thickness} мм`;
+        const metalKey = `${it.metal} ${it.thickness} мм`;
         if (!byGroup[subKey]) byGroup[subKey] = {};
         if (!byGroup[subKey][metalKey]) byGroup[subKey][metalKey] = [];
         byGroup[subKey][metalKey].push(it);
@@ -469,9 +475,9 @@ function formatPreviewItems(items, isFitting) {
             out += `<div class="text-[10px] font-bold text-slate-400 pl-2 mt-0.5">${mKey}</div>`;
             arr.forEach(it => {
                 let dimText = '';
-                if (it.shape === 'rect') dimText = `${it.w}х${it.h} \vert{} L=${it.l || 1250}`;
-                else if (it.shape === 'round') dimText = `Ø${it.d} \vert{} L=${it.l || 1250}`;
-                else dimText = `${it.w1 || it.w}х${it.h1 \vert{}\vert{} it.h} → Ø${it.d}`;
+                if (it.shape === 'rect') dimText = `${it.w}х${it.h} | L=${it.l || 1250}`;
+                else if (it.shape === 'round') dimText = `Ø${it.d} | L=${it.l || 1250}`;
+                else dimText = `${it.w1 || it.w}х${it.h1 || it.h} → Ø${it.d}`;
                 out += `<div class="pl-4 text-[11px] text-slate-200 mono">${dimText} | <strong class="text-blue-300">${it.qty} шт</strong></div>`;
             });
         }
@@ -479,7 +485,9 @@ function formatPreviewItems(items, isFitting) {
     return out;
 }
 
-// --- УПРАВЛЕНИЕ ПРОЕКТАМИ ---
+// ==========================================
+// УПРАВЛЕНИЕ ПРОЕКТАМИ
+// ==========================================
 function openProjectModal(editId = null) {
     document.getElementById('modalProjId').value = editId || '';
     document.getElementById('projectModalHeader').textContent = editId ? 'Редактировать проект' : 'Создать проект';
@@ -534,7 +542,7 @@ function saveProjectModal() {
             updatedAt: now,
             items: [],
             payments: [],
-            nestingState: null
+            nestings: {}
         };
         db.projects.unshift(newP);
         session.clickedProjectId = newP.id;
@@ -570,7 +578,9 @@ function deleteProjectPermanent(id) {
     renderMainMenuProjects();
 }
 
-// --- ВНУТРИ ПРОЕКТА ---
+// ==========================================
+// ВНУТРИ ПРОЕКТА
+// ==========================================
 function openInsideProject(id) {
     session.insideProjectId = id;
     session.selectedSpecIds = [];
@@ -608,7 +618,9 @@ function renderProjectInside() {
     renderSpecification();
 }
 
-// --- СВОДКА ПО ПРОЕКТУ ---
+// ==========================================
+// СВОДКА ПО ПРОЕКТУ
+// ==========================================
 function toggleSummaryAccordion() {
     const body = document.getElementById('summaryBody');
     const arrow = document.getElementById('summaryArrow');
@@ -686,7 +698,7 @@ function renderSummarySection() {
 function groupSummaryDucts(arr) {
     const res = {};
     arr.forEach(it => {
-        const k = `${it.metal}${it.thickness} мм`;
+        const k = `${it.metal} ${it.thickness} мм`;
         if (!res[k]) res[k] = { qty: 0, area: 0 };
         res[k].qty += it.qty;
         const unfold = it.shape === 'rect' ? (2 * (it.w + it.h) + 41) : Math.round(Math.PI * it.d + 22);
@@ -698,13 +710,15 @@ function groupSummaryDucts(arr) {
 function groupSummaryFittings(arr) {
     const res = {};
     arr.forEach(it => {
-        const k = `${it.metal}${it.thickness} мм`;
+        const k = `${it.metal} ${it.thickness} мм`;
         res[k] = (res[k] || 0) + it.qty;
     });
     return res;
 }
 
-// --- УПРАВЛЕНИЕ ФОРМОЙ ИЗДЕЛИЙ ---
+// ==========================================
+// ФОРМА ДОБАВЛЕНИЯ И ДИНАМИЧЕСКИЕ ПОЛЯ
+// ==========================================
 function populateFormDropdowns() {
     const mSel = document.getElementById('inMetal');
     const tSel = document.getElementById('inThickness');
@@ -852,7 +866,6 @@ function renderDynamicInputs() {
     if (fitDef.params.includes('offset')) html += `<div><label class="block text-xs text-slate-400 mb-1">Смещение (мм)</label><input type="number" id="f_offset" value="100" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
     if (fitDef.params.includes('inlets_cnt')) html += `<div><label class="block text-xs text-slate-400 mb-1">Количество врезок (шт)</label><input type="number" id="f_inlets_cnt" value="2" min="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
 
-    // Тройники и Крестовины прямоугольные
     if (fitDef.params.includes('tee_rect')) {
         html += `
             <div class="space-y-2 bg-slate-900 p-3 rounded-xl border border-slate-800">
@@ -876,7 +889,6 @@ function renderDynamicInputs() {
         `;
     }
 
-    // Тройники и Крестовины круглые
     if (fitDef.params.includes('tee_round')) {
         html += `
             <div class="space-y-2 bg-slate-900 p-3 rounded-xl border border-slate-800">
@@ -900,7 +912,6 @@ function renderDynamicInputs() {
         `;
     }
 
-    // Шинка
     if (fitDef.params.includes('flange1') || fitDef.params.includes('flange2')) {
         html += `
             <div class="pt-2 border-t border-slate-800">
@@ -943,7 +954,9 @@ function toggleSameCheck(type, isChecked) {
     }
 }
 
-// --- СОХРАНЕНИЕ ИЗДЕЛИЯ С АВТОСУММИРОВАНИЕМ ---
+// ==========================================
+// СОХРАНЕНИЕ ИЗДЕЛИЯ С АВТОСУММИРОВАНИЕМ
+// ==========================================
 function saveProjectItem(e) {
     e.preventDefault();
     const p = db.projects.find(x => x.id === session.insideProjectId);
@@ -1033,7 +1046,6 @@ function saveProjectItem(e) {
         const idx = p.items.findIndex(i => i.id === Number(editId));
         if (idx !== -1) p.items[idx] = item;
     } else {
-        // Проверка на автосуммирование одинаковых позиций
         const existing = p.items.find(i => i.key === item.key);
         if (existing) {
             existing.qty += item.qty;
@@ -1060,7 +1072,9 @@ function resetItemForm() {
     renderDynamicInputs();
 }
 
-// --- СПЕЦИФИКАЦИЯ ИЗДЕЛИЙ С АККОРДЕОНАМИ И ПАКЕТНЫМ УДАЛЕНИЕМ ---
+// ==========================================
+// СПЕЦИФИКАЦИЯ ИЗДЕЛИЙ
+// ==========================================
 function renderSpecification() {
     const p = db.projects.find(x => x.id === session.insideProjectId);
     if (!p) return;
@@ -1205,7 +1219,9 @@ function deleteSingleItem(id) {
     renderProjectInside();
 }
 
-// --- ДУБЛИРОВАНИЕ С ПРЕДВАРИТЕЛЬНЫМ ИЗМЕНЕНИЕМ ---
+// ==========================================
+// ДУБЛИРОВАНИЕ И РЕДАКТИРОВАНИЕ
+// ==========================================
 function duplicateWithModal(id) {
     const p = db.projects.find(x => x.id === session.insideProjectId);
     const it = p.items.find(x => x.id === id);
@@ -1265,7 +1281,9 @@ function editProjectItem(id) {
     window.scrollTo({ top: document.getElementById('itemFormCard').offsetTop - 60, behavior: 'smooth' });
 }
 
-// --- ШИНКА В ПРОЕКТЕ (ПОЛНЫЙ РАСКРОЙ ПО ПАЧКАМ) ---
+// ==========================================
+// ШИНКА В ПРОЕКТЕ
+// ==========================================
 function addFlangeScrap(target) {
     const inp = target === 'project' ? document.getElementById('projScrapLenInput') : document.getElementById('stScrapInput');
     const len = Number(inp.value);
@@ -1438,7 +1456,9 @@ function exportFlangeText(mode) {
     alert('Наряд на шинку скопирован в буфер обмена!');
 }
 
-// --- РАСКРОЙ ЛИСТА 2D (ТОЛЬКО ВОЗДУХОВОДЫ) ---
+// ==========================================
+// РАСКРОЙ ЛИСТА 2D
+// ==========================================
 function renderProjectNesting() {
     const p = db.projects.find(x => x.id === session.insideProjectId);
     if (!p) return;
@@ -1652,7 +1672,9 @@ function finishCuttingWork() {
     alert('Статус проекта обновлен: «Воздуховоды отрезаны»!');
 }
 
-// --- ФИНАНСЫ И ПЕРЕРАСПРЕДЕЛЕНИЕ ПЕРЕПЛАТ ---
+// ==========================================
+// ФИНАНСЫ И ПЕРЕРАСПРЕДЕЛЕНИЕ
+// ==========================================
 function calculateProjectFinances(p) {
     let totalSum = 0;
     (p.items || []).forEach(it => {
@@ -1766,7 +1788,9 @@ function deletePayment(idx) {
     renderProjectFinance();
 }
 
-// --- ГЛОБАЛЬНЫЙ ФИНАНСОВЫЙ ОТЧЕТ ПО ВСЕМ ОБЪЕКТАМ ---
+// ==========================================
+// ГЛОБАЛЬНЫЙ ФИНАНСОВЫЙ ОТЧЕТ
+// ==========================================
 function openGlobalFinanceModal() {
     document.getElementById('profileDropdown').classList.add('hidden');
     const modal = document.getElementById('globalFinanceModal');
@@ -1832,7 +1856,9 @@ function closeGlobalFinanceModal() {
     document.getElementById('globalFinanceModal').classList.add('hidden');
 }
 
-// --- АВТОНОМНЫЙ КАЛЬКУЛЯТОР ШИНКИ ---
+// ==========================================
+// АВТОНОМНЫЙ КАЛЬКУЛЯТОР ШИНКИ
+// ==========================================
 function openStandaloneFlange() {
     document.getElementById('standaloneFlangeModal').classList.remove('hidden');
     renderStandaloneFlange();
@@ -1888,7 +1914,9 @@ function renderStandaloneFlange() {
     document.getElementById('stFlangeOutput').innerHTML = buildFlangeCalculationUI(sidesObj, packLen, kerf, roundMode, db.standaloneFlange.scraps || []);
 }
 
-// --- ПАНЕЛЬ РАЗРАБОТЧИКА: СПРАВОЧНИКИ, КОНСТРУКТОР, АРХИВ ---
+// ==========================================
+// ПАНЕЛЬ РАЗРАБОТЧИКА
+// ==========================================
 function openDevModal() {
     document.getElementById('profileDropdown').classList.add('hidden');
     document.getElementById('devModal').classList.remove('hidden');
@@ -1981,7 +2009,9 @@ function renderDevUsersStats() {
     }).join('');
 }
 
-// --- ЕЖЕМЕСЯЧНАЯ АРХИВАЦИЯ В ФАЙЛ И ОЧИСТКА ---
+// ==========================================
+// АРХИВАЦИЯ ПО МЕСЯЦАМ
+// ==========================================
 function exportMonthlyArchive() {
     const now = new Date();
     const monthStr = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -2030,7 +2060,9 @@ function startNewMonthClean() {
     alert('Архивные проекты очищены. Новый месяц готов к работе!');
 }
 
+// ==========================================
 // ЗАПУСК СИСТЕМЫ
+// ==========================================
 window.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
