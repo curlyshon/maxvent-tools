@@ -1,8 +1,10 @@
 // ==========================================
-// КОНФИГУРАЦИЯ SUPABASE
+// ИНИЦИАЛИЗАЦИЯ SUPABASE ОНЛАЙН-КЛИЕНТА
 // ==========================================
-const SUPABASE_URL = "https://anwuikxtqesewifvipaw.supabase.co/rest/v1";
+const SUPABASE_URL = "https://anwuikxtqesewifvipaw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_7ENnMe3mS3P4dIsNUC3YAQ_ATVta-In";
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const POPULAR_RECT = [100, 150, 200, 225, 250, 285, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000];
 const POPULAR_DIAM = [100, 125, 140, 150, 160, 180, 200, 225, 250, 280, 300, 315, 355, 400, 450, 500];
@@ -74,8 +76,8 @@ const DEFAULT_FITTINGS = {
     ],
     smooth: [
         { id: 's_trans', name: 'Переход', params: ['w1', 'h1', 'd', 'len', 'flange1'], price: 1000 },
-        { id: 's_inlet_r2c', name: 'Врезка прямоугольный на круглый', params: ['w', 'h', 'd_main', 'len'], price: 1000 },
-        { id: 's_inlet_c2r', name: 'Врезка круглый на прямоугольный', params: ['d', 'len'], price: 1000 },
+        { id: 's_inlet_r2c', name: 'Врезка прямоуг. на круглый', params: ['w', 'h', 'd_main', 'len'], price: 1000 },
+        { id: 's_inlet_c2r', name: 'Врезка круглый на прямоуг.', params: ['d', 'len'], price: 1000 },
         { id: 's_tee', name: 'Тройник', params: ['w', 'h', 'd_main', 'flange1'], price: 1000 },
         { id: 's_silencer', name: 'Шумоглушитель', params: ['w', 'h', 'd', 'len_silencer', 'flange1'], price: 1000 },
         { id: 's_hood', name: 'Зонт вытяжной', params: ['w', 'h', 'd', 'len'], price: 1000 },
@@ -83,15 +85,18 @@ const DEFAULT_FITTINGS = {
     ]
 };
 
-let db = {
+// Оперативная память клиентской сессии
+let appState = {
     users: [],
     metals: ['Оц.', 'Нерж.', 'Краш.'],
     thicknesses: [0.45, 0.5, 0.6, 0.7, 0.8, 1.0],
     groups: ['Бригада №1', 'Бригада №2', 'Цех (Самовывоз)'],
     fittings: JSON.parse(JSON.stringify(DEFAULT_FITTINGS)),
     projects: [],
-    standaloneFlange: { rows: [], scraps: [] },
-    activityLog: []
+    activeProjectItems: [],
+    activeProjectPayments: [],
+    activeProjectNestings: {},
+    standaloneFlange: { rows: [], scraps: [] }
 };
 
 let session = {
@@ -108,93 +113,64 @@ let session = {
 };
 
 // ==========================================
-// ОБЛАЧНАЯ СИНХРОНИЗАЦИЯ
+// ПРЯМЫЕ ОНЛАЙН-ЗАПРОСЫ В SUPABASE
 // ==========================================
-async function syncToCloud() {
-    localStorage.setItem('maxvent_v3_db', JSON.stringify(db));
-    localStorage.setItem('maxvent_v3_session', JSON.stringify({ user: session.user, devMode: session.devMode }));
+async function loadInitialData() {
     const ind = document.getElementById('cloudIndicator');
-    if (ind) { ind.textContent = '● Сохранение в облако...'; ind.className = 'text-[10px] text-amber-400'; }
-
-    try {
-        const res = await fetch(`${SUPABASE_URL}/maxvent_cloud`, {
-            method: 'POST',
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'resolution=merge-duplicates'
-            },
-            body: JSON.stringify({
-                id: 'main_workspace',
-                payload: db,
-                updated_at: new Date().toISOString()
-            })
-        });
-        if (res.ok) {
-            if (ind) { ind.textContent = '● Облако синхронизировано'; ind.className = 'text-[10px] text-emerald-400'; }
-        } else {
-            if (ind) { ind.textContent = '● Локально (создайте таблицу maxvent_cloud)'; ind.className = 'text-[10px] text-slate-400'; }
-        }
-    } catch (e) {
-        if (ind) { ind.textContent = '● Автономный режим'; ind.className = 'text-[10px] text-slate-400'; }
-    }
-}
-
-async function syncFromCloud(showAlert = false) {
-    try {
-        const res = await fetch(`${SUPABASE_URL}/maxvent_cloud?id=eq.main_workspace&select=payload`, {
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`
-            }
-        });
-        if (res.ok) {
-            const data = await res.json();
-            if (data && data.length > 0 && data[0].payload) {
-                db = data[0].payload;
-                ensureDbIntegrity();
-                localStorage.setItem('maxvent_v3_db', JSON.stringify(db));
-                const authSt = document.getElementById('cloudStatusAuth');
-                if (authSt) authSt.textContent = 'Облако Supabase: подключено ✓';
-                if (showAlert) alert('Данные успешно загружены из облака!');
-                refreshCurrentScreen();
-                return;
-            }
-        }
-    } catch (e) {
-        console.warn('Cloud fetch fallback:', e);
-    }
     const authSt = document.getElementById('cloudStatusAuth');
-    if (authSt) authSt.textContent = 'Режим памяти устройства';
+    if (ind) { ind.textContent = '● Загрузка из базы...'; ind.className = 'text-[10px] text-amber-400'; }
+
+    try {
+        // 1. Загрузка справочников
+        const { data: setts } = await supabaseClient.from('app_settings').select('*').eq('id', 'global_config').single();
+        if (setts) {
+            if (Array.isArray(setts.metals) && setts.metals.length) appState.metals = setts.metals;
+            if (Array.isArray(setts.thicknesses) && setts.thicknesses.length) appState.thicknesses = setts.thicknesses;
+            if (Array.isArray(setts.groups) && setts.groups.length) appState.groups = setts.groups;
+            if (setts.fittings && setts.fittings.rect) appState.fittings = setts.fittings;
+        }
+
+        // 2. Загрузка пользователей
+        const { data: uList } = await supabaseClient.from('users').select('*').order('id', { ascending: true });
+        if (uList) appState.users = uList;
+
+        // 3. Загрузка проектов
+        const { data: pList } = await supabaseClient.from('projects').select('*').order('id', { ascending: false });
+        if (pList) appState.projects = pList;
+
+        if (ind) { ind.textContent = '● Онлайн (Supabase)'; ind.className = 'text-[10px] text-emerald-400'; }
+        if (authSt) authSt.textContent = 'Онлайн-база: подключено ✓';
+
+        checkAuthState();
+        refreshCurrentScreen();
+    } catch (err) {
+        console.error('Supabase load error:', err);
+        if (ind) { ind.textContent = '● Ошибка связи с базой'; ind.className = 'text-[10px] text-rose-400'; }
+        if (authSt) authSt.textContent = 'Ошибка подключения к базе';
+    }
 }
 
-function ensureDbIntegrity() {
-    if (!Array.isArray(db.users)) db.users = [];
-    if (!Array.isArray(db.metals) || !db.metals.length) db.metals = ['Оц.', 'Нерж.', 'Краш.'];
-    if (!Array.isArray(db.thicknesses) || !db.thicknesses.length) db.thicknesses = [0.45, 0.5, 0.6, 0.7, 0.8, 1.0];
-    if (!Array.isArray(db.groups) || !db.groups.length) db.groups = ['Бригада №1', 'Бригада №2'];
-    if (!db.fittings || !db.fittings.rect) db.fittings = JSON.parse(JSON.stringify(DEFAULT_FITTINGS));
-    if (!Array.isArray(db.projects)) db.projects = [];
-    if (!db.standaloneFlange) db.standaloneFlange = { rows: [], scraps: [] };
-}
+async function loadProjectDetails(projectId) {
+    try {
+        const [itRes, payRes, nestRes] = await Promise.all([
+            supabaseClient.from('items').select('*').eq('project_id', projectId).order('id', { ascending: true }),
+            supabaseClient.from('payments').select('*').eq('project_id', projectId).order('id', { ascending: true }),
+            supabaseClient.from('nestings').select('*').eq('project_id', projectId)
+        ]);
 
-async function initApp() {
-    const localDb = localStorage.getItem('maxvent_v3_db');
-    if (localDb) {
-        try { db = JSON.parse(localDb); } catch(e){}
+        appState.activeProjectItems = (itRes.data || []).map(i => ({
+            ...i,
+            ...i.dimensions
+        }));
+        appState.activeProjectPayments = payRes.data || [];
+
+        appState.activeProjectNestings = {};
+        (nestRes.data || []).forEach(n => {
+            appState.activeProjectNestings[n.metal_key] = { sheets: n.sheets };
+        });
+    } catch (e) {
+        console.error('Error loading project details:', e);
     }
-    const localSess = localStorage.getItem('maxvent_v3_session');
-    if (localSess) {
-        try {
-            const parsed = JSON.parse(localSess);
-            session.user = parsed.user;
-            session.devMode = parsed.devMode;
-        } catch(e){}
-    }
-    ensureDbIntegrity();
-    await syncFromCloud(false);
-    checkAuthState();
 }
 
 // ==========================================
@@ -206,52 +182,79 @@ function setAuthMode(m) {
     document.getElementById('authTabLogin').className = m === 'login' ? 'flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-blue-400 border-b-2 border-blue-500' : 'flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 border-b-2 border-transparent';
     document.getElementById('authTabRegister').className = m === 'register' ? 'flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-blue-400 border-b-2 border-blue-500' : 'flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 border-b-2 border-transparent';
     document.getElementById('regNameWrap').classList.toggle('hidden', m !== 'register');
-    const hasDev = db.users.some(u => u.role === 'developer');
+    const hasDev = appState.users.some(u => u.role === 'developer');
     document.getElementById('regRoleWrap').classList.toggle('hidden', m !== 'register' || hasDev);
     document.getElementById('authSubmitBtn').textContent = m === 'login' ? 'Войти' : 'Зарегистрироваться';
     document.getElementById('authError').classList.add('hidden');
 }
 
-function handleAuthSubmit(e) {
+async function handleAuthSubmit(e) {
     e.preventDefault();
     const login = document.getElementById('authLogin').value.trim();
     const pass = document.getElementById('authPass').value.trim();
     const err = document.getElementById('authError');
 
     if (authMode === 'login') {
-        const u = db.users.find(x => x.login.toLowerCase() === login.toLowerCase() && x.pass === pass);
+        const u = appState.users.find(x => x.login.toLowerCase() === login.toLowerCase() && x.pass === pass);
         if (!u) {
-            err.textContent = 'Неверный логин или пароль. Если у вас еще нет аккаунта — перейдите на вкладку «Создать аккаунт».';
+            err.textContent = 'Неверный логин или пароль. Проверьте данные или создайте аккаунт.';
             err.classList.remove('hidden');
             return;
         }
         session.user = u;
         session.devMode = (u.role === 'developer');
+        localStorage.setItem('mv_online_session', JSON.stringify({ userId: u.id, devMode: session.devMode }));
     } else {
-        if (db.users.some(x => x.login.toLowerCase() === login.toLowerCase())) {
-            err.textContent = 'Этот логин уже занят';
+        if (appState.users.some(x => x.login.toLowerCase() === login.toLowerCase())) {
+            err.textContent = 'Пользователь с таким логином уже существует в базе';
             err.classList.remove('hidden');
             return;
         }
         const name = document.getElementById('authName').value.trim() || login;
-        const hasDev = db.users.some(u => u.role === 'developer');
+        const hasDev = appState.users.some(u => u.role === 'developer');
         const role = !hasDev ? document.getElementById('authRoleSelect').value : 'worker';
-        const newU = { id: Date.now(), login, pass, name, role, canFinance: false };
-        db.users.push(newU);
+
+        const { data: newU, error } = await supabaseClient.from('users').insert({
+            login, pass, name, role
+        }).select().single();
+
+        if (error) {
+            err.textContent = 'Ошибка при создании аккаунта в базе: ' + error.message;
+            err.classList.remove('hidden');
+            return;
+        }
+
+        appState.users.push(newU);
         session.user = newU;
         session.devMode = (role === 'developer');
+        localStorage.setItem('mv_online_session', JSON.stringify({ userId: newU.id, devMode: session.devMode }));
     }
-    syncToCloud();
+
     checkAuthState();
 }
 
 function checkAuthState() {
     const screen = document.getElementById('authScreen');
     if (!session.user) {
+        // Проверка сохраненной сессии
+        const saved = localStorage.getItem('mv_online_session');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                const found = appState.users.find(u => u.id === parsed.userId);
+                if (found) {
+                    session.user = found;
+                    session.devMode = parsed.devMode;
+                }
+            } catch(e){}
+        }
+    }
+
+    if (!session.user) {
         screen.classList.remove('hidden');
-        if (db.users.length === 0) {
+        if (appState.users.length === 0) {
             setAuthMode('register');
-            document.getElementById('authSubtitle').textContent = 'Первый запуск: создайте аккаунт Разработчика';
+            document.getElementById('authSubtitle').textContent = 'Создайте первый аккаунт администратора';
         }
     } else {
         screen.classList.add('hidden');
@@ -262,19 +265,19 @@ function checkAuthState() {
 
 function logout() {
     session.user = null;
-    localStorage.removeItem('maxvent_v3_session');
+    localStorage.removeItem('mv_online_session');
     document.getElementById('profileDropdown').classList.add('hidden');
     checkAuthState();
 }
 
 function isDev() {
-    return (session.user?.role === 'developer' && session.devMode) || session.user?.canDev;
+    return session.user?.role === 'developer' && session.devMode;
 }
 
 function toggleDevMode() {
     if (session.user?.role !== 'developer') return;
     session.devMode = !session.devMode;
-    syncToCloud();
+    localStorage.setItem('mv_online_session', JSON.stringify({ userId: session.user.id, devMode: session.devMode }));
     updateHeaderUI();
     refreshCurrentScreen();
 }
@@ -308,14 +311,15 @@ function toggleProfileMenu() {
     document.getElementById('profileDropdown').classList.toggle('hidden');
 }
 
-function openProfileEditModal() {
+async function openProfileEditModal() {
     document.getElementById('profileDropdown').classList.add('hidden');
     const newName = prompt('Введите ваше новое имя:', session.user.name);
     if (newName && newName.trim()) {
-        session.user.name = newName.trim();
-        const u = db.users.find(x => x.id === session.user.id);
-        if (u) u.name = newName.trim();
-        syncToCloud();
+        const trimmed = newName.trim();
+        session.user.name = trimmed;
+        await supabaseClient.from('users').update({ name: trimmed }).eq('id', session.user.id);
+        const u = appState.users.find(x => x.id === session.user.id);
+        if (u) u.name = trimmed;
         updateHeaderUI();
     }
 }
@@ -352,7 +356,7 @@ function toggleProjectsSection() {
 }
 
 function renderMainMenuProjects() {
-    const list = db.projects.filter(p => (p.archiveState || 'active') === session.projectFilter);
+    const list = appState.projects.filter(p => (p.archive_state || 'active') === session.projectFilter);
     document.getElementById('projectsBadgeCount').textContent = list.length;
 
     const container = document.getElementById('projectsButtonsContainer');
@@ -369,14 +373,17 @@ function renderMainMenuProjects() {
         const isSelected = p.id === session.clickedProjectId;
         const btn = document.createElement('button');
         btn.className = `w-full text-left p-4 rounded-xl border transition flex items-center justify-between ${isSelected ? 'bg-blue-600/15 border-blue-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-200 hover:border-slate-700'}`;
-        btn.onclick = () => {
+        btn.onclick = async () => {
             session.clickedProjectId = (session.clickedProjectId === p.id) ? null : p.id;
+            if (session.clickedProjectId) {
+                await loadProjectDetails(p.id);
+            }
             renderMainMenuProjects();
         };
         btn.innerHTML = `
             <div class="truncate pr-2">
                 <div class="font-bold text-sm truncate">${p.title}</div>
-                <div class="text-[11px] text-slate-400 mt-0.5">${p.group || 'Без бригады'} • <span class="text-blue-400">${p.statusText || 'В работе'}</span></div>
+                <div class="text-[11px] text-slate-400 mt-0.5">${p.group_name || 'Без бригады'} • <span class="text-blue-400">${p.status_text || 'В работе'}</span></div>
             </div>
             <span class="text-slate-500 font-bold">›</span>
         `;
@@ -392,12 +399,12 @@ function renderMainMenuProjects() {
 
 function renderProjectPreviewCard(projId) {
     const preview = document.getElementById('projectPreviewCard');
-    const p = db.projects.find(x => x.id === projId);
+    const p = appState.projects.find(x => x.id === projId);
     if (!p) { preview.classList.add('hidden'); return; }
     preview.classList.remove('hidden');
 
-    const ducts = (p.items || []).filter(i => i.category === 'duct');
-    const fittings = (p.items || []).filter(i => i.category === 'fitting');
+    const ducts = appState.activeProjectItems.filter(i => i.category === 'duct');
+    const fittings = appState.activeProjectItems.filter(i => i.category === 'fitting');
     const totalDuctQty = ducts.reduce((s, i) => s + i.qty, 0);
     const totalFitQty = fittings.reduce((s, i) => s + i.qty, 0);
 
@@ -421,11 +428,11 @@ function renderProjectPreviewCard(projId) {
         <div class="flex flex-wrap justify-between items-start gap-2 border-b border-slate-800 pb-3">
             <div>
                 <h3 class="text-base font-black text-white">${p.title}</h3>
-                <p class="text-xs text-slate-400 mt-0.5">${p.desc || 'Описание не указано'}</p>
+                <p class="text-xs text-slate-400 mt-0.5">${p.description || 'Описание не указано'}</p>
             </div>
             <div class="text-right">
-                <span class="text-xs px-2.5 py-1 rounded-lg font-bold ${p.statusText === 'Воздуховоды отрезаны' ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-blue-400 border border-slate-700'}">${p.statusText || 'В работе'}</span>
-                <div class="text-[11px] text-slate-400 mt-1">${p.group || 'Без бригады'}</div>
+                <span class="text-xs px-2.5 py-1 rounded-lg font-bold ${p.status_text === 'Воздуховоды отрезаны' ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-blue-400 border border-slate-700'}">${p.status_text || 'В работе'}</span>
+                <div class="text-[11px] text-slate-400 mt-1">${p.group_name || 'Без бригады'}</div>
             </div>
         </div>
 
@@ -451,9 +458,9 @@ function renderProjectPreviewCard(projId) {
                 ✎ Редактировать
             </button>
             <button onclick="archiveProjectSafe(${p.id})" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white py-2.5 px-3 rounded-xl text-xs">
-                ${p.archiveState === 'archived' ? 'Восстановить' : 'В архив'}
+                ${p.archive_state === 'archived' ? 'Восстановить' : 'В архив'}
             </button>
-            ${isDev() && p.archiveState === 'archived' ? `<button onclick="deleteProjectPermanent(${p.id})" class="bg-rose-900/60 hover:bg-rose-800 text-rose-200 py-2.5 px-3 rounded-xl text-xs">Удалить</button>` : ''}
+            ${isDev() && p.archive_state === 'archived' ? `<button onclick="deleteProjectPermanent(${p.id})" class="bg-rose-900/60 hover:bg-rose-800 text-rose-200 py-2.5 px-3 rounded-xl text-xs">Удалить</button>` : ''}
         </div>
     `;
 }
@@ -486,22 +493,22 @@ function formatPreviewItems(items, isFitting) {
 }
 
 // ==========================================
-// УПРАВЛЕНИЕ ПРОЕКТАМИ
+// СОЗДАНИЕ И РЕДАКТИРОВАНИЕ ПРОЕКТОВ ОНЛАЙН
 // ==========================================
 function openProjectModal(editId = null) {
     document.getElementById('modalProjId').value = editId || '';
     document.getElementById('projectModalHeader').textContent = editId ? 'Редактировать проект' : 'Создать проект';
-    
+
     const groupSel = document.getElementById('modalProjGroup');
-    groupSel.innerHTML = db.groups.map(g => `<option value="${g}">${g}</option>`).join('');
+    groupSel.innerHTML = appState.groups.map(g => `<option value="${g}">${g}</option>`).join('');
 
     if (editId) {
-        const p = db.projects.find(x => x.id === editId);
+        const p = appState.projects.find(x => x.id === editId);
         if (p) {
             document.getElementById('modalProjTitle').value = p.title;
-            document.getElementById('modalProjDesc').value = p.desc || '';
-            document.getElementById('modalProjGroup').value = p.group || db.groups[0];
-            document.getElementById('modalProjStatusText').value = p.statusText || 'В работе';
+            document.getElementById('modalProjDesc').value = p.description || '';
+            document.getElementById('modalProjGroup').value = p.group_name || appState.groups[0];
+            document.getElementById('modalProjStatusText').value = p.status_text || 'В работе';
         }
     } else {
         document.getElementById('modalProjTitle').value = '';
@@ -515,82 +522,84 @@ function closeProjectModal() {
     document.getElementById('projectModal').classList.add('hidden');
 }
 
-function saveProjectModal() {
+async function saveProjectModal() {
     const title = document.getElementById('modalProjTitle').value.trim();
     if (!title) { alert('Укажите название проекта'); return; }
     const editId = document.getElementById('modalProjId').value;
-    const now = new Date().toISOString().split('T')[0];
+    const desc = document.getElementById('modalProjDesc').value.trim();
+    const group = document.getElementById('modalProjGroup').value;
+    const statusText = document.getElementById('modalProjStatusText').value;
 
     if (editId) {
-        const p = db.projects.find(x => x.id === Number(editId));
+        await supabaseClient.from('projects').update({
+            title, description: desc, group_name: group, status_text: statusText, updated_at: new Date().toISOString()
+        }).eq('id', Number(editId));
+
+        const p = appState.projects.find(x => x.id === Number(editId));
         if (p) {
             p.title = title;
-            p.desc = document.getElementById('modalProjDesc').value.trim();
-            p.group = document.getElementById('modalProjGroup').value;
-            p.statusText = document.getElementById('modalProjStatusText').value;
-            p.updatedAt = now;
+            p.description = desc;
+            p.group_name = group;
+            p.status_text = statusText;
         }
     } else {
-        const newP = {
-            id: Date.now(),
-            title,
-            desc: document.getElementById('modalProjDesc').value.trim(),
-            group: document.getElementById('modalProjGroup').value,
-            statusText: document.getElementById('modalProjStatusText').value,
-            archiveState: 'active',
-            createdAt: now,
-            updatedAt: now,
-            items: [],
-            payments: [],
-            nestings: {}
-        };
-        db.projects.unshift(newP);
-        session.clickedProjectId = newP.id;
+        const { data: newP } = await supabaseClient.from('projects').insert({
+            title, description: desc, group_name: group, status_text: statusText, archive_state: 'active'
+        }).select().single();
+
+        if (newP) {
+            appState.projects.unshift(newP);
+            session.clickedProjectId = newP.id;
+            await loadProjectDetails(newP.id);
+        }
     }
-    syncToCloud();
+
     closeProjectModal();
     renderMainMenuProjects();
 }
 
-function archiveProjectSafe(id) {
-    const p = db.projects.find(x => x.id === id);
+async function archiveProjectSafe(id) {
+    const p = appState.projects.find(x => x.id === id);
     if (!p) return;
 
-    if (p.archiveState !== 'archived') {
-        const fin = calculateProjectFinances(p);
+    if (p.archive_state !== 'archived') {
+        await loadProjectDetails(id);
+        const fin = calculateProjectFinances();
         if (fin.debt > 0) {
             const confirmArch = confirm(`Внимание: по объекту "${p.title}" есть непогашенная задолженность: ${fin.debt.toLocaleString()} ₸!\n\nВы действительно хотите отправить его в архив с долгом?`);
             if (!confirmArch) return;
         }
-        p.archiveState = 'archived';
+        p.archive_state = 'archived';
     } else {
-        p.archiveState = 'active';
+        p.archive_state = 'active';
     }
-    syncToCloud();
+
+    await supabaseClient.from('projects').update({ archive_state: p.archive_state }).eq('id', id);
     renderMainMenuProjects();
 }
 
-function deleteProjectPermanent(id) {
-    if (!confirm('Удалить проект навсегда? Все расчеты и история будут стерты.')) return;
-    db.projects = db.projects.filter(x => x.id !== id);
+async function deleteProjectPermanent(id) {
+    if (!confirm('Удалить проект навсегда из базы? Все расчеты и история будут стерты.')) return;
+    await supabaseClient.from('projects').delete().eq('id', id);
+    appState.projects = appState.projects.filter(x => x.id !== id);
     session.clickedProjectId = null;
-    syncToCloud();
     renderMainMenuProjects();
 }
 
 // ==========================================
 // ВНУТРИ ПРОЕКТА
 // ==========================================
-function openInsideProject(id) {
+async function openInsideProject(id) {
     session.insideProjectId = id;
     session.selectedSpecIds = [];
     document.getElementById('mainMenuScreen').classList.add('hidden');
     document.getElementById('projectScreen').classList.remove('hidden');
 
-    const p = db.projects.find(x => x.id === id);
+    const p = appState.projects.find(x => x.id === id);
     document.getElementById('activeProjTitleHeader').textContent = p ? p.title : 'Проект';
-    document.getElementById('activeProjCutBadge').classList.toggle('hidden', p?.statusText !== 'Воздуховоды отрезаны');
+    document.getElementById('activeProjCutBadge').classList.toggle('hidden', p?.status_text !== 'Воздуховоды отрезаны');
 
+    await loadProjectDetails(id);
     populateFormDropdowns();
     selectCategory('duct');
     selectShape('rect');
@@ -630,11 +639,8 @@ function toggleSummaryAccordion() {
 }
 
 function renderSummarySection() {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    if (!p) return;
-
-    const ducts = (p.items || []).filter(i => i.category === 'duct');
-    const fittings = (p.items || []).filter(i => i.category === 'fitting');
+    const ducts = appState.activeProjectItems.filter(i => i.category === 'duct');
+    const fittings = appState.activeProjectItems.filter(i => i.category === 'fitting');
 
     document.getElementById('sumTotalDucts').textContent = ducts.reduce((s, i) => s + i.qty, 0) + ' шт';
     document.getElementById('sumTotalFittings').textContent = fittings.reduce((s, i) => s + i.qty, 0) + ' шт';
@@ -717,21 +723,21 @@ function groupSummaryFittings(arr) {
 }
 
 // ==========================================
-// ФОРМА ДОБАВЛЕНИЯ И ДИНАМИЧЕСКИЕ ПОЛЯ
+// ФОРМА И ДИНАМИЧЕСКИЕ ПОЛЯ
 // ==========================================
 function populateFormDropdowns() {
     const mSel = document.getElementById('inMetal');
     const tSel = document.getElementById('inThickness');
-    mSel.innerHTML = db.metals.map(m => `<option value="${m}">${m}</option>`).join('');
-    tSel.innerHTML = db.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
+    mSel.innerHTML = appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
+    tSel.innerHTML = appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
 
     const fmSel = document.getElementById('specFilterMetal');
     const ftSel = document.getElementById('specFilterThick');
-    fmSel.innerHTML = '<option value="all">Все</option>' + db.metals.map(m => `<option value="${m}">${m}</option>`).join('');
-    ftSel.innerHTML = '<option value="all">Все</option>' + db.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
+    fmSel.innerHTML = '<option value="all">Все</option>' + appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
+    ftSel.innerHTML = '<option value="all">Все</option>' + appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
 
     const wBox = document.getElementById('workersCheckboxes');
-    wBox.innerHTML = db.users.map(u => `
+    wBox.innerHTML = appState.users.map(u => `
         <label class="bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer">
             <input type="checkbox" name="assignWorker" value="${u.name}" class="rounded text-blue-600">
             <span class="text-slate-300 font-medium">${u.name}</span>
@@ -770,7 +776,7 @@ function selectShape(sh) {
 function updateFittingDropdown() {
     if (session.activeCategory !== 'fitting') return;
     const sel = document.getElementById('fittingTypeSelect');
-    const list = db.fittings[session.activeShape] || [];
+    const list = appState.fittings[session.activeShape] || [];
     sel.innerHTML = list.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
     if (list.length > 0) onFittingTypeChange();
 }
@@ -829,7 +835,7 @@ function renderDynamicInputs() {
     }
 
     const fitId = document.getElementById('fittingTypeSelect').value;
-    const fitDef = (db.fittings[session.activeShape] || []).find(f => f.id === fitId) || { params: ['w', 'h', 'len'] };
+    const fitDef = (appState.fittings[session.activeShape] || []).find(f => f.id === fitId) || { params: ['w', 'h', 'len'] };
     let html = '<div class="space-y-3">';
 
     if (fitDef.params.includes('hood_type')) {
