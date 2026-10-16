@@ -1,41 +1,15 @@
 // ==========================================
-// ИНИЦИАЛИЗАЦИЯ SUPABASE ОНЛАЙН-КЛИЕНТА
+// 100% ОНЛАЙН MAXVENT TOOLS (SUPABASE CLIENT)
 // ==========================================
 const SUPABASE_URL = "https://anwuikxtqesewifvipaw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_7ENnMe3mS3P4dIsNUC3YAQ_ATVta-In";
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Инициализация официального клиента Supabase
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const POPULAR_RECT = [100, 150, 200, 225, 250, 285, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000];
 const POPULAR_DIAM = [100, 125, 140, 150, 160, 180, 200, 225, 250, 280, 300, 315, 355, 400, 450, 500];
 const POPULAR_LEN_SILENCER = [500, 600, 1000, 1250];
-
-const ALL_PARAM_DEFS = [
-    { code: 'deg', label: 'Градус (°)' },
-    { code: 'deg135', label: 'Градус (по умолч. 135°)' },
-    { code: 'hood_type', label: 'Вид зонта (Пристенный/Островной)' },
-    { code: 'w', label: 'Ширина (мм)' },
-    { code: 'h', label: 'Высота (мм)' },
-    { code: 'w1', label: 'Ширина 1 (мм)' },
-    { code: 'h1', label: 'Высота 1 (мм)' },
-    { code: 'w2', label: 'Ширина 2 (мм)' },
-    { code: 'h2', label: 'Высота 2 (мм)' },
-    { code: 'd', label: 'Диаметр Ø (мм)' },
-    { code: 'd1', label: 'Диаметр 1 Ø (мм)' },
-    { code: 'd2', label: 'Диаметр 2 Ø (мм)' },
-    { code: 'd_main', label: 'Диаметр осн. воздуховода Ø' },
-    { code: 'len', label: 'Длина L (мм)' },
-    { code: 'len_silencer', label: 'Длина (500/600/1000/1250)' },
-    { code: 'hood_seat', label: 'Длина посадочного места' },
-    { code: 'offset', label: 'Смещение (мм)' },
-    { code: 'inlets_cnt', label: 'Количество врезок (шт)' },
-    { code: 'tee_rect', label: 'Тройник прямоуг. (3 стороны + галочка)' },
-    { code: 'cross_rect', label: 'Крестовина прямоуг. (4 стороны + галочка)' },
-    { code: 'tee_round', label: 'Тройник круглый (3 диаметра + галочка)' },
-    { code: 'cross_round', label: 'Крестовина круглая (4 диаметра + галочка)' },
-    { code: 'flange1', label: 'Шинка: Сторона 1' },
-    { code: 'flange2', label: 'Шинка: Сторона 1 и Сторона 2' }
-];
 
 const DEFAULT_FITTINGS = {
     rect: [
@@ -76,8 +50,8 @@ const DEFAULT_FITTINGS = {
     ],
     smooth: [
         { id: 's_trans', name: 'Переход', params: ['w1', 'h1', 'd', 'len', 'flange1'], price: 1000 },
-        { id: 's_inlet_r2c', name: 'Врезка прямоуг. на круглый', params: ['w', 'h', 'd_main', 'len'], price: 1000 },
-        { id: 's_inlet_c2r', name: 'Врезка круглый на прямоуг.', params: ['d', 'len'], price: 1000 },
+        { id: 's_inlet_r2c', name: 'Врезка прямоугольный на круглый', params: ['w', 'h', 'd_main', 'len'], price: 1000 },
+        { id: 's_inlet_c2r', name: 'Врезка круглый на прямоугольный', params: ['d', 'len'], price: 1000 },
         { id: 's_tee', name: 'Тройник', params: ['w', 'h', 'd_main', 'flange1'], price: 1000 },
         { id: 's_silencer', name: 'Шумоглушитель', params: ['w', 'h', 'd', 'len_silencer', 'flange1'], price: 1000 },
         { id: 's_hood', name: 'Зонт вытяжной', params: ['w', 'h', 'd', 'len'], price: 1000 },
@@ -85,20 +59,7 @@ const DEFAULT_FITTINGS = {
     ]
 };
 
-// Оперативная память клиентской сессии
-let appState = {
-    users: [],
-    metals: ['Оц.', 'Нерж.', 'Краш.'],
-    thicknesses: [0.45, 0.5, 0.6, 0.7, 0.8, 1.0],
-    groups: ['Бригада №1', 'Бригада №2', 'Цех (Самовывоз)'],
-    fittings: JSON.parse(JSON.stringify(DEFAULT_FITTINGS)),
-    projects: [],
-    activeProjectItems: [],
-    activeProjectPayments: [],
-    activeProjectNestings: {},
-    standaloneFlange: { rows: [], scraps: [] }
-};
-
+// Сессия и оперативная память текущего экрана
 let session = {
     user: null,
     devMode: false,
@@ -112,64 +73,45 @@ let session = {
     accordionState: {}
 };
 
+// Текущие данные проекта
+let appConfig = {
+    metals: ['Оц.', 'Нерж.', 'Краш.'],
+    thicknesses: [0.45, 0.5, 0.6, 0.7, 0.8, 1.0],
+    groups: ['Бригада №1', 'Бригада №2', 'Цех (Самовывоз)'],
+    fittings: DEFAULT_FITTINGS
+};
+
+let currentProjects = [];
+let currentProjectItems = [];
+let currentProjectPayments = [];
+let currentProjectNestings = {};
+let standaloneFlange = { rows: [], scraps: [] };
+
 // ==========================================
-// ПРЯМЫЕ ОНЛАЙН-ЗАПРОСЫ В SUPABASE
+// ИНИЦИАЛИЗАЦИЯ
 // ==========================================
-async function loadInitialData() {
-    const ind = document.getElementById('cloudIndicator');
-    const authSt = document.getElementById('cloudStatusAuth');
-    if (ind) { ind.textContent = '● Загрузка из базы...'; ind.className = 'text-[10px] text-amber-400'; }
-
-    try {
-        // 1. Загрузка справочников
-        const { data: setts } = await supabaseClient.from('app_settings').select('*').eq('id', 'global_config').single();
-        if (setts) {
-            if (Array.isArray(setts.metals) && setts.metals.length) appState.metals = setts.metals;
-            if (Array.isArray(setts.thicknesses) && setts.thicknesses.length) appState.thicknesses = setts.thicknesses;
-            if (Array.isArray(setts.groups) && setts.groups.length) appState.groups = setts.groups;
-            if (setts.fittings && setts.fittings.rect) appState.fittings = setts.fittings;
-        }
-
-        // 2. Загрузка пользователей
-        const { data: uList } = await supabaseClient.from('users').select('*').order('id', { ascending: true });
-        if (uList) appState.users = uList;
-
-        // 3. Загрузка проектов
-        const { data: pList } = await supabaseClient.from('projects').select('*').order('id', { ascending: false });
-        if (pList) appState.projects = pList;
-
-        if (ind) { ind.textContent = '● Онлайн (Supabase)'; ind.className = 'text-[10px] text-emerald-400'; }
-        if (authSt) authSt.textContent = 'Онлайн-база: подключено ✓';
-
-        checkAuthState();
-        refreshCurrentScreen();
-    } catch (err) {
-        console.error('Supabase load error:', err);
-        if (ind) { ind.textContent = '● Ошибка связи с базой'; ind.className = 'text-[10px] text-rose-400'; }
-        if (authSt) authSt.textContent = 'Ошибка подключения к базе';
+async function initApp() {
+    const savedUser = localStorage.getItem('mv_online_user');
+    if (savedUser) {
+        try {
+            session.user = JSON.parse(savedUser);
+            session.devMode = (session.user.role === 'developer');
+        } catch(e){}
     }
+    await loadGlobalConfig();
+    checkAuthState();
 }
 
-async function loadProjectDetails(projectId) {
+async function loadGlobalConfig() {
     try {
-        const [itRes, payRes, nestRes] = await Promise.all([
-            supabaseClient.from('items').select('*').eq('project_id', projectId).order('id', { ascending: true }),
-            supabaseClient.from('payments').select('*').eq('project_id', projectId).order('id', { ascending: true }),
-            supabaseClient.from('nestings').select('*').eq('project_id', projectId)
-        ]);
-
-        appState.activeProjectItems = (itRes.data || []).map(i => ({
-            ...i,
-            ...i.dimensions
-        }));
-        appState.activeProjectPayments = payRes.data || [];
-
-        appState.activeProjectNestings = {};
-        (nestRes.data || []).forEach(n => {
-            appState.activeProjectNestings[n.metal_key] = { sheets: n.sheets };
-        });
+        const { data } = await sb.from('app_settings').select('*').eq('id', 'global_config').maybeSingle();
+        if (data) {
+            if (data.metals) appConfig.metals = data.metals;
+            if (data.thicknesses) appConfig.thicknesses = data.thicknesses;
+            if (data.groups) appConfig.groups = data.groups;
+        }
     } catch (e) {
-        console.error('Error loading project details:', e);
+        console.warn('Config load:', e);
     }
 }
 
@@ -182,8 +124,7 @@ function setAuthMode(m) {
     document.getElementById('authTabLogin').className = m === 'login' ? 'flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-blue-400 border-b-2 border-blue-500' : 'flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 border-b-2 border-transparent';
     document.getElementById('authTabRegister').className = m === 'register' ? 'flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-blue-400 border-b-2 border-blue-500' : 'flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 border-b-2 border-transparent';
     document.getElementById('regNameWrap').classList.toggle('hidden', m !== 'register');
-    const hasDev = appState.users.some(u => u.role === 'developer');
-    document.getElementById('regRoleWrap').classList.toggle('hidden', m !== 'register' || hasDev);
+    document.getElementById('regRoleWrap').classList.toggle('hidden', m !== 'register');
     document.getElementById('authSubmitBtn').textContent = m === 'login' ? 'Войти' : 'Зарегистрироваться';
     document.getElementById('authError').classList.add('hidden');
 }
@@ -195,67 +136,43 @@ async function handleAuthSubmit(e) {
     const err = document.getElementById('authError');
 
     if (authMode === 'login') {
-        const u = appState.users.find(x => x.login.toLowerCase() === login.toLowerCase() && x.pass === pass);
-        if (!u) {
-            err.textContent = 'Неверный логин или пароль. Проверьте данные или создайте аккаунт.';
+        const { data, error } = await sb.from('users').select('*').eq('login', login).eq('pass', pass).maybeSingle();
+        if (error || !data) {
+            err.textContent = 'Неверный логин или пароль';
             err.classList.remove('hidden');
             return;
         }
-        session.user = u;
-        session.devMode = (u.role === 'developer');
-        localStorage.setItem('mv_online_session', JSON.stringify({ userId: u.id, devMode: session.devMode }));
+        session.user = data;
+        session.devMode = (data.role === 'developer');
     } else {
-        if (appState.users.some(x => x.login.toLowerCase() === login.toLowerCase())) {
-            err.textContent = 'Пользователь с таким логином уже существует в базе';
-            err.classList.remove('hidden');
-            return;
-        }
         const name = document.getElementById('authName').value.trim() || login;
-        const hasDev = appState.users.some(u => u.role === 'developer');
-        const role = !hasDev ? document.getElementById('authRoleSelect').value : 'worker';
+        const role = document.getElementById('authRoleSelect').value;
 
-        const { data: newU, error } = await supabaseClient.from('users').insert({
-            login, pass, name, role
-        }).select().single();
-
-        if (error) {
-            err.textContent = 'Ошибка при создании аккаунта в базе: ' + error.message;
+        const { data: existing } = await sb.from('users').select('id').eq('login', login).maybeSingle();
+        if (existing) {
+            err.textContent = 'Пользователь с таким логином уже существует';
             err.classList.remove('hidden');
             return;
         }
 
-        appState.users.push(newU);
-        session.user = newU;
+        const { data: newUser, error } = await sb.from('users').insert([{ login, pass, name, role }]).select().single();
+        if (error) {
+            err.textContent = 'Ошибка создания аккаунта: ' + error.message;
+            err.classList.remove('hidden');
+            return;
+        }
+        session.user = newUser;
         session.devMode = (role === 'developer');
-        localStorage.setItem('mv_online_session', JSON.stringify({ userId: newU.id, devMode: session.devMode }));
     }
 
+    localStorage.setItem('mv_online_user', JSON.stringify(session.user));
     checkAuthState();
 }
 
 function checkAuthState() {
     const screen = document.getElementById('authScreen');
     if (!session.user) {
-        // Проверка сохраненной сессии
-        const saved = localStorage.getItem('mv_online_session');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                const found = appState.users.find(u => u.id === parsed.userId);
-                if (found) {
-                    session.user = found;
-                    session.devMode = parsed.devMode;
-                }
-            } catch(e){}
-        }
-    }
-
-    if (!session.user) {
         screen.classList.remove('hidden');
-        if (appState.users.length === 0) {
-            setAuthMode('register');
-            document.getElementById('authSubtitle').textContent = 'Создайте первый аккаунт администратора';
-        }
     } else {
         screen.classList.add('hidden');
         updateHeaderUI();
@@ -265,21 +182,21 @@ function checkAuthState() {
 
 function logout() {
     session.user = null;
-    localStorage.removeItem('mv_online_session');
+    localStorage.removeItem('mv_online_user');
     document.getElementById('profileDropdown').classList.add('hidden');
     checkAuthState();
 }
 
 function isDev() {
-    return session.user?.role === 'developer' && session.devMode;
+    return (session.user?.role === 'developer' && session.devMode);
 }
 
 function toggleDevMode() {
     if (session.user?.role !== 'developer') return;
     session.devMode = !session.devMode;
-    localStorage.setItem('mv_online_session', JSON.stringify({ userId: session.user.id, devMode: session.devMode }));
     updateHeaderUI();
-    refreshCurrentScreen();
+    renderSpecification();
+    renderProjectFinance();
 }
 
 function updateHeaderUI() {
@@ -311,36 +228,15 @@ function toggleProfileMenu() {
     document.getElementById('profileDropdown').classList.toggle('hidden');
 }
 
-async function openProfileEditModal() {
-    document.getElementById('profileDropdown').classList.add('hidden');
-    const newName = prompt('Введите ваше новое имя:', session.user.name);
-    if (newName && newName.trim()) {
-        const trimmed = newName.trim();
-        session.user.name = trimmed;
-        await supabaseClient.from('users').update({ name: trimmed }).eq('id', session.user.id);
-        const u = appState.users.find(x => x.id === session.user.id);
-        if (u) u.name = trimmed;
-        updateHeaderUI();
-    }
-}
-
-function refreshCurrentScreen() {
-    if (!document.getElementById('projectScreen').classList.contains('hidden')) {
-        renderProjectInside();
-    } else {
-        renderMainMenuProjects();
-    }
-}
-
 // ==========================================
 // ГЛАВНОЕ МЕНЮ И ПРОЕКТЫ
 // ==========================================
-function goToMainMenu() {
+async function goToMainMenu() {
     document.getElementById('profileDropdown').classList.add('hidden');
     document.getElementById('projectScreen').classList.add('hidden');
     document.getElementById('mainMenuScreen').classList.remove('hidden');
     session.clickedProjectId = null;
-    renderMainMenuProjects();
+    await fetchProjectsList();
 }
 
 function setProjectFilter(f) {
@@ -348,15 +244,19 @@ function setProjectFilter(f) {
     session.clickedProjectId = null;
     document.getElementById('btnProjActive').className = f === 'active' ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white' : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-400';
     document.getElementById('btnProjArchived').className = f === 'archived' ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white' : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-400';
-    renderMainMenuProjects();
+    renderProjectsListUI();
 }
 
-function toggleProjectsSection() {
-    document.getElementById('projectsMainGrid').classList.toggle('hidden');
+async function fetchProjectsList() {
+    const { data, error } = await sb.from('projects').select('*').order('id', { ascending: false });
+    if (!error && data) {
+        currentProjects = data;
+    }
+    renderProjectsListUI();
 }
 
-function renderMainMenuProjects() {
-    const list = appState.projects.filter(p => (p.archive_state || 'active') === session.projectFilter);
+function renderProjectsListUI() {
+    const list = currentProjects.filter(p => (p.archive_state || 'active') === session.projectFilter);
     document.getElementById('projectsBadgeCount').textContent = list.length;
 
     const container = document.getElementById('projectsButtonsContainer');
@@ -373,12 +273,9 @@ function renderMainMenuProjects() {
         const isSelected = p.id === session.clickedProjectId;
         const btn = document.createElement('button');
         btn.className = `w-full text-left p-4 rounded-xl border transition flex items-center justify-between ${isSelected ? 'bg-blue-600/15 border-blue-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-200 hover:border-slate-700'}`;
-        btn.onclick = async () => {
+        btn.onclick = () => {
             session.clickedProjectId = (session.clickedProjectId === p.id) ? null : p.id;
-            if (session.clickedProjectId) {
-                await loadProjectDetails(p.id);
-            }
-            renderMainMenuProjects();
+            renderProjectsListUI();
         };
         btn.innerHTML = `
             <div class="truncate pr-2">
@@ -393,36 +290,23 @@ function renderMainMenuProjects() {
     if (!session.clickedProjectId) {
         preview.classList.add('hidden');
     } else {
-        renderProjectPreviewCard(session.clickedProjectId);
+        renderProjectPreviewCardOnline(session.clickedProjectId);
     }
 }
 
-function renderProjectPreviewCard(projId) {
+async function renderProjectPreviewCardOnline(projId) {
     const preview = document.getElementById('projectPreviewCard');
-    const p = appState.projects.find(x => x.id === projId);
+    const p = currentProjects.find(x => x.id === projId);
     if (!p) { preview.classList.add('hidden'); return; }
     preview.classList.remove('hidden');
 
-    const ducts = appState.activeProjectItems.filter(i => i.category === 'duct');
-    const fittings = appState.activeProjectItems.filter(i => i.category === 'fitting');
+    const { data: items } = await sb.from('items').select('*').eq('project_id', projId);
+    const itemList = items || [];
+
+    const ducts = itemList.filter(i => i.category === 'duct');
+    const fittings = itemList.filter(i => i.category === 'fitting');
     const totalDuctQty = ducts.reduce((s, i) => s + i.qty, 0);
     const totalFitQty = fittings.reduce((s, i) => s + i.qty, 0);
-
-    let treeHtml = '';
-    const dRect = ducts.filter(i => i.shape === 'rect');
-    if (dRect.length) treeHtml += `<div class="font-bold text-blue-400 mt-2">Воздуховоды прямоугольные</div>` + formatPreviewItems(dRect, false);
-
-    const dRound = ducts.filter(i => i.shape === 'round');
-    if (dRound.length) treeHtml += `<div class="font-bold text-emerald-400 mt-2">Воздуховоды круглые</div>` + formatPreviewItems(dRound, false);
-
-    const fRect = fittings.filter(i => i.shape === 'rect');
-    if (fRect.length) treeHtml += `<div class="font-bold text-amber-400 mt-2">Изделия прямоугольные</div>` + formatPreviewItems(fRect, true);
-
-    const fRound = fittings.filter(i => i.shape === 'round');
-    if (fRound.length) treeHtml += `<div class="font-bold text-purple-400 mt-2">Изделия круглые</div>` + formatPreviewItems(fRound, true);
-
-    const fSmooth = fittings.filter(i => i.shape === 'smooth');
-    if (fSmooth.length) treeHtml += `<div class="font-bold text-cyan-400 mt-2">Изделия плавные</div>` + formatPreviewItems(fSmooth, true);
 
     preview.innerHTML = `
         <div class="flex flex-wrap justify-between items-start gap-2 border-b border-slate-800 pb-3">
@@ -431,7 +315,7 @@ function renderProjectPreviewCard(projId) {
                 <p class="text-xs text-slate-400 mt-0.5">${p.description || 'Описание не указано'}</p>
             </div>
             <div class="text-right">
-                <span class="text-xs px-2.5 py-1 rounded-lg font-bold ${p.status_text === 'Воздуховоды отрезаны' ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-blue-400 border border-slate-700'}">${p.status_text || 'В работе'}</span>
+                <span class="text-xs px-2.5 py-1 rounded-lg font-bold bg-slate-800 text-blue-400 border border-slate-700">${p.status_text || 'В работе'}</span>
                 <div class="text-[11px] text-slate-400 mt-1">${p.group_name || 'Без бригады'}</div>
             </div>
         </div>
@@ -443,11 +327,6 @@ function renderProjectPreviewCard(projId) {
             <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
                 <span class="text-slate-400">Изделия:</span> <strong class="text-emerald-400 mono">${totalFitQty} шт</strong>
             </div>
-        </div>
-
-        <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1 bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs">
-            <div class="text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-1">Состав проекта:</div>
-            ${treeHtml || '<div class="text-slate-500">В проекте пока нет позиций</div>'}
         </div>
 
         <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800">
@@ -465,49 +344,19 @@ function renderProjectPreviewCard(projId) {
     `;
 }
 
-function formatPreviewItems(items, isFitting) {
-    let out = '';
-    const byGroup = {};
-    items.forEach(it => {
-        const subKey = isFitting ? it.title : 'Прямые участки';
-        const metalKey = `${it.metal} ${it.thickness} мм`;
-        if (!byGroup[subKey]) byGroup[subKey] = {};
-        if (!byGroup[subKey][metalKey]) byGroup[subKey][metalKey] = [];
-        byGroup[subKey][metalKey].push(it);
-    });
-
-    for (let [subName, metals] of Object.entries(byGroup)) {
-        if (isFitting) out += `<div class="text-[11px] font-semibold text-slate-300 mt-1 pl-1">${subName}</div>`;
-        for (let [mKey, arr] of Object.entries(metals)) {
-            out += `<div class="text-[10px] font-bold text-slate-400 pl-2 mt-0.5">${mKey}</div>`;
-            arr.forEach(it => {
-                let dimText = '';
-                if (it.shape === 'rect') dimText = `${it.w}х${it.h} | L=${it.l || 1250}`;
-                else if (it.shape === 'round') dimText = `Ø${it.d} | L=${it.l || 1250}`;
-                else dimText = `${it.w1 || it.w}х${it.h1 || it.h} → Ø${it.d}`;
-                out += `<div class="pl-4 text-[11px] text-slate-200 mono">${dimText} | <strong class="text-blue-300">${it.qty} шт</strong></div>`;
-            });
-        }
-    }
-    return out;
-}
-
-// ==========================================
-// СОЗДАНИЕ И РЕДАКТИРОВАНИЕ ПРОЕКТОВ ОНЛАЙН
-// ==========================================
 function openProjectModal(editId = null) {
     document.getElementById('modalProjId').value = editId || '';
     document.getElementById('projectModalHeader').textContent = editId ? 'Редактировать проект' : 'Создать проект';
-
+    
     const groupSel = document.getElementById('modalProjGroup');
-    groupSel.innerHTML = appState.groups.map(g => `<option value="${g}">${g}</option>`).join('');
+    groupSel.innerHTML = appConfig.groups.map(g => `<option value="${g}">${g}</option>`).join('');
 
     if (editId) {
-        const p = appState.projects.find(x => x.id === editId);
+        const p = currentProjects.find(x => x.id === editId);
         if (p) {
             document.getElementById('modalProjTitle').value = p.title;
             document.getElementById('modalProjDesc').value = p.description || '';
-            document.getElementById('modalProjGroup').value = p.group_name || appState.groups[0];
+            document.getElementById('modalProjGroup').value = p.group_name || appConfig.groups[0];
             document.getElementById('modalProjStatusText').value = p.status_text || 'В работе';
         }
     } else {
@@ -531,59 +380,33 @@ async function saveProjectModal() {
     const statusText = document.getElementById('modalProjStatusText').value;
 
     if (editId) {
-        await supabaseClient.from('projects').update({
-            title, description: desc, group_name: group, status_text: statusText, updated_at: new Date().toISOString()
-        }).eq('id', Number(editId));
-
-        const p = appState.projects.find(x => x.id === Number(editId));
-        if (p) {
-            p.title = title;
-            p.description = desc;
-            p.group_name = group;
-            p.status_text = statusText;
-        }
+        await sb.from('projects').update({
+            title, description: desc, group_name: group, status_text: statusText, updated_at: new Date()
+        }).eq('id', editId);
     } else {
-        const { data: newP } = await supabaseClient.from('projects').insert({
-            title, description: desc, group_name: group, status_text: statusText, archive_state: 'active'
-        }).select().single();
-
-        if (newP) {
-            appState.projects.unshift(newP);
-            session.clickedProjectId = newP.id;
-            await loadProjectDetails(newP.id);
-        }
+        const { data } = await sb.from('projects').insert([{
+            title, description: desc, group_name: group, status_text: statusText
+        }]).select().single();
+        if (data) session.clickedProjectId = data.id;
     }
 
     closeProjectModal();
-    renderMainMenuProjects();
+    await fetchProjectsList();
 }
 
 async function archiveProjectSafe(id) {
-    const p = appState.projects.find(x => x.id === id);
+    const p = currentProjects.find(x => x.id === id);
     if (!p) return;
-
-    if (p.archive_state !== 'archived') {
-        await loadProjectDetails(id);
-        const fin = calculateProjectFinances();
-        if (fin.debt > 0) {
-            const confirmArch = confirm(`Внимание: по объекту "${p.title}" есть непогашенная задолженность: ${fin.debt.toLocaleString()} ₸!\n\nВы действительно хотите отправить его в архив с долгом?`);
-            if (!confirmArch) return;
-        }
-        p.archive_state = 'archived';
-    } else {
-        p.archive_state = 'active';
-    }
-
-    await supabaseClient.from('projects').update({ archive_state: p.archive_state }).eq('id', id);
-    renderMainMenuProjects();
+    const newState = p.archive_state === 'archived' ? 'active' : 'archived';
+    await sb.from('projects').update({ archive_state: newState }).eq('id', id);
+    await fetchProjectsList();
 }
 
 async function deleteProjectPermanent(id) {
-    if (!confirm('Удалить проект навсегда из базы? Все расчеты и история будут стерты.')) return;
-    await supabaseClient.from('projects').delete().eq('id', id);
-    appState.projects = appState.projects.filter(x => x.id !== id);
+    if (!confirm('Удалить проект навсегда из базы?')) return;
+    await sb.from('projects').delete().eq('id', id);
     session.clickedProjectId = null;
-    renderMainMenuProjects();
+    await fetchProjectsList();
 }
 
 // ==========================================
@@ -595,15 +418,25 @@ async function openInsideProject(id) {
     document.getElementById('mainMenuScreen').classList.add('hidden');
     document.getElementById('projectScreen').classList.remove('hidden');
 
-    const p = appState.projects.find(x => x.id === id);
+    const p = currentProjects.find(x => x.id === id);
     document.getElementById('activeProjTitleHeader').textContent = p ? p.title : 'Проект';
     document.getElementById('activeProjCutBadge').classList.toggle('hidden', p?.status_text !== 'Воздуховоды отрезаны');
 
-    await loadProjectDetails(id);
     populateFormDropdowns();
     selectCategory('duct');
     selectShape('rect');
     switchInnerTab('items');
+
+    await loadProjectDataOnline(id);
+}
+
+async function loadProjectDataOnline(projId) {
+    const { data: items } = await sb.from('items').select('*').eq('project_id', projId).order('id');
+    currentProjectItems = items || [];
+
+    const { data: payments } = await sb.from('payments').select('*').eq('project_id', projId).order('id');
+    currentProjectPayments = payments || [];
+
     renderProjectInside();
 }
 
@@ -639,8 +472,8 @@ function toggleSummaryAccordion() {
 }
 
 function renderSummarySection() {
-    const ducts = appState.activeProjectItems.filter(i => i.category === 'duct');
-    const fittings = appState.activeProjectItems.filter(i => i.category === 'fitting');
+    const ducts = currentProjectItems.filter(i => i.category === 'duct');
+    const fittings = currentProjectItems.filter(i => i.category === 'fitting');
 
     document.getElementById('sumTotalDucts').textContent = ducts.reduce((s, i) => s + i.qty, 0) + ' шт';
     document.getElementById('sumTotalFittings').textContent = fittings.reduce((s, i) => s + i.qty, 0) + ' шт';
@@ -673,13 +506,12 @@ function renderSummarySection() {
 
     const fRect = fittings.filter(i => i.shape === 'rect');
     if (fRect.length) {
-        fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-1">Прямоугольные изделия:</div>';
+        dHtml += '<div class="text-[11px] font-bold text-slate-300 mt-1">Прямоугольные изделия:</div>';
         const grouped = groupSummaryFittings(fRect);
         for (let [m, q] of Object.entries(grouped)) {
             fHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${q} шт</strong></div>`;
         }
     }
-
     const fRound = fittings.filter(i => i.shape === 'round');
     if (fRound.length) {
         fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-2">Круглые изделия:</div>';
@@ -688,7 +520,6 @@ function renderSummarySection() {
             fHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${q} шт</strong></div>`;
         }
     }
-
     const fSmooth = fittings.filter(i => i.shape === 'smooth');
     if (fSmooth.length) {
         fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-2">Плавные изделия:</div>';
@@ -707,8 +538,9 @@ function groupSummaryDucts(arr) {
         const k = `${it.metal} ${it.thickness} мм`;
         if (!res[k]) res[k] = { qty: 0, area: 0 };
         res[k].qty += it.qty;
-        const unfold = it.shape === 'rect' ? (2 * (it.w + it.h) + 41) : Math.round(Math.PI * it.d + 22);
-        res[k].area += (unfold * (it.l || 1250) * it.qty) / 1e6;
+        const d = it.dimensions || {};
+        const unfold = it.shape === 'rect' ? (2 * ((d.w || 400) + (d.h || 300)) + 41) : Math.round(Math.PI * (d.d || 200) + 22);
+        res[k].area += (unfold * (d.l || 1250) * it.qty) / 1e6;
     });
     return res;
 }
@@ -723,26 +555,18 @@ function groupSummaryFittings(arr) {
 }
 
 // ==========================================
-// ФОРМА И ДИНАМИЧЕСКИЕ ПОЛЯ
+// ФОРМА ДОБАВЛЕНИЯ В СПЕЦИФИКАЦИЮ
 // ==========================================
 function populateFormDropdowns() {
     const mSel = document.getElementById('inMetal');
     const tSel = document.getElementById('inThickness');
-    mSel.innerHTML = appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
-    tSel.innerHTML = appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
+    mSel.innerHTML = appConfig.metals.map(m => `<option value="${m}">${m}</option>`).join('');
+    tSel.innerHTML = appConfig.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
 
     const fmSel = document.getElementById('specFilterMetal');
     const ftSel = document.getElementById('specFilterThick');
-    fmSel.innerHTML = '<option value="all">Все</option>' + appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
-    ftSel.innerHTML = '<option value="all">Все</option>' + appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
-
-    const wBox = document.getElementById('workersCheckboxes');
-    wBox.innerHTML = appState.users.map(u => `
-        <label class="bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" name="assignWorker" value="${u.name}" class="rounded text-blue-600">
-            <span class="text-slate-300 font-medium">${u.name}</span>
-        </label>
-    `).join('');
+    fmSel.innerHTML = '<option value="all">Все</option>' + appConfig.metals.map(m => `<option value="${m}">${m}</option>`).join('');
+    ftSel.innerHTML = '<option value="all">Все</option>' + appConfig.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
 }
 
 function selectCategory(cat) {
@@ -776,9 +600,9 @@ function selectShape(sh) {
 function updateFittingDropdown() {
     if (session.activeCategory !== 'fitting') return;
     const sel = document.getElementById('fittingTypeSelect');
-    const list = appState.fittings[session.activeShape] || [];
+    const list = appConfig.fittings[session.activeShape] || [];
     sel.innerHTML = list.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
-    if (list.length > 0) onFittingTypeChange();
+    renderDynamicInputs();
 }
 
 function onFittingTypeChange() {
@@ -835,7 +659,7 @@ function renderDynamicInputs() {
     }
 
     const fitId = document.getElementById('fittingTypeSelect').value;
-    const fitDef = (appState.fittings[session.activeShape] || []).find(f => f.id === fitId) || { params: ['w', 'h', 'len'] };
+    const fitDef = (appConfig.fittings[session.activeShape] || []).find(f => f.id === fitId) || { params: ['w', 'h', 'len'] };
     let html = '<div class="space-y-3">';
 
     if (fitDef.params.includes('hood_type')) {
@@ -851,8 +675,6 @@ function renderDynamicInputs() {
     }
 
     if (fitDef.params.includes('deg')) html += `<div><label class="block text-xs text-slate-400 mb-1">Градус (°)</label><input type="number" id="f_deg" value="90" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
-    if (fitDef.params.includes('deg135')) html += `<div><label class="block text-xs text-slate-400 mb-1">Градус (°)</label><input type="number" id="f_deg" value="135" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
-
     if (fitDef.params.includes('w')) html += `<div><label class="block text-xs text-slate-400 mb-1">Ширина (мм)</label><input type="number" id="f_w" value="400" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_w', POPULAR_RECT)}</div>`;
     if (fitDef.params.includes('h')) html += `<div><label class="block text-xs text-slate-400 mb-1">Высота (мм)</label><input type="number" id="f_h" value="300" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_h', POPULAR_RECT)}</div>`;
 
@@ -864,59 +686,12 @@ function renderDynamicInputs() {
     if (fitDef.params.includes('d')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр Ø (мм)</label><input type="number" id="f_d" value="200" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d', POPULAR_DIAM)}</div>`;
     if (fitDef.params.includes('d1')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр 1 Ø (мм)</label><input type="number" id="f_d1" value="250" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d1', POPULAR_DIAM)}</div>`;
     if (fitDef.params.includes('d2')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр 2 Ø (мм)</label><input type="number" id="f_d2" value="200" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d2', POPULAR_DIAM)}</div>`;
-    if (fitDef.params.includes('d_main')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр основного воздуховода Ø (мм)</label><input type="number" id="f_d_main" value="315" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d_main', POPULAR_DIAM)}</div>`;
+    if (fitDef.params.includes('d_main')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр магистрали Ø (мм)</label><input type="number" id="f_d_main" value="315" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d_main', POPULAR_DIAM)}</div>`;
 
     if (fitDef.params.includes('len')) html += `<div><label class="block text-xs text-slate-400 mb-1">Длина L (мм)</label><input type="number" id="f_len" value="300" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
-    if (fitDef.params.includes('len_silencer')) html += `<div><label class="block text-xs text-slate-400 mb-1">Длина L (мм)</label><input type="number" id="f_len" value="1000" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_len', POPULAR_LEN_SILENCER)}</div>`;
-    if (fitDef.params.includes('hood_seat')) html += `<div><label class="block text-xs text-slate-400 mb-1">Длина посадочного места (мм)</label><input type="number" id="f_hood_seat" value="100" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
+    if (fitDef.params.includes('hood_seat')) html += `<div><label class="block text-xs text-slate-400 mb-1">Посадочное место (мм)</label><input type="number" id="f_hood_seat" value="100" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
     if (fitDef.params.includes('offset')) html += `<div><label class="block text-xs text-slate-400 mb-1">Смещение (мм)</label><input type="number" id="f_offset" value="100" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
-    if (fitDef.params.includes('inlets_cnt')) html += `<div><label class="block text-xs text-slate-400 mb-1">Количество врезок (шт)</label><input type="number" id="f_inlets_cnt" value="2" min="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
-
-    if (fitDef.params.includes('tee_rect')) {
-        html += `
-            <div class="space-y-2 bg-slate-900 p-3 rounded-xl border border-slate-800">
-                <label class="flex items-center gap-2 cursor-pointer text-xs"><input type="checkbox" id="f_tee_same" onchange="toggleSameCheck('tee_rect', this.checked)" class="rounded text-blue-600"> <span>Все стороны одинакового размера</span></label>
-                <div><label class="block text-[11px] text-slate-400">Сторона 1 (А1×В1)</label><input type="text" id="f_ts1" value="400x300" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_ts2"><label class="block text-[11px] text-slate-400">Сторона 2 (А2×В2)</label><input type="text" id="f_ts2" value="300x300" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_ts3"><label class="block text-[11px] text-slate-400">Сторона 3 (А3×В3)</label><input type="text" id="f_ts3" value="400x300" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-            </div>
-        `;
-    }
-
-    if (fitDef.params.includes('cross_rect')) {
-        html += `
-            <div class="space-y-2 bg-slate-900 p-3 rounded-xl border border-slate-800">
-                <label class="flex items-center gap-2 cursor-pointer text-xs"><input type="checkbox" id="f_cross_same" onchange="toggleSameCheck('cross_rect', this.checked)" class="rounded text-blue-600"> <span>Все 4 стороны одинакового размера</span></label>
-                <div><label class="block text-[11px] text-slate-400">Сторона 1 (А1×В1)</label><input type="text" id="f_cs1" value="400x300" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cs2"><label class="block text-[11px] text-slate-400">Сторона 2 (А2×В2)</label><input type="text" id="f_cs2" value="400x300" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cs3"><label class="block text-[11px] text-slate-400">Сторона 3 (А3×В3)</label><input type="text" id="f_cs3" value="400x300" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cs4"><label class="block text-[11px] text-slate-400">Сторона 4 (А4×В4)</label><input type="text" id="f_cs4" value="400x300" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-            </div>
-        `;
-    }
-
-    if (fitDef.params.includes('tee_round')) {
-        html += `
-            <div class="space-y-2 bg-slate-900 p-3 rounded-xl border border-slate-800">
-                <label class="flex items-center gap-2 cursor-pointer text-xs"><input type="checkbox" id="f_tee_r_same" onchange="toggleSameCheck('tee_round', this.checked)" class="rounded text-blue-600"> <span>Все диаметры одинаковые</span></label>
-                <div><label class="block text-[11px] text-slate-400">Ø1 (мм)</label><input type="number" id="f_tr1" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_tr2"><label class="block text-[11px] text-slate-400">Ø2 (мм)</label><input type="number" id="f_tr2" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_tr3"><label class="block text-[11px] text-slate-400">Ø3 (мм)</label><input type="number" id="f_tr3" value="250" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-            </div>
-        `;
-    }
-
-    if (fitDef.params.includes('cross_round')) {
-        html += `
-            <div class="space-y-2 bg-slate-900 p-3 rounded-xl border border-slate-800">
-                <label class="flex items-center gap-2 cursor-pointer text-xs"><input type="checkbox" id="f_cross_r_same" onchange="toggleSameCheck('cross_round', this.checked)" class="rounded text-blue-600"> <span>Все 4 диаметра одинаковые</span></label>
-                <div><label class="block text-[11px] text-slate-400">Ø1 (мм)</label><input type="number" id="f_cr1" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cr2"><label class="block text-[11px] text-slate-400">Ø2 (мм)</label><input type="number" id="f_cr2" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cr3"><label class="block text-[11px] text-slate-400">Ø3 (мм)</label><input type="number" id="f_cr3" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cr4"><label class="block text-[11px] text-slate-400">Ø4 (мм)</label><input type="number" id="f_cr4" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-            </div>
-        `;
-    }
+    if (fitDef.params.includes('inlets_cnt')) html += `<div><label class="block text-xs text-slate-400 mb-1">Кол-во врезок (шт)</label><input type="number" id="f_inlets_cnt" value="2" min="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
 
     if (fitDef.params.includes('flange1') || fitDef.params.includes('flange2')) {
         html += `
@@ -942,31 +717,12 @@ function renderChipScroller(targetId, arr) {
     `;
 }
 
-function toggleSameCheck(type, isChecked) {
-    if (type === 'tee_rect') {
-        document.getElementById('wrap_ts2').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_ts3').style.display = isChecked ? 'none' : 'block';
-    } else if (type === 'cross_rect') {
-        document.getElementById('wrap_cs2').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_cs3').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_cs4').style.display = isChecked ? 'none' : 'block';
-    } else if (type === 'tee_round') {
-        document.getElementById('wrap_tr2').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_tr3').style.display = isChecked ? 'none' : 'block';
-    } else if (type === 'cross_round') {
-        document.getElementById('wrap_cr2').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_cr3').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_cr4').style.display = isChecked ? 'none' : 'block';
-    }
-}
-
 // ==========================================
-// СОХРАНЕНИЕ ИЗДЕЛИЯ С АВТОСУММИРОВАНИЕМ
+// СОХРАНЕНИЕ В БАЗУ ДАННЫХ SUPABASE (INSERT / UPDATE)
 // ==========================================
-function saveProjectItem(e) {
+async function saveProjectItem(e) {
     e.preventDefault();
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    if (!p) return;
+    if (!session.insideProjectId) return;
 
     const editId = document.getElementById('editItemId').value;
     const metal = document.getElementById('inMetal').value;
@@ -974,99 +730,80 @@ function saveProjectItem(e) {
     const qty = Number(document.getElementById('inQty').value) || 1;
     const price = Number(document.getElementById('inPrice').value) || 1000;
 
-    const workers = Array.from(document.querySelectorAll('input[name="assignWorker"]:checked')).map(cb => cb.value);
-
-    let item = {
-        id: editId ? Number(editId) : Date.now(),
-        category: session.activeCategory,
-        shape: session.activeShape,
-        metal,
-        thickness,
-        qty,
-        price,
-        workers
-    };
+    const dimensions = {};
+    let itemTitle = 'Изделие';
 
     if (session.activeCategory === 'duct') {
-        item.title = session.activeShape === 'rect' ? 'Воздуховод прямой' : 'Воздуховод круглый';
-        item.l = Number(document.getElementById('f_l')?.value || 1250);
+        itemTitle = session.activeShape === 'rect' ? 'Воздуховод прямой' : 'Воздуховод круглый';
+        dimensions.l = Number(document.getElementById('f_l')?.value || 1250);
         if (session.activeShape === 'rect') {
-            item.w = Number(document.getElementById('f_w')?.value || 400);
-            item.h = Number(document.getElementById('f_h')?.value || 300);
-            item.flange1 = !!document.getElementById('f_flange1')?.checked;
-            item.flange2 = !!document.getElementById('f_flange2')?.checked;
-            item.key = `duct_rect_${item.w}_${item.h}_${item.l}_${item.flange1}_${item.flange2}_${metal}_${thickness}`;
+            dimensions.w = Number(document.getElementById('f_w')?.value || 400);
+            dimensions.h = Number(document.getElementById('f_h')?.value || 300);
+            dimensions.flange1 = !!document.getElementById('f_flange1')?.checked;
+            dimensions.flange2 = !!document.getElementById('f_flange2')?.checked;
         } else {
-            item.d = Number(document.getElementById('f_d')?.value || 200);
-            item.key = `duct_round_${item.d}_${item.l}_${metal}_${thickness}`;
+            dimensions.d = Number(document.getElementById('f_d')?.value || 200);
         }
     } else {
-        const fitDef = (db.fittings[session.activeShape] || []).find(f => f.id === document.getElementById('fittingTypeSelect').value);
-        item.title = fitDef ? fitDef.name : 'Изделие';
-        item.fittingId = fitDef ? fitDef.id : 'custom';
-
-        if (document.getElementById('f_hood_type')) item.hood_type = document.getElementById('f_hood_type').value;
-        if (document.getElementById('f_deg')) item.deg = Number(document.getElementById('f_deg').value);
-        if (document.getElementById('f_w')) item.w = Number(document.getElementById('f_w').value);
-        if (document.getElementById('f_h')) item.h = Number(document.getElementById('f_h').value);
-        if (document.getElementById('f_w1')) item.w1 = Number(document.getElementById('f_w1').value);
-        if (document.getElementById('f_h1')) item.h1 = Number(document.getElementById('f_h1').value);
-        if (document.getElementById('f_w2')) item.w2 = Number(document.getElementById('f_w2').value);
-        if (document.getElementById('f_h2')) item.h2 = Number(document.getElementById('f_h2').value);
-        if (document.getElementById('f_d')) item.d = Number(document.getElementById('f_d').value);
-        if (document.getElementById('f_d1')) item.d1 = Number(document.getElementById('f_d1').value);
-        if (document.getElementById('f_d2')) item.d2 = Number(document.getElementById('f_d2').value);
-        if (document.getElementById('f_d_main')) item.d_main = Number(document.getElementById('f_d_main').value);
-        if (document.getElementById('f_len')) item.l = Number(document.getElementById('f_len').value);
-        if (document.getElementById('f_hood_seat')) item.hood_seat = Number(document.getElementById('f_hood_seat').value);
-        if (document.getElementById('f_offset')) item.offset = Number(document.getElementById('f_offset').value);
-        if (document.getElementById('f_inlets_cnt')) item.inlets_cnt = Number(document.getElementById('f_inlets_cnt').value);
-        if (document.getElementById('f_flange1')) item.flange1 = document.getElementById('f_flange1').checked;
-        if (document.getElementById('f_flange2')) item.flange2 = document.getElementById('f_flange2').checked;
-
-        if (document.getElementById('f_tee_same')?.checked) {
-            item.descDetail = `Все стороны: ${document.getElementById('f_ts1').value}`;
-        } else if (document.getElementById('f_ts1')) {
-            item.descDetail = `${document.getElementById('f_ts1').value} / ${document.getElementById('f_ts2').value} / ${document.getElementById('f_ts3').value}`;
-        }
-        if (document.getElementById('f_cross_same')?.checked) {
-            item.descDetail = `Все стороны: ${document.getElementById('f_cs1').value}`;
-        } else if (document.getElementById('f_cs1')) {
-            item.descDetail = `${document.getElementById('f_cs1').value} / ${document.getElementById('f_cs2').value} / ${document.getElementById('f_cs3').value} / ${document.getElementById('f_cs4').value}`;
-        }
-        if (document.getElementById('f_tee_r_same')?.checked) {
-            item.descDetail = `Все Ø${document.getElementById('f_tr1').value}`;
-        } else if (document.getElementById('f_tr1')) {
-            item.descDetail = `Ø${document.getElementById('f_tr1').value} / Ø${document.getElementById('f_tr2').value} / Ø${document.getElementById('f_tr3').value}`;
-        }
-        if (document.getElementById('f_cross_r_same')?.checked) {
-            item.descDetail = `Все Ø${document.getElementById('f_cr1').value}`;
-        } else if (document.getElementById('f_cr1')) {
-            item.descDetail = `Ø${document.getElementById('f_cr1').value} / Ø${document.getElementById('f_cr2').value} / Ø${document.getElementById('f_cr3').value} / Ø${document.getElementById('f_cr4').value}`;
-        }
-
-        item.key = `fit_${item.title}_${item.w || 0}_${item.h || 0}_${item.w1 || 0}_${item.h1 || 0}_${item.w2 || 0}_${item.h2 || 0}_${item.d || 0}_${item.d1 || 0}_${item.d2 || 0}_${item.d_main || 0}_${item.l || 0}_${item.deg || 0}_${item.offset || 0}_${item.hood_seat || 0}_${item.inlets_cnt || 0}_${item.flange1}_${item.flange2}_${item.descDetail || ''}_${metal}_${thickness}`;
+        const fitDef = (appConfig.fittings[session.activeShape] || []).find(f => f.id === document.getElementById('fittingTypeSelect').value);
+        itemTitle = fitDef ? fitDef.name : 'Изделие';
+        if (document.getElementById('f_w')) dimensions.w = Number(document.getElementById('f_w').value);
+        if (document.getElementById('f_h')) dimensions.h = Number(document.getElementById('f_h').value);
+        if (document.getElementById('f_w1')) dimensions.w1 = Number(document.getElementById('f_w1').value);
+        if (document.getElementById('f_h1')) dimensions.h1 = Number(document.getElementById('f_h1').value);
+        if (document.getElementById('f_w2')) dimensions.w2 = Number(document.getElementById('f_w2').value);
+        if (document.getElementById('f_h2')) dimensions.h2 = Number(document.getElementById('f_h2').value);
+        if (document.getElementById('f_d')) dimensions.d = Number(document.getElementById('f_d').value);
+        if (document.getElementById('f_d1')) dimensions.d1 = Number(document.getElementById('f_d1').value);
+        if (document.getElementById('f_d2')) dimensions.d2 = Number(document.getElementById('f_d2').value);
+        if (document.getElementById('f_d_main')) dimensions.d_main = Number(document.getElementById('f_d_main').value);
+        if (document.getElementById('f_len')) dimensions.l = Number(document.getElementById('f_len').value);
+        if (document.getElementById('f_deg')) dimensions.deg = Number(document.getElementById('f_deg').value);
+        if (document.getElementById('f_hood_seat')) dimensions.hood_seat = Number(document.getElementById('f_hood_seat').value);
+        if (document.getElementById('f_offset')) dimensions.offset = Number(document.getElementById('f_offset').value);
+        if (document.getElementById('f_inlets_cnt')) dimensions.inlets_cnt = Number(document.getElementById('f_inlets_cnt').value);
+        if (document.getElementById('f_hood_type')) dimensions.hood_type = document.getElementById('f_hood_type').value;
+        if (document.getElementById('f_flange1')) dimensions.flange1 = document.getElementById('f_flange1').checked;
+        if (document.getElementById('f_flange2')) dimensions.flange2 = document.getElementById('f_flange2').checked;
     }
+
+    const itemKey = `${session.activeCategory}_${session.activeShape}_${itemTitle}_${JSON.stringify(dimensions)}_${metal}_${thickness}`;
 
     if (editId) {
-        const idx = p.items.findIndex(i => i.id === Number(editId));
-        if (idx !== -1) p.items[idx] = item;
+        // Редактирование
+        await sb.from('items').update({
+            title: itemTitle,
+            metal,
+            thickness,
+            qty,
+            price,
+            dimensions,
+            item_key: itemKey
+        }).eq('id', editId);
     } else {
-        const existing = p.items.find(i => i.key === item.key);
+        // ПРОВЕРКА НА АВТОСУММИРОВАНИЕ В БАЗЕ
+        const existing = currentProjectItems.find(i => i.item_key === itemKey);
         if (existing) {
-            existing.qty += item.qty;
-            if (item.workers.length) {
-                existing.workers = Array.from(new Set([...(existing.workers || []), ...item.workers]));
-            }
+            await sb.from('items').update({ qty: existing.qty + qty }).eq('id', existing.id);
         } else {
-            p.items.push(item);
+            await sb.from('items').insert([{
+                project_id: session.insideProjectId,
+                category: session.activeCategory,
+                shape: session.activeShape,
+                fitting_id: document.getElementById('fittingTypeSelect')?.value || '',
+                title: itemTitle,
+                metal,
+                thickness,
+                qty,
+                price,
+                dimensions,
+                item_key: itemKey
+            }]);
         }
     }
 
-    p.updatedAt = new Date().toISOString().split('T')[0];
-    syncToCloud();
     resetItemForm();
-    renderProjectInside();
+    await loadProjectDataOnline(session.insideProjectId);
 }
 
 function resetItemForm() {
@@ -1074,21 +811,17 @@ function resetItemForm() {
     document.getElementById('formHeaderTitle').textContent = 'Добавить в проект';
     document.getElementById('cancelEditBtn').classList.add('hidden');
     document.getElementById('submitItemBtn').textContent = 'Добавить в спецификацию';
-    document.querySelectorAll('input[name="assignWorker"]').forEach(cb => cb.checked = false);
     renderDynamicInputs();
 }
 
 // ==========================================
-// СПЕЦИФИКАЦИЯ ИЗДЕЛИЙ
+// СПЕЦИФИКАЦИЯ
 // ==========================================
 function renderSpecification() {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    if (!p) return;
-
     const filterM = document.getElementById('specFilterMetal').value;
     const filterT = document.getElementById('specFilterThick').value;
 
-    let items = (p.items || []).filter(it => {
+    let items = currentProjectItems.filter(it => {
         if (filterM !== 'all' && it.metal !== filterM) return false;
         if (filterT !== 'all' && it.thickness !== Number(filterT)) return false;
         return true;
@@ -1098,8 +831,7 @@ function renderSpecification() {
     container.innerHTML = '';
 
     const bulkBtn = document.getElementById('bulkDeleteBtn');
-    const bulkCount = document.getElementById('bulkCount');
-    bulkCount.textContent = session.selectedSpecIds.length;
+    document.getElementById('bulkCount').textContent = session.selectedSpecIds.length;
     bulkBtn.classList.toggle('hidden', session.selectedSpecIds.length === 0);
 
     if (items.length === 0) {
@@ -1145,34 +877,32 @@ function toggleSectionAccordion(secId) {
 
 function renderSpecItemRow(it) {
     const isSelected = session.selectedSpecIds.includes(it.id);
+    const d = it.dimensions || {};
     let descParts = [];
 
     if (it.shape === 'rect' && it.category === 'duct') {
-        descParts.push(`${it.w}×${it.h} мм`);
-        descParts.push(`L=${it.l || 1250}`);
+        descParts.push(`${d.w}×${d.h} мм`);
+        descParts.push(`L=${d.l || 1250}`);
         const fl = [];
-        if (it.flange1) fl.push('Сторона 1');
-        if (it.flange2) fl.push('Сторона 2');
+        if (d.flange1) fl.push('Сторона 1');
+        if (d.flange2) fl.push('Сторона 2');
         if (fl.length) descParts.push(`Шинка: ${fl.join(', ')}`);
     } else if (it.shape === 'round' && it.category === 'duct') {
-        descParts.push(`Ø${it.d} мм`);
-        descParts.push(`L=${it.l || 1250}`);
+        descParts.push(`Ø${d.d} мм`);
+        descParts.push(`L=${d.l || 1250}`);
     } else {
-        if (it.hood_type) descParts.push(it.hood_type);
-        if (it.deg) descParts.push(`${it.deg}°`);
-        if (it.descDetail) descParts.push(it.descDetail);
-        if (it.w1 && it.w2) descParts.push(`${it.w1}×${it.h1} → ${it.w2}×${it.h2}`);
-        else if (it.w && it.h) descParts.push(`${it.w}×${it.h}`);
-        if (it.d1 && it.d2) descParts.push(`Ø${it.d1} → Ø${it.d2}`);
-        else if (it.d) descParts.push(`Ø${it.d}`);
-        if (it.d_main) descParts.push(`Осн: Ø${it.d_main}`);
-        if (it.l) descParts.push(`L=${it.l}`);
-        if (it.hood_seat) descParts.push(`Посадка: ${it.hood_seat} мм`);
-        if (it.offset) descParts.push(`Смещение: ${it.offset} мм`);
-        if (it.inlets_cnt) descParts.push(`Врезок: ${it.inlets_cnt} шт`);
+        if (d.hood_type) descParts.push(d.hood_type);
+        if (d.deg) descParts.push(`${d.deg}°`);
+        if (d.w1 && d.w2) descParts.push(`${d.w1}×${d.h1} → ${d.w2}×${d.h2}`);
+        else if (d.w && d.h) descParts.push(`${d.w}×${d.h}`);
+        if (d.d1 && d.d2) descParts.push(`Ø${d.d1} → Ø${d.d2}`);
+        else if (d.d) descParts.push(`Ø${d.d}`);
+        if (d.d_main) descParts.push(`Осн: Ø${d.d_main}`);
+        if (d.l) descParts.push(`L=${d.l}`);
+        if (d.hood_seat) descParts.push(`Посадка: ${d.hood_seat} мм`);
+        if (d.offset) descParts.push(`Смещение: ${d.offset} мм`);
+        if (d.inlets_cnt) descParts.push(`Врезок: ${d.inlets_cnt} шт`);
     }
-
-    const workersHtml = (it.workers && it.workers.length) ? `<div class="text-[10px] text-amber-400 mt-0.5">Мастера: ${it.workers.join(', ')}</div>` : '';
 
     return `
         <div class="bg-slate-900 border ${isSelected ? 'border-blue-500 bg-blue-950/20' : 'border-slate-800'} rounded-xl p-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -1182,13 +912,11 @@ function renderSpecItemRow(it) {
                     <div class="font-bold text-xs text-white">${it.title}</div>
                     <div class="text-xs text-blue-300 mono mt-0.5">${descParts.join(' | ')}</div>
                     <div class="text-[11px] text-slate-400 mt-0.5">Металл: <strong class="text-slate-200">${it.metal} ${it.thickness} мм</strong> ${isDev() ? `| Тариф: <span class="mono text-emerald-400">${it.price} ₸</span>` : ''}</div>
-                    ${workersHtml}
                 </div>
             </div>
             <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
                 <div class="text-sm font-black mono text-white">${it.qty} шт</div>
                 <div class="flex gap-1">
-                    <button onclick="duplicateWithModal(${it.id})" title="Дублировать с изменением" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-bold">⧉</button>
                     <button onclick="editProjectItem(${it.id})" title="Редактировать" class="bg-slate-800 hover:bg-slate-700 text-blue-400 px-2.5 py-1.5 rounded-lg text-xs">✎</button>
                     <button onclick="deleteSingleItem(${it.id})" title="Удалить" class="bg-slate-800 hover:bg-slate-700 text-rose-400 px-2.5 py-1.5 rounded-lg text-xs">✕</button>
                 </div>
@@ -1206,44 +934,20 @@ function toggleSpecItemSelect(id, checked) {
     renderSpecification();
 }
 
-function deleteSelectedItems() {
+async function deleteSelectedItems() {
     if (!confirm(`Удалить выбранные позиции (${session.selectedSpecIds.length} шт)?`)) return;
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    p.items = p.items.filter(i => !session.selectedSpecIds.includes(i.id));
+    await sb.from('items').delete().in('id', session.selectedSpecIds);
     session.selectedSpecIds = [];
-    p.updatedAt = new Date().toISOString().split('T')[0];
-    syncToCloud();
-    renderProjectInside();
+    await loadProjectDataOnline(session.insideProjectId);
 }
 
-function deleteSingleItem(id) {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    p.items = p.items.filter(i => i.id !== id);
-    session.selectedSpecIds = session.selectedSpecIds.filter(x => x !== id);
-    p.updatedAt = new Date().toISOString().split('T')[0];
-    syncToCloud();
-    renderProjectInside();
-}
-
-// ==========================================
-// ДУБЛИРОВАНИЕ И РЕДАКТИРОВАНИЕ
-// ==========================================
-function duplicateWithModal(id) {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    const it = p.items.find(x => x.id === id);
-    if (!it) return;
-
-    editProjectItem(id);
-    document.getElementById('editItemId').value = '';
-    document.getElementById('formHeaderTitle').textContent = `Дубликат: ${it.title} (измените нужные параметры)`;
-    document.getElementById('cancelEditBtn').classList.remove('hidden');
-    document.getElementById('submitItemBtn').textContent = '+ Создать дубликат';
-    window.scrollTo({ top: document.getElementById('itemFormCard').offsetTop - 60, behavior: 'smooth' });
+async function deleteSingleItem(id) {
+    await sb.from('items').delete().eq('id', id);
+    await loadProjectDataOnline(session.insideProjectId);
 }
 
 function editProjectItem(id) {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    const it = p.items.find(x => x.id === id);
+    const it = currentProjectItems.find(x => x.id === id);
     if (!it) return;
 
     document.getElementById('editItemId').value = it.id;
@@ -1259,30 +963,26 @@ function editProjectItem(id) {
     document.getElementById('inQty').value = it.qty;
     document.getElementById('inPrice').value = it.price;
 
-    if (it.fittingId) document.getElementById('fittingTypeSelect').value = it.fittingId;
     renderDynamicInputs();
 
-    if (document.getElementById('f_w')) document.getElementById('f_w').value = it.w || 400;
-    if (document.getElementById('f_h')) document.getElementById('f_h').value = it.h || 300;
-    if (document.getElementById('f_d')) document.getElementById('f_d').value = it.d || 200;
-    if (document.getElementById('f_l')) document.getElementById('f_l').value = it.l || 1250;
-    if (document.getElementById('f_w1')) document.getElementById('f_w1').value = it.w1 || 400;
-    if (document.getElementById('f_h1')) document.getElementById('f_h1').value = it.h1 || 300;
-    if (document.getElementById('f_w2')) document.getElementById('f_w2').value = it.w2 || 300;
-    if (document.getElementById('f_h2')) document.getElementById('f_h2').value = it.h2 || 250;
-    if (document.getElementById('f_d1')) document.getElementById('f_d1').value = it.d1 || 250;
-    if (document.getElementById('f_d2')) document.getElementById('f_d2').value = it.d2 || 200;
-    if (document.getElementById('f_d_main')) document.getElementById('f_d_main').value = it.d_main || 315;
-    if (document.getElementById('f_deg')) document.getElementById('f_deg').value = it.deg || 90;
-    if (document.getElementById('f_offset')) document.getElementById('f_offset').value = it.offset || 100;
-    if (document.getElementById('f_hood_seat')) document.getElementById('f_hood_seat').value = it.hood_seat || 100;
-    if (document.getElementById('f_inlets_cnt')) document.getElementById('f_inlets_cnt').value = it.inlets_cnt || 2;
-    if (document.getElementById('f_flange1')) document.getElementById('f_flange1').checked = it.flange1;
-    if (document.getElementById('f_flange2')) document.getElementById('f_flange2').checked = it.flange2;
-
-    document.querySelectorAll('input[name="assignWorker"]').forEach(cb => {
-        cb.checked = (it.workers || []).includes(cb.value);
-    });
+    const d = it.dimensions || {};
+    if (document.getElementById('f_w')) document.getElementById('f_w').value = d.w || 400;
+    if (document.getElementById('f_h')) document.getElementById('f_h').value = d.h || 300;
+    if (document.getElementById('f_d')) document.getElementById('f_d').value = d.d || 200;
+    if (document.getElementById('f_l')) document.getElementById('f_l').value = d.l || 1250;
+    if (document.getElementById('f_w1')) document.getElementById('f_w1').value = d.w1 || 400;
+    if (document.getElementById('f_h1')) document.getElementById('f_h1').value = d.h1 || 300;
+    if (document.getElementById('f_w2')) document.getElementById('f_w2').value = d.w2 || 300;
+    if (document.getElementById('f_h2')) document.getElementById('f_h2').value = d.h2 || 250;
+    if (document.getElementById('f_d1')) document.getElementById('f_d1').value = d.d1 || 250;
+    if (document.getElementById('f_d2')) document.getElementById('f_d2').value = d.d2 || 200;
+    if (document.getElementById('f_d_main')) document.getElementById('f_d_main').value = d.d_main || 315;
+    if (document.getElementById('f_deg')) document.getElementById('f_deg').value = d.deg || 90;
+    if (document.getElementById('f_offset')) document.getElementById('f_offset').value = d.offset || 100;
+    if (document.getElementById('f_hood_seat')) document.getElementById('f_hood_seat').value = d.hood_seat || 100;
+    if (document.getElementById('f_inlets_cnt')) document.getElementById('f_inlets_cnt').value = d.inlets_cnt || 2;
+    if (document.getElementById('f_flange1')) document.getElementById('f_flange1').checked = d.flange1;
+    if (document.getElementById('f_flange2')) document.getElementById('f_flange2').checked = d.flange2;
 
     window.scrollTo({ top: document.getElementById('itemFormCard').offsetTop - 60, behavior: 'smooth' });
 }
@@ -1290,60 +990,25 @@ function editProjectItem(id) {
 // ==========================================
 // ШИНКА В ПРОЕКТЕ
 // ==========================================
-function addFlangeScrap(target) {
-    const inp = target === 'project' ? document.getElementById('projScrapLenInput') : document.getElementById('stScrapInput');
-    const len = Number(inp.value);
-    if (!len || len < 100) return;
-
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    if (target === 'project') {
-        if (!p.flangeScraps) p.flangeScraps = [];
-        p.flangeScraps.push(len);
-    } else {
-        db.standaloneFlange.scraps.push(len);
-    }
-    inp.value = '';
-    syncToCloud();
-    if (target === 'project') renderProjectFlange(); else renderStandaloneFlange();
-}
-
-function removeFlangeScrap(target, idx) {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    if (target === 'project') p.flangeScraps.splice(idx, 1);
-    else db.standaloneFlange.scraps.splice(idx, 1);
-    syncToCloud();
-    if (target === 'project') renderProjectFlange(); else renderStandaloneFlange();
-}
-
 function renderProjectFlange() {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    if (!p) return;
-
-    const scrapBox = document.getElementById('projScrapChips');
-    scrapBox.innerHTML = (p.flangeScraps || []).map((s, i) => `
-        <span class="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg text-slate-200 mono flex items-center gap-1.5">
-            ${s} мм (пачка) <button onclick="removeFlangeScrap('project', ${i})" class="text-slate-500 hover:text-rose-400 font-bold">×</button>
-        </span>
-    `).join('');
-
     const packLen = Number(document.getElementById('projPackLen').value) || 3000;
     const kerf = Number(document.getElementById('projKerf').value) || 2;
     const roundMode = document.getElementById('projFlangeRound').value;
 
     const sides = {};
-    (p.items || []).forEach(it => {
+    currentProjectItems.forEach(it => {
+        const d = it.dimensions || {};
         if (it.shape === 'rect' || it.shape === 'smooth') {
             const add = (w, h) => {
                 const k = `${w}×${h}`;
                 sides[k] = (sides[k] || 0) + it.qty;
             };
-            if (it.flange1) add(it.w || it.w1 || 400, it.h || it.h1 || 300);
-            if (it.flange2 && it.shape === 'rect') add(it.w || it.w2 || 400, it.h || it.h2 || 300);
+            if (d.flange1) add(d.w || d.w1 || 400, d.h || d.h1 || 300);
+            if (d.flange2 && it.shape === 'rect') add(d.w || d.w2 || 400, d.h || d.h2 || 300);
         }
     });
 
-    const out = document.getElementById('projFlangeOutput');
-    out.innerHTML = buildFlangeCalculationUI(sides, packLen, kerf, roundMode, p.flangeScraps || []);
+    document.getElementById('projFlangeOutput').innerHTML = buildFlangeCalculationUI(sides, packLen, kerf, roundMode, []);
 }
 
 function buildFlangeCalculationUI(sidesObj, packLen, kerf, roundMode, scrapsList) {
@@ -1357,7 +1022,7 @@ function buildFlangeCalculationUI(sidesObj, packLen, kerf, roundMode, scrapsList
     }
 
     if (Object.keys(cutsNeeded).length === 0) {
-        return `<div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center text-xs text-slate-500">В проекте нет прямоугольных сторон с включенной шинкой</div>`;
+        return `<div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center text-xs text-slate-500">В проекте нет прямоугольных сторон с шинкой</div>`;
     }
 
     const packCuts = [];
@@ -1376,9 +1041,7 @@ function buildFlangeCalculationUI(sidesObj, packLen, kerf, roundMode, scrapsList
 
     packCuts.sort((a, b) => b - a);
 
-    const availablePacks = [...(scrapsList || []).map(l => ({ len: l, isScrap: true }))];
     const resultPacks = [];
-
     packCuts.forEach(c => {
         let placed = false;
         for (let p of resultPacks) {
@@ -1390,22 +1053,20 @@ function buildFlangeCalculationUI(sidesObj, packLen, kerf, roundMode, scrapsList
             }
         }
         if (!placed) {
-            const scrap = availablePacks.shift();
-            const totalLen = scrap ? scrap.len : packLen;
-            resultPacks.push({ totalLen, isScrap: !!scrap, cuts: [c] });
+            resultPacks.push({ totalLen: packLen, cuts: [c] });
         }
     });
 
     let html = `
         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-            <div class="font-bold text-blue-400 uppercase tracking-wider text-xs">Стороны для сборщика (готовые рамки):</div>
+            <div class="font-bold text-blue-400 uppercase tracking-wider text-xs">Стороны для сборщика:</div>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mono">
                 ${Object.entries(sidesObj).map(([k, v]) => `<div class="bg-slate-900 p-2 rounded-lg border border-slate-800/80">${k} — <strong class="text-white">${v} сторон</strong></div>`).join('')}
             </div>
         </div>
 
         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-            <div class="font-bold text-emerald-400 uppercase tracking-wider text-xs">Количество заготовок шинки (Сторона − 30 мм):</div>
+            <div class="font-bold text-emerald-400 uppercase tracking-wider text-xs">Количество шинок (Сторона − 30 мм):</div>
             <div class="flex flex-wrap gap-2 mono">
                 ${Object.entries(cutsNeeded).map(([k, v]) => `<span class="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-200">${k} мм — <strong class="text-emerald-400">${v} шт</strong></span>`).join('')}
             </div>
@@ -1414,7 +1075,7 @@ function buildFlangeCalculationUI(sidesObj, packLen, kerf, roundMode, scrapsList
         <div class="space-y-3">
             <div class="flex justify-between items-center text-xs">
                 <span class="font-bold text-white uppercase tracking-wider">Карты реза пачек (1 рез = 10 шинок):</span>
-                <span class="text-slate-400">Всего пачек: <strong class="text-blue-400 mono">${resultPacks.length} шт</strong> (${resultPacks.length * 10} хлыстов)</span>
+                <span class="text-slate-400">Пачек по 10 хлыстов: <strong class="text-blue-400 mono">${resultPacks.length} шт</strong></span>
             </div>
             <div class="space-y-2.5">
     `;
@@ -1425,8 +1086,8 @@ function buildFlangeCalculationUI(sidesObj, packLen, kerf, roundMode, scrapsList
         html += `
             <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
                 <div class="flex justify-between text-xs">
-                    <span class="font-bold text-white">${p.isScrap ? '✂ Обрезок пачки' : `Пачка №${idx + 1}`} (${p.totalLen} мм)</span>
-                    <span class="text-slate-400">Деловой остаток: <strong class="text-amber-400 mono">${rem} мм</strong></span>
+                    <span class="font-bold text-white">Пачка №${idx + 1} (${p.totalLen} мм)</span>
+                    <span class="text-slate-400">Остаток: <strong class="text-amber-400 mono">${rem} мм</strong></span>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     ${p.cuts.map(c => `<span class="bg-blue-950 border border-blue-700 text-blue-200 px-3 py-1 rounded-lg text-xs mono font-bold">Рез ${c} мм (10 шт)</span>`).join('')}
@@ -1436,40 +1097,21 @@ function buildFlangeCalculationUI(sidesObj, packLen, kerf, roundMode, scrapsList
     });
 
     html += `</div></div>`;
-
-    if (singleTails.length > 0) {
-        html += `
-            <div class="bg-amber-950/30 border border-amber-800/60 p-4 rounded-xl text-xs space-y-2">
-                <div class="font-bold text-amber-300 uppercase tracking-wider">Памятка: Хвостики на штучный дорез (некратные 10 шт):</div>
-                <div class="flex flex-wrap gap-2 mono">
-                    ${singleTails.map(t => `<span class="bg-amber-900/40 text-amber-200 px-3 py-1 rounded-lg">${t.len} мм — ${t.qty} шт</span>`).join('')}
-                </div>
-            </div>
-        `;
-    }
-
     return html;
 }
 
 function exportFlangeText(mode) {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    let text = `MAXVENT TOOLS — НАРЯД НА ШИНКУ\nОбъект: ${mode === 'project' ? p.title : 'Автономный расчет'}\n\n`;
-    text += `СТОРОНЫ ДЛЯ СБОРЩИКА:\n`;
-    document.querySelectorAll(mode === 'project' ? '#projFlangeOutput .grid div' : '#stFlangeOutput .grid div').forEach(d => {
-        text += `- ${d.textContent.trim()}\n`;
-    });
+    let text = `MAXVENT TOOLS — НАРЯД НА ШИНКУ\n`;
+    document.querySelectorAll('#projFlangeOutput .grid div').forEach(d => text += `- ${d.textContent.trim()}\n`);
     navigator.clipboard.writeText(text);
-    alert('Наряд на шинку скопирован в буфер обмена!');
+    alert('Наряд скопирован в буфер обмена!');
 }
 
 // ==========================================
-// РАСКРОЙ ЛИСТА 2D
+// 2D РАСКРОЙ ЛИСТА
 // ==========================================
 function renderProjectNesting() {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    if (!p) return;
-
-    const ducts = (p.items || []).filter(i => i.category === 'duct');
+    const ducts = currentProjectItems.filter(i => i.category === 'duct');
     const queues = {};
     ducts.forEach(d => {
         const k = `${d.metal} ${d.thickness} мм`;
@@ -1482,7 +1124,7 @@ function renderProjectNesting() {
     const keys = Object.keys(queues);
 
     if (keys.length === 0) {
-        tabs.innerHTML = `<span class="text-xs text-slate-500">В проекте нет воздуховодов для раскроя листа</span>`;
+        tabs.innerHTML = `<span class="text-xs text-slate-500">В проекте нет воздуховодов для раскроя</span>`;
         document.getElementById('nestingDuctsSelectionBox').innerHTML = '';
         document.getElementById('nestingVisualizerBox').innerHTML = '';
         return;
@@ -1506,71 +1148,44 @@ function renderProjectNesting() {
         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
             <div class="flex justify-between items-center text-xs border-b border-slate-800 pb-2">
                 <span class="font-bold text-white">Воздуховоды в раскрой:</span>
-                <span class="text-slate-400">Формат: <strong class="text-blue-400 mono">Лист 2500 × 1250 мм</strong></span>
+                <span class="text-slate-400">Лист: <strong class="text-blue-400 mono">2500 × 1250 мм</strong></span>
             </div>
             <div class="space-y-2">
                 ${currentDucts.map(d => {
-                    const unfold = d.shape === 'rect' ? (2 * (d.w + d.h) + 41) : Math.round(Math.PI * d.d + 22);
-                    const name = d.shape === 'rect' ? `${d.w}×${d.h}` : `Ø${d.d}`;
+                    const dim = d.dimensions || {};
+                    const unfold = d.shape === 'rect' ? (2 * ((dim.w || 400) + (dim.h || 300)) + 41) : Math.round(Math.PI * (dim.d || 200) + 22);
+                    const name = d.shape === 'rect' ? `${dim.w}×${dim.h}` : `Ø${dim.d}`;
                     return `
                         <div class="flex items-center justify-between bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-xs">
-                            <div class="flex items-center gap-3">
-                                <input type="checkbox" id="nestDuctCheck_${d.id}" checked class="rounded text-blue-600">
-                                <div>
-                                    <span class="font-bold text-white">${name}</span>
-                                    <span class="text-slate-400 ml-2 mono">Развертка: <strong class="text-blue-300">${unfold} ×${d.l || 1250} мм</strong></span>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-slate-400">Штук:</span>
-                                <input type="number" id="nestDuctQty_${d.id}" value="${d.qty}" min="1" max="${d.qty}" class="w-16 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-center mono text-white font-bold">
-                            </div>
+                            <span class="font-bold text-white">${name} <span class="text-slate-400 font-normal">(${unfold} ×${dim.l || 1250} мм)</span></span>
+                            <span class="font-bold mono text-blue-300">${d.qty} шт</span>
                         </div>
                     `;
                 }).join('')}
             </div>
             <div class="pt-2 flex justify-end">
-                <button onclick="calculateAndSaveNesting()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl">
-                    Сделать оптимальный раскрой
+                <button onclick="calculateNesting2D()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl">
+                    Рассчитать раскрой
                 </button>
             </div>
         </div>
     `;
-
-    renderNestingResult(p);
 }
 
-function calculateAndSaveNesting() {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    const ducts = (p.items || []).filter(i => i.category === 'duct');
-    const currentDucts = ducts.filter(d => `${d.metal} ${d.thickness} мм` === session.activeNestingKey);
-
+function calculateNesting2D() {
+    const ducts = currentProjectItems.filter(i => i.category === 'duct' && `${i.metal} ${i.thickness} мм` === session.activeNestingKey);
     const partsToCut = [];
-    currentDucts.forEach(d => {
-        const isChecked = document.getElementById(`nestDuctCheck_${d.id}`)?.checked;
-        const qty = Number(document.getElementById(`nestDuctQty_${d.id}`)?.value || 0);
-        if (isChecked && qty > 0) {
-            const unfoldL = d.shape === 'rect' ? (2 * (d.w + d.h) + 41) : Math.round(Math.PI * d.d + 22);
-            const name = d.shape === 'rect' ? `${d.w}×${d.h}` : `Ø${d.d}`;
-            for (let i = 0; i < qty; i++) {
-                partsToCut.push({
-                    title: d.title,
-                    label: name,
-                    cutL: unfoldL,
-                    cutW: d.l || 1250
-                });
-            }
+    ducts.forEach(d => {
+        const dim = d.dimensions || {};
+        const unfoldL = d.shape === 'rect' ? (2 * ((dim.w || 400) + (dim.h || 300)) + 41) : Math.round(Math.PI * (dim.d || 200) + 22);
+        const name = d.shape === 'rect' ? `${dim.w}×${dim.h}` : `Ø${dim.d}`;
+        for (let i = 0; i < d.qty; i++) {
+            partsToCut.push({ label: name, cutL: unfoldL, cutW: dim.l || 1250 });
         }
     });
 
-    if (partsToCut.length === 0) {
-        alert('Выберите хотя бы один воздуховод');
-        return;
-    }
-
     const sheetL = 2500;
     const sheets = [];
-
     partsToCut.forEach(pt => {
         let placed = false;
         for (let s of sheets) {
@@ -1582,44 +1197,13 @@ function calculateAndSaveNesting() {
             }
         }
         if (!placed) {
-            sheets.push({ parts: [pt], cutDone: false });
+            sheets.push({ parts: [pt] });
         }
     });
 
-    if (!p.nestings) p.nestings = {};
-    p.nestings[session.activeNestingKey] = {
-        sheets,
-        updatedAt: new Date().toISOString().split('T')[0]
-    };
-    syncToCloud();
-    renderNestingResult(p);
-}
-
-function renderNestingResult(p) {
     const box = document.getElementById('nestingVisualizerBox');
-    const nestingData = p.nestings ? p.nestings[session.activeNestingKey] : null;
-
-    if (!nestingData || !nestingData.sheets || nestingData.sheets.length === 0) {
-        box.innerHTML = `<div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center text-xs text-slate-500">Нажмите «Сделать оптимальный раскрой», чтобы рассчитать и сохранить карты раскроя</div>`;
-        return;
-    }
-
-    const sheets = nestingData.sheets;
-    const sheetL = 2500;
-    const allDone = sheets.every(s => s.cutDone);
-
     let html = `
-        <div class="flex flex-wrap justify-between items-center gap-2">
-            <div class="text-xs">
-                <span class="font-bold text-white uppercase tracking-wider">Карты раскроя листа:</span>
-                <span class="text-slate-400 ml-2">Всего цельных листов 2500×1250: <strong class="text-blue-400 mono">${sheets.length} шт</strong></span>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="finishCuttingWork()" class="${allDone ? 'bg-emerald-600' : 'bg-slate-800'} text-white text-xs font-bold px-4 py-2 rounded-xl">
-                    ✓ Закончить работу (Воздуховоды отрезаны)
-                </button>
-            </div>
-        </div>
+        <div class="text-xs font-bold text-white uppercase tracking-wider mb-2">Всего листов 2500×1250: ${sheets.length} шт</div>
         <div class="space-y-4">
     `;
 
@@ -1628,15 +1212,11 @@ function renderNestingResult(p) {
         const remL = sheetL - usedL;
 
         html += `
-            <div class="bg-slate-950 border ${s.cutDone ? 'border-emerald-600/80 bg-emerald-950/10' : 'border-slate-800'} rounded-xl p-4 space-y-3">
-                <div class="flex justify-between items-center text-xs">
-                    <label class="flex items-center gap-2 cursor-pointer font-bold text-white">
-                        <input type="checkbox" onchange="toggleSheetCutDone('${session.activeNestingKey}', ${idx}, this.checked)" ${s.cutDone ? 'checked' : ''} class="rounded text-emerald-600">
-                        <span>Лист №${idx + 1} (2500 × 1250 мм) — ${s.cutDone ? '<span class="text-emerald-400">Отрезан</span>' : '<span class="text-slate-400">В процессе</span>'}</span>
-                    </label>
-                    <span class="text-slate-400">Остаток листа: <strong class="text-amber-400 mono">${remL} × 1250 мм</strong></span>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                <div class="flex justify-between text-xs">
+                    <span class="font-bold text-white">Лист №${idx + 1}</span>
+                    <span class="text-slate-400">Остаток: <strong class="text-amber-400 mono">${remL} мм</strong></span>
                 </div>
-
                 <div class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 flex h-24 overflow-hidden relative">
                     ${s.parts.map(pt => {
                         const widthPct = (pt.cutL / sheetL) * 100;
@@ -1647,11 +1227,7 @@ function renderNestingResult(p) {
                             </div>
                         `;
                     }).join('')}
-                    ${remL > 0 ? `<div style="width: ${(remL / sheetL) * 100}%" class="h-full bg-amber-950/30 flex items-center justify-center text-[10px] text-amber-400 mono truncate px-1">Остаток ${remL} мм</div>` : ''}
-                </div>
-
-                <div class="flex flex-wrap gap-2 text-xs mono">
-                    ${s.parts.map(pt => `<span class="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded text-slate-300">${pt.label} (${pt.cutL} ×${pt.cutW} мм)</span>`).join('')}
+                    ${remL > 0 ? `<div style="width: ${(remL / sheetL) * 100}%" class="h-full bg-amber-950/30 flex items-center justify-center text-[10px] text-amber-400 mono truncate">Остаток ${remL} мм</div>` : ''}
                 </div>
             </div>
         `;
@@ -1661,49 +1237,29 @@ function renderNestingResult(p) {
     box.innerHTML = html;
 }
 
-function toggleSheetCutDone(nestKey, idx, isChecked) {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    if (p.nestings && p.nestings[nestKey] && p.nestings[nestKey].sheets[idx]) {
-        p.nestings[nestKey].sheets[idx].cutDone = isChecked;
-        syncToCloud();
-        renderNestingResult(p);
-    }
-}
-
-function finishCuttingWork() {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    p.statusText = 'Воздуховоды отрезаны';
-    syncToCloud();
-    document.getElementById('activeProjCutBadge').classList.remove('hidden');
-    alert('Статус проекта обновлен: «Воздуховоды отрезаны»!');
-}
-
 // ==========================================
-// ФИНАНСЫ И ПЕРЕРАСПРЕДЕЛЕНИЕ
+// ФИНАНСЫ ПРОЕКТА
 // ==========================================
-function calculateProjectFinances(p) {
+function calculateProjectFinances() {
     let totalSum = 0;
-    (p.items || []).forEach(it => {
+    currentProjectItems.forEach(it => {
+        const d = it.dimensions || {};
         if (it.category === 'duct') {
-            const unfold = it.shape === 'rect' ? (2 * (it.w + it.h) + 41) : Math.round(Math.PI * it.d + 22);
-            const area = (unfold * (it.l || 1250) * it.qty) / 1e6;
+            const unfold = it.shape === 'rect' ? (2 * ((d.w || 400) + (d.h || 300)) + 41) : Math.round(Math.PI * (d.d || 200) + 22);
+            const area = (unfold * (d.l || 1250) * it.qty) / 1e6;
             totalSum += Math.round(area * it.price);
         } else {
             totalSum += Math.round(it.qty * it.price);
         }
     });
 
-    const paid = (p.payments || []).reduce((s, pay) => s + pay.amount, 0);
+    const paid = currentProjectPayments.reduce((s, pay) => s + pay.amount, 0);
     const debt = Math.max(0, totalSum - paid);
-    const overpay = Math.max(0, paid - totalSum);
-    return { totalSum, paid, debt, overpay };
+    return { totalSum, paid, debt };
 }
 
 function renderProjectFinance() {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    if (!p) return;
-    const fin = calculateProjectFinances(p);
-
+    const fin = calculateProjectFinances();
     const body = document.getElementById('projFinanceBody');
     body.innerHTML = `
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1716,10 +1272,8 @@ function renderProjectFinance() {
                 <div class="text-xl font-bold mono text-emerald-400 mt-1">${fin.paid.toLocaleString()} ₸</div>
             </div>
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-xs text-slate-400">${fin.overpay > 0 ? 'Переплата:' : 'Остаток долга:'}</div>
-                <div class="text-xl font-bold mono ${fin.overpay > 0 ? 'text-blue-400' : 'text-amber-400'} mt-1">
-                    ${fin.overpay > 0 ? `+${fin.overpay.toLocaleString()} ₸` : `${fin.debt.toLocaleString()} ₸`}
-                </div>
+                <div class="text-xs text-slate-400">Остаток долга:</div>
+                <div class="text-xl font-bold mono text-amber-400 mt-1">${fin.debt.toLocaleString()} ₸</div>
             </div>
         </div>
 
@@ -1727,108 +1281,75 @@ function renderProjectFinance() {
             <div class="font-bold text-white text-xs uppercase tracking-wider">Зафиксировать платеж</div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <input type="number" id="payAmountInput" placeholder="Сумма (₸)" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs mono text-white font-bold">
-                <input type="text" id="payNoteInput" placeholder="Примечание (Kaspi, нал)" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
-                <button onclick="addProjectPayment()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase rounded-lg py-2">
+                <input type="text" id="payNoteInput" placeholder="Примечание" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
+                <button onclick="addProjectPaymentOnline()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase rounded-lg py-2">
                     + Внести платеж
                 </button>
             </div>
         </div>
 
         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-            <div class="font-bold text-white text-xs uppercase tracking-wider">История платежей объекта:</div>
+            <div class="font-bold text-white text-xs uppercase tracking-wider">История платежей:</div>
             <div class="space-y-1.5 mono">
-                ${(p.payments && p.payments.length) ? p.payments.map((pay, i) => `
+                ${currentProjectPayments.map(pay => `
                     <div class="flex justify-between items-center bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-xs">
-                        <div><span class="text-slate-400">${pay.date}</span> — <strong class="text-emerald-400">${pay.amount.toLocaleString()} ₸</strong> <span class="text-slate-400">(${pay.note || '—'})</span></div>
-                        <button onclick="deletePayment(${i})" class="text-slate-500 hover:text-rose-400 font-bold px-2">✕</button>
+                        <div><span class="text-slate-400">${pay.payment_date}</span> — <strong class="text-emerald-400">${pay.amount.toLocaleString()} ₸</strong> <span class="text-slate-400">(${pay.note || '—'})</span></div>
+                        <button onclick="deletePaymentOnline(${pay.id})" class="text-slate-500 hover:text-rose-400 font-bold px-2">✕</button>
                     </div>
-                `).join('') : '<div class="text-slate-500 text-xs">Платежей не зафиксировано</div>'}
+                `).join('')}
             </div>
         </div>
     `;
 }
 
-function addProjectPayment() {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
+async function addProjectPaymentOnline() {
     const amt = Number(document.getElementById('payAmountInput').value);
     const note = document.getElementById('payNoteInput').value.trim();
     if (!amt || amt <= 0) return;
 
-    const finBefore = calculateProjectFinances(p);
-    const today = new Date().toISOString().split('T')[0];
+    await sb.from('payments').insert([{
+        project_id: session.insideProjectId,
+        amount: amt,
+        note
+    }]);
 
-    if (!p.payments) p.payments = [];
-    p.payments.push({ id: Date.now(), date: today, amount: amt, note });
-
-    if (amt > finBefore.debt && finBefore.debt > 0) {
-        const overpayAmt = amt - finBefore.debt;
-        const otherProjects = db.projects.filter(x => x.id !== p.id && x.archiveState !== 'archived');
-        if (otherProjects.length > 0) {
-            const promptText = `Образовалась переплата ${overpayAmt.toLocaleString()} ₸!\n\nНазначить разницу на другой объект?\n` + otherProjects.map((op, idx) => `${idx + 1}. ${op.title}`).join('\n') + `\n\nВведите номер объекта (или 0 для отмены):`;
-            const choice = prompt(promptText);
-            const idx = Number(choice) - 1;
-            if (otherProjects[idx]) {
-                const targetP = otherProjects[idx];
-                if (!targetP.payments) targetP.payments = [];
-                targetP.payments.push({
-                    id: Date.now() + 1,
-                    date: today,
-                    amount: overpayAmt,
-                    note: `Перенос переплаты с "${p.title}"`
-                });
-                p.payments[p.payments.length - 1].amount = finBefore.debt;
-                p.payments[p.payments.length - 1].note += ` (часть ${overpayAmt} ₸ перенесена на "${targetP.title}")`;
-                alert(`Разница ${overpayAmt.toLocaleString()} ₸ успешно зачислена на объект "${targetP.title}"!`);
-            }
-        }
-    }
-
-    syncToCloud();
-    renderProjectFinance();
+    await loadProjectDataOnline(session.insideProjectId);
 }
 
-function deletePayment(idx) {
-    const p = db.projects.find(x => x.id === session.insideProjectId);
-    p.payments.splice(idx, 1);
-    syncToCloud();
-    renderProjectFinance();
+async function deletePaymentOnline(id) {
+    await sb.from('payments').delete().eq('id', id);
+    await loadProjectDataOnline(session.insideProjectId);
 }
 
 // ==========================================
 // ГЛОБАЛЬНЫЙ ФИНАНСОВЫЙ ОТЧЕТ
 // ==========================================
-function openGlobalFinanceModal() {
+async function openGlobalFinanceModal() {
     document.getElementById('profileDropdown').classList.add('hidden');
     const modal = document.getElementById('globalFinanceModal');
     modal.classList.remove('hidden');
 
-    const content = document.getElementById('globalFinanceContent');
+    const { data: allItems } = await sb.from('items').select('*');
+    const { data: allPayments } = await sb.from('payments').select('*');
+
     let grandTotal = 0;
-    let grandPaid = 0;
-    let grandDebt = 0;
+    (allItems || []).forEach(it => {
+        const d = it.dimensions || {};
+        if (it.category === 'duct') {
+            const unfold = it.shape === 'rect' ? (2 * ((d.w || 400) + (d.h || 300)) + 41) : Math.round(Math.PI * (d.d || 200) + 22);
+            grandTotal += Math.round(((unfold * (d.l || 1250) * it.qty) / 1e6) * it.price);
+        } else {
+            grandTotal += Math.round(it.qty * it.price);
+        }
+    });
 
-    const rows = db.projects.map(p => {
-        const fin = calculateProjectFinances(p);
-        grandTotal += fin.totalSum;
-        grandPaid += fin.paid;
-        grandDebt += fin.debt;
-        return `
-            <tr class="border-b border-slate-800 hover:bg-slate-950">
-                <td class="p-3 font-bold text-white">${p.title} <span class="text-[10px] text-slate-500 block">${p.group || '—'}</span></td>
-                <td class="p-3 mono">${fin.totalSum.toLocaleString()} ₸</td>
-                <td class="p-3 mono text-emerald-400">${fin.paid.toLocaleString()} ₸</td>
-                <td class="p-3 mono ${fin.debt > 0 ? 'text-amber-400 font-bold' : 'text-slate-500'}">${fin.debt.toLocaleString()} ₸</td>
-                <td class="p-3">
-                    <span class="text-[10px] px-2 py-0.5 rounded font-bold ${p.archiveState === 'archived' ? 'bg-slate-800 text-slate-400' : 'bg-blue-950 text-blue-300'}">${p.archiveState === 'archived' ? 'Архив' : 'Активен'}</span>
-                </td>
-            </tr>
-        `;
-    }).join('');
+    const grandPaid = (allPayments || []).reduce((s, p) => s + p.amount, 0);
+    const grandDebt = Math.max(0, grandTotal - grandPaid);
 
-    content.innerHTML = `
+    document.getElementById('globalFinanceContent').innerHTML = `
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-slate-400">Сумма всех заказов:</div>
+                <div class="text-slate-400">Сумма заказов:</div>
                 <div class="text-xl font-bold mono text-white mt-1">${grandTotal.toLocaleString()} ₸</div>
             </div>
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
@@ -1839,21 +1360,6 @@ function openGlobalFinanceModal() {
                 <div class="text-slate-400">Общий остаток долга:</div>
                 <div class="text-xl font-bold mono text-amber-400 mt-1">${grandDebt.toLocaleString()} ₸</div>
             </div>
-        </div>
-
-        <div class="overflow-x-auto bg-slate-950 rounded-xl border border-slate-800">
-            <table class="w-full text-left text-xs">
-                <thead class="bg-slate-900 border-b border-slate-800 uppercase text-slate-400">
-                    <tr>
-                        <th class="p-3">Объект</th>
-                        <th class="p-3">Смета</th>
-                        <th class="p-3">Оплачено</th>
-                        <th class="p-3">Долг</th>
-                        <th class="p-3">Статус</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
         </div>
     `;
 }
@@ -1882,53 +1388,41 @@ function addStandaloneFlangeRow() {
     if (!w || !h || !sides || !qty) return;
 
     const totalSides = sides * qty;
-    const existing = db.standaloneFlange.rows.find(r => r.w === w && r.h === h);
+    const existing = standaloneFlange.rows.find(r => r.w === w && r.h === h);
     if (existing) {
         existing.totalSides += totalSides;
     } else {
-        db.standaloneFlange.rows.push({ w, h, totalSides });
+        standaloneFlange.rows.push({ w, h, totalSides });
     }
-    syncToCloud();
     renderStandaloneFlange();
 }
 
 function clearStandaloneFlange() {
-    db.standaloneFlange.rows = [];
-    db.standaloneFlange.scraps = [];
-    syncToCloud();
+    standaloneFlange.rows = [];
     renderStandaloneFlange();
 }
 
 function renderStandaloneFlange() {
-    const scrapBox = document.getElementById('stScrapChips');
-    scrapBox.innerHTML = (db.standaloneFlange.scraps || []).map((s, i) => `
-        <span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-200 mono flex items-center gap-1">
-            ${s} мм <button onclick="removeFlangeScrap('standalone', ${i})" class="text-rose-400 font-bold">×</button>
-        </span>
-    `).join('');
-
     const packLen = Number(document.getElementById('stPackLen').value) || 3000;
     const kerf = Number(document.getElementById('stKerf').value) || 2;
     const roundMode = document.getElementById('stRound').value;
 
     const sidesObj = {};
-    db.standaloneFlange.rows.forEach(r => {
+    standaloneFlange.rows.forEach(r => {
         const k = `${r.w}×${r.h}`;
         sidesObj[k] = (sidesObj[k] || 0) + r.totalSides;
     });
 
-    document.getElementById('stFlangeOutput').innerHTML = buildFlangeCalculationUI(sidesObj, packLen, kerf, roundMode, db.standaloneFlange.scraps || []);
+    document.getElementById('stFlangeOutput').innerHTML = buildFlangeCalculationUI(sidesObj, packLen, kerf, roundMode, []);
 }
 
 // ==========================================
-// ПАНЕЛЬ РАЗРАБОТЧИКА
+// МЕНЮ РАЗРАБОТЧИКА И ЭКСПОРТ АРХИВА
 // ==========================================
 function openDevModal() {
     document.getElementById('profileDropdown').classList.add('hidden');
     document.getElementById('devModal').classList.remove('hidden');
     renderDevCatalogs();
-    renderCustomFitParamsCheckboxes();
-    renderDevUsersStats();
 }
 
 function closeDevModal() {
@@ -1936,139 +1430,58 @@ function closeDevModal() {
 }
 
 function renderDevCatalogs() {
-    document.getElementById('devMetalsList').innerHTML = db.metals.map((m, i) => `
+    document.getElementById('devMetalsList').innerHTML = appConfig.metals.map((m, i) => `
         <span class="bg-slate-900 border border-slate-800 px-2 py-1 rounded text-white flex items-center gap-1">${m} <button onclick="removeCatalogItem('metals', ${i})" class="text-slate-500 hover:text-rose-400">×</button></span>
     `).join('');
-    document.getElementById('devThickList').innerHTML = db.thicknesses.map((t, i) => `
+    document.getElementById('devThickList').innerHTML = appConfig.thicknesses.map((t, i) => `
         <span class="bg-slate-900 border border-slate-800 px-2 py-1 rounded text-white mono flex items-center gap-1">${t} мм <button onclick="removeCatalogItem('thicknesses', ${i})" class="text-slate-500 hover:text-rose-400">×</button></span>
     `).join('');
-    document.getElementById('devGroupsList').innerHTML = db.groups.map((g, i) => `
+    document.getElementById('devGroupsList').innerHTML = appConfig.groups.map((g, i) => `
         <span class="bg-slate-900 border border-slate-800 px-2 py-1 rounded text-white flex items-center gap-1">${g} <button onclick="removeCatalogItem('groups', ${i})" class="text-slate-500 hover:text-rose-400">×</button></span>
     `).join('');
 }
 
-function addCatalogItem(type, inputId) {
+async function addCatalogItem(type, inputId) {
     const inp = document.getElementById(inputId);
     const val = type === 'thicknesses' ? Number(inp.value) : inp.value.trim();
-    if (!val) return;
-    if (!db[type].includes(val)) {
-        db[type].push(val);
-        inp.value = '';
-        syncToCloud();
-        renderDevCatalogs();
-    }
-}
+    if (!val || appConfig[type].includes(val)) return;
 
-function removeCatalogItem(type, idx) {
-    db[type].splice(idx, 1);
-    syncToCloud();
+    appConfig[type].push(val);
+    inp.value = '';
+    await sb.from('app_settings').upsert({ id: 'global_config', [type]: appConfig[type] });
     renderDevCatalogs();
 }
 
-function renderCustomFitParamsCheckboxes() {
-    const box = document.getElementById('customFitParamsCheckboxes');
-    box.innerHTML = ALL_PARAM_DEFS.map(p => `
-        <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
-            <input type="checkbox" name="customParamCheckbox" value="${p.code}" class="rounded text-amber-500">
-            <span class="truncate">${p.label}</span>
-        </label>
-    `).join('');
+async function removeCatalogItem(type, idx) {
+    appConfig[type].splice(idx, 1);
+    await sb.from('app_settings').upsert({ id: 'global_config', [type]: appConfig[type] });
+    renderDevCatalogs();
 }
 
-function saveCustomFitting() {
-    const name = document.getElementById('customFitName').value.trim();
-    const shape = document.getElementById('customFitShape').value;
-    const price = Number(document.getElementById('customFitPrice').value) || 1000;
-    const params = Array.from(document.querySelectorAll('input[name="customParamCheckbox"]:checked')).map(cb => cb.value);
+async function exportMonthlyArchive() {
+    const { data: projects } = await sb.from('projects').select('*');
+    const { data: items } = await sb.from('items').select('*');
+    const { data: payments } = await sb.from('payments').select('*');
 
-    if (!name) { alert('Укажите название изделия'); return; }
-    if (params.length === 0) { alert('Отметьте хотя бы один параметр для изделия'); return; }
-
-    const newId = 'cust_' + Date.now();
-    if (!db.fittings[shape]) db.fittings[shape] = [];
-    db.fittings[shape].push({ id: newId, name, params, price });
-
-    syncToCloud();
-    alert(`Изделие "${name}" успешно сохранено в справочник!`);
-    document.getElementById('customFitName').value = '';
-    document.querySelectorAll('input[name="customParamCheckbox"]').forEach(cb => cb.checked = false);
+    const fullArchive = { projects, items, payments, exportedAt: new Date() };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullArchive, null, 2));
+    const dl = document.createElement('a');
+    dl.setAttribute("href", dataStr);
+    dl.setAttribute("download", `Maxvent_Archive_${new Date().toISOString().slice(0,7)}.json`);
+    document.body.appendChild(dl);
+    dl.click();
+    dl.remove();
 }
 
-function renderDevUsersStats() {
-    const box = document.getElementById('devUsersStatsList');
-    box.innerHTML = db.users.map(u => {
-        let totalItemsCount = 0;
-        db.projects.forEach(p => {
-            (p.items || []).forEach(it => {
-                if ((it.workers || []).includes(u.name)) totalItemsCount += it.qty;
-            });
-        });
-
-        return `
-            <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex justify-between items-center">
-                <div>
-                    <div class="font-bold text-white">${u.name} <span class="text-slate-500 font-normal">(@${u.login})</span></div>
-                    <div class="text-[11px] text-slate-400 mt-0.5">Роль: <strong class="text-blue-400">${u.role === 'developer' ? 'Разработчик' : 'Работник'}</strong> | Участие в изделиях: <strong class="text-emerald-400 mono">${totalItemsCount} шт</strong></div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-// ==========================================
-// АРХИВАЦИЯ ПО МЕСЯЦАМ
-// ==========================================
-function exportMonthlyArchive() {
-    const now = new Date();
-    const monthStr = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const filename = `Maxvent_Archive_${monthStr}.json`;
-
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
-    const dlAnchor = document.createElement('a');
-    dlAnchor.setAttribute("href", dataStr);
-    dlAnchor.setAttribute("download", filename);
-    document.body.appendChild(dlAnchor);
-    dlAnchor.click();
-    dlAnchor.remove();
-}
-
-function importMonthlyArchive(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-        try {
-            const imported = JSON.parse(evt.target.result);
-            if (imported && Array.isArray(imported.projects)) {
-                db = imported;
-                ensureDbIntegrity();
-                document.getElementById('archiveModeBanner').textContent = `[РЕЖИМ ПРОСМОТРА АРХИВА]: ${file.name}`;
-                document.getElementById('archiveModeBanner').className = 'text-xs text-amber-400 font-bold mt-1';
-                closeDevModal();
-                goToMainMenu();
-                alert(`Архив "${file.name}" успешно открыт для просмотра!`);
-            }
-        } catch(err) {
-            alert('Ошибка чтения файла архива');
-        }
-    };
-    reader.readAsText(file);
-}
-
-function startNewMonthClean() {
-    const archivedCount = db.projects.filter(p => p.archiveState === 'archived').length;
-    if (!confirm(`Выгрузили ли вы копию месяца на компьютер?\n\nБудет удалено ${archivedCount} архивных проектов. Активные незавершенные проекты останутся в работе.`)) return;
-
-    db.projects = db.projects.filter(p => p.archiveState !== 'archived');
-    syncToCloud();
+async function startNewMonthClean() {
+    if (!confirm('Удалить из облака все архивные проекты? Активные заказы останутся в работе.')) return;
+    await sb.from('projects').delete().eq('archive_state', 'archived');
     closeDevModal();
-    renderMainMenuProjects();
-    alert('Архивные проекты очищены. Новый месяц готов к работе!');
+    await fetchProjectsList();
+    alert('Архивные проекты очищены!');
 }
 
-// ==========================================
-// ЗАПУСК СИСТЕМЫ
-// ==========================================
+// Запуск
 window.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
