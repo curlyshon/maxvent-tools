@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Maxvent Tools — Производственная система</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; background-color: #020617; color: #f1f5f9; }
         .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
@@ -13,7 +14,7 @@
         ::-webkit-scrollbar-track { background: #090d16; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
         .chip-scroll { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
-        .chip-btn { flex: 0 0 auto; min-height: 36px; padding: 0 12px; border-radius: 8px; font-size: 13px; font-weight: 600; background: #1e293b; color: #e2e8f0; border: 1px solid #334155; }
+        .chip-btn { flex: 0 0 auto; min-height: 38px; padding: 0 14px; border-radius: 8px; font-size: 13px; font-weight: 600; background: #1e293b; color: #e2e8f0; border: 1px solid #334155; }
         .chip-btn:active { background: #2563eb; color: #fff; }
         @media print {
             .no-print { display: none !important; }
@@ -29,16 +30,15 @@
         <button onclick="window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'})" title="Вниз" class="w-11 h-11 rounded-full bg-slate-800/90 hover:bg-slate-700 text-white shadow-lg flex items-center justify-center font-bold text-lg border border-slate-600">↓</button>
     </div>
 
-    <!-- ЭКРАН АВТОРИЗАЦИИ / ПЕРВОЙ НАСТРОЙКИ -->
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <div id="authScreen" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 my-auto">
             <div class="text-center space-y-1">
                 <div class="inline-block bg-blue-600 text-white font-black px-3 py-1 text-sm rounded tracking-wider mb-2">MAXVENT</div>
                 <h1 class="text-xl font-bold tracking-tight text-white">Добро пожаловать в Maxvent Tools</h1>
-                <p id="authSubtitle" class="text-xs text-slate-400">Пожалуйста авторизуйтесь</p>
+                <p id="authSubtitle" class="text-xs text-slate-400">Пожалуйста, авторизуйтесь</p>
             </div>
 
-            <!-- Вкладки Вход / Регистрация -->
             <div id="authTabs" class="flex border-b border-slate-800">
                 <button type="button" onclick="setAuthMode('login')" id="authTabLogin" class="flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-blue-400 border-b-2 border-blue-500">Вход</button>
                 <button type="button" onclick="setAuthMode('register')" id="authTabRegister" class="flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 border-b-2 border-transparent">Создать аккаунт</button>
@@ -71,26 +71,25 @@
             </form>
 
             <div class="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-800">
-                <span id="cloudStatusAuth">Облако: подключение...</span>
-                <button type="button" onclick="syncFromCloud(true)" class="text-blue-400 hover:underline">Обновить из облака</button>
+                <span id="cloudStatusAuth">Онлайн-база: подключение...</span>
+                <button type="button" onclick="loadInitialData()" class="text-blue-400 hover:underline">Проверить связь</button>
             </div>
         </div>
     </div>
 
-    <!-- ВЕРХНЯЯ ПАНЕЛЬ (ШАПКА) -->
+    <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
     <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-30 no-print">
         <div class="flex items-center gap-3">
             <button onclick="goToMainMenu()" class="flex items-center gap-2 text-left">
                 <span class="bg-blue-600 text-white font-black px-2.5 py-1 text-xs rounded">MV</span>
                 <div>
                     <div class="font-bold text-sm text-white leading-none">MAXVENT TOOLS</div>
-                    <div id="cloudIndicator" class="text-[10px] text-emerald-400">● Синхронизировано</div>
+                    <div id="cloudIndicator" class="text-[10px] text-emerald-400">● Онлайн (Supabase)</div>
                 </div>
             </button>
         </div>
 
         <div class="flex items-center gap-2 sm:gap-3">
-            <!-- Переключатель режима разработчика -->
             <div id="devToggleWrap" class="hidden items-center gap-1.5 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-800 text-xs">
                 <span class="text-[10px] font-bold text-amber-400">DEV</span>
                 <button type="button" onclick="toggleDevMode()" id="devToggleBtn" class="w-8 h-4 bg-blue-600 rounded-full relative transition flex items-center">
@@ -98,7 +97,6 @@
                 </button>
             </div>
 
-            <!-- Профиль -->
             <div class="relative">
                 <button onclick="toggleProfileMenu()" class="flex items-center gap-2 bg-slate-950 border border-slate-800 px-2.5 py-1.5 rounded-lg">
                     <span id="userAvatar" class="w-6 h-6 rounded-full bg-blue-600 text-xs font-bold flex items-center justify-center text-white">А</span>
@@ -112,23 +110,21 @@
                         <div class="text-[11px] text-blue-400" id="dropUserRole">Роль</div>
                     </div>
                     <button onclick="openProfileEditModal()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-200">✎ Редактировать профиль</button>
-                    <button id="menuBtnDevSettings" onclick="openDevModal()" class="hidden w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-amber-300 font-semibold">⚙ Панель разработчика (Справочники / Люди / Архив)</button>
+                    <button id="menuBtnDevSettings" onclick="openDevModal()" class="hidden w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-amber-300 font-semibold">⚙ Панель разработчика (Справочники / Архив)</button>
                     <button id="menuBtnGlobalFinance" onclick="openGlobalFinanceModal()" class="hidden w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-emerald-400 font-semibold">₸ Финансы всех объектов</button>
-                    <button onclick="syncFromCloud(true)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-blue-400">↻ Принудительная синхронизация</button>
+                    <button onclick="loadInitialData()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-blue-400">↻ Обновить данные из базы</button>
                     <button onclick="logout()" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-rose-400">Выйти из аккаунта</button>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- ========================================== -->
-    <!-- ГЛАВНОЕ МЕНЮ                               -->
-    <!-- ========================================== -->
+    <!-- ГЛАВНОЕ МЕНЮ -->
     <main id="mainMenuScreen" class="flex-1 p-4 sm:p-6 max-w-6xl w-full mx-auto space-y-6">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-7 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <h1 class="text-xl sm:text-2xl font-black text-white">Maxvent Tools. Приятной работы</h1>
-                <p id="archiveModeBanner" class="text-xs text-slate-400 mt-1">Активная облачная база цеха Maxvent</p>
+                <p id="archiveModeBanner" class="text-xs text-slate-400 mt-1">Производственная облачная база данных</p>
             </div>
             <div class="flex flex-wrap gap-2 w-full sm:w-auto">
                 <button onclick="openProjectModal()" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition">
@@ -140,15 +136,12 @@
             </div>
         </div>
 
-        <!-- Раздел Проекты -->
         <div class="space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="flex items-center gap-2">
-                    <button onclick="toggleProjectsSection()" class="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-sm font-bold text-white flex items-center gap-2">
-                        <span>Проекты</span>
-                        <span id="projectsBadgeCount" class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full mono">0</span>
-                    </button>
-                </div>
+                <button onclick="toggleProjectsSection()" class="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-sm font-bold text-white flex items-center gap-2">
+                    <span>Проекты</span>
+                    <span id="projectsBadgeCount" class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full mono">0</span>
+                </button>
                 <div class="flex gap-1.5">
                     <button onclick="setProjectFilter('active')" id="btnProjActive" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white">Активные</button>
                     <button onclick="setProjectFilter('archived')" id="btnProjArchived" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-400">Архив</button>
@@ -162,9 +155,7 @@
         </div>
     </main>
 
-    <!-- ========================================== -->
-    <!-- ЭКРАН ВНУТРИ ПРОЕКТА                       -->
-    <!-- ========================================== -->
+    <!-- ВНУТРИ ПРОЕКТА -->
     <div id="projectScreen" class="hidden flex-1 flex flex-col">
         <div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 no-print">
             <div class="flex items-center gap-2">
@@ -181,9 +172,8 @@
         </div>
 
         <div class="p-4 sm:p-6 max-w-6xl w-full mx-auto space-y-6 flex-1">
-            <!-- ВКЛАДКА 1: ИЗДЕЛИЯ И ЗАКАЗ -->
             <div id="view-items" class="space-y-6">
-                <!-- СВОДКА ПО ПРОЕКТУ -->
+                <!-- СВОДКА (СВЕРНУТА ПО УМОЛЧАНИЮ) -->
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
                     <button onclick="toggleSummaryAccordion()" class="w-full p-4 flex flex-wrap items-center justify-between gap-2 text-left hover:bg-slate-800/50 transition">
                         <div class="flex items-center gap-2">
@@ -210,12 +200,10 @@
 
                     <form id="itemForm" onsubmit="saveProjectItem(event)" class="space-y-4">
                         <input type="hidden" id="editItemId" value="">
-
                         <div class="grid grid-cols-2 gap-2">
                             <button type="button" onclick="selectCategory('duct')" id="btnCatDuct" class="py-3 text-xs font-bold uppercase tracking-wider rounded-xl bg-blue-600 text-white">Воздуховод</button>
                             <button type="button" onclick="selectCategory('fitting')" id="btnCatFitting" class="py-3 text-xs font-bold uppercase tracking-wider rounded-xl bg-slate-800 text-slate-300">Изделие</button>
                         </div>
-
                         <div>
                             <label class="block text-xs text-slate-400 mb-1.5">Форма сечения</label>
                             <div class="grid grid-cols-3 gap-2" id="shapeButtonsWrap">
@@ -224,14 +212,11 @@
                                 <button type="button" onclick="selectShape('smooth')" id="btnShapeSmooth" class="hidden py-2.5 text-xs font-bold rounded-xl bg-slate-800 text-slate-300">Плавное</button>
                             </div>
                         </div>
-
                         <div id="fittingSelectWrap" class="hidden">
                             <label class="block text-xs text-slate-400 mb-1.5">Вид изделия</label>
                             <select id="fittingTypeSelect" onchange="onFittingTypeChange()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-sm font-semibold text-white focus:outline-none focus:border-blue-500"></select>
                         </div>
-
                         <div id="dynamicFieldsBox" class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 sm:p-4 space-y-4"></div>
-
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             <div>
                                 <label class="block text-xs text-slate-400 mb-1">Металл</label>
@@ -250,19 +235,17 @@
                                 <input type="number" id="inPrice" min="0" value="1000" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs mono font-bold text-emerald-400">
                             </div>
                         </div>
-
                         <div id="workersAssignWrap" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
                             <div class="text-xs font-bold text-amber-400">Участвовавшие работники (Исполнители):</div>
                             <div id="workersCheckboxes" class="flex flex-wrap gap-2 text-xs"></div>
                         </div>
-
                         <button type="submit" id="submitItemBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl shadow-lg transition">
                             Добавить в спецификацию
                         </button>
                     </form>
                 </div>
 
-                <!-- СПЕЦИФИКАЦИЯ ИЗДЕЛИЙ -->
+                <!-- СПЕЦИФИКАЦИЯ -->
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-3">
                         <div class="flex items-center gap-3">
@@ -271,7 +254,6 @@
                                 Удалить выбранные (<span id="bulkCount">0</span>)
                             </button>
                         </div>
-
                         <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto text-xs">
                             <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl">
                                 <span class="text-slate-400">Вид металла:</span>
@@ -287,12 +269,11 @@
                             </div>
                         </div>
                     </div>
-
                     <div id="specificationAccordionList" class="space-y-3"></div>
                 </div>
             </div>
 
-            <!-- ВКЛАДКА 2: ШИНКА -->
+            <!-- ШИНКА -->
             <div id="view-flange" class="hidden space-y-6">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-5">
                     <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-3">
@@ -301,10 +282,9 @@
                             <p class="text-xs text-slate-400">1 рез пачки = 10 шинок. Длина шинки = Сторона − 30 мм</p>
                         </div>
                         <button onclick="exportFlangeText('project')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-xl">
-                            Экспортировать / Копировать наряд
+                            Копировать наряд
                         </button>
                     </div>
-
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs">
                         <div>
                             <label class="block text-slate-400 mb-1">Длина пачки (мм)</label>
@@ -322,46 +302,40 @@
                             </select>
                         </div>
                     </div>
-
                     <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
                         <div class="font-bold text-slate-300">Имеющиеся обрезки пачек (по 10 хлыстов):</div>
                         <div class="flex flex-wrap gap-2">
-                            <input type="number" id="projScrapLenInput" placeholder="Длина обрезка (мм), например 1400" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 mono text-white">
+                            <input type="number" id="projScrapLenInput" placeholder="Длина обрезка (мм)" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 mono text-white">
                             <button onclick="addFlangeScrap('project')" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-lg">+ Добавить обрезок</button>
                         </div>
                         <div id="projScrapChips" class="flex flex-wrap gap-2"></div>
                     </div>
-
                     <div id="projFlangeOutput" class="space-y-4"></div>
                 </div>
             </div>
 
-            <!-- ВКЛАДКА 3: РАСКРОЙ ЛИСТА 2D -->
+            <!-- РАСКРОЙ ЛИСТА 2D -->
             <div id="view-nesting" class="hidden space-y-6">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-5">
-                    <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-3">
-                        <div>
-                            <h2 class="text-sm font-bold uppercase tracking-wider text-white">Раскрой листа 2D (Только воздуховоды)</h2>
-                            <p class="text-xs text-slate-400">Стандартный лист 2500 × 1250 мм. Без вращения деталей.</p>
-                        </div>
+                    <div class="border-b border-slate-800 pb-3">
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-white">Раскрой листа 2D (Только воздуховоды)</h2>
+                        <p class="text-xs text-slate-400">Стандартный лист 2500 × 1250 мм. Без вращения деталей.</p>
                     </div>
-
                     <div>
                         <div class="text-xs text-slate-400 mb-2">1. Выберите лист (вид металла и толщину):</div>
                         <div id="nestingSheetTabs" class="flex flex-wrap gap-2"></div>
                     </div>
-
                     <div id="nestingDuctsSelectionBox" class="space-y-3"></div>
                     <div id="nestingVisualizerBox" class="space-y-4 pt-4 border-t border-slate-800"></div>
                 </div>
             </div>
 
-            <!-- ВКЛАДКА 4: ФИНАНСЫ ПРОЕКТА (DEV) -->
+            <!-- ФИНАНСЫ -->
             <div id="view-finance" class="hidden space-y-6">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-5">
                     <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                         <h2 class="text-sm font-bold uppercase tracking-wider text-white">Финансы проекта (₸)</h2>
-                        <button onclick="openGlobalFinanceModal()" class="text-xs text-blue-400 hover:underline">Открыть сводку по всем объектам →</button>
+                        <button onclick="openGlobalFinanceModal()" class="text-xs text-blue-400 hover:underline">Сводка по всем объектам →</button>
                     </div>
                     <div id="projFinanceBody" class="space-y-4"></div>
                 </div>
@@ -369,17 +343,13 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО: АВТОНОМНЫЙ КАЛЬКУЛЯТОР ШИНКИ -->
+    <!-- МОДАЛЬНЫЕ ОКНА -->
     <div id="standaloneFlangeModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full p-4 sm:p-6 space-y-4 my-auto max-h-[92vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <div>
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-white">Калькулятор шинки (Быстрый расчет)</h3>
-                    <p class="text-xs text-slate-400">Одинаковые размеры автоматически суммируются</p>
-                </div>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-white">Калькулятор шинки (Быстрый расчет)</h3>
                 <button onclick="closeStandaloneFlange()" class="text-slate-400 hover:text-white text-xl font-bold px-2">✕</button>
             </div>
-
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs">
                 <div>
                     <label class="block text-slate-400 mb-1">Длина пачки (мм)</label>
@@ -397,7 +367,6 @@
                     </select>
                 </div>
             </div>
-
             <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs">
                 <div class="font-bold text-slate-300">Обрезки пачек (по 10 шт):</div>
                 <div class="flex gap-2">
@@ -406,7 +375,6 @@
                 </div>
                 <div id="stScrapChips" class="flex flex-wrap gap-1.5"></div>
             </div>
-
             <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-3 text-xs">
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div>
@@ -418,7 +386,7 @@
                         <input type="number" id="stH" value="300" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 mono text-white">
                     </div>
                     <div>
-                        <label class="block text-slate-400 mb-1">Кол-во сторон (на 1 ед.)</label>
+                        <label class="block text-slate-400 mb-1">Кол-во сторон</label>
                         <input type="number" id="stSides" value="2" min="1" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 mono text-white">
                     </div>
                     <div>
@@ -431,12 +399,10 @@
                     <button onclick="clearStandaloneFlange()" class="bg-slate-800 text-slate-400 hover:text-rose-400 px-4 py-2.5 rounded-xl">Очистить</button>
                 </div>
             </div>
-
             <div id="stFlangeOutput" class="space-y-4"></div>
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО: ПРОЕКТ -->
     <div id="projectModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4">
             <h3 id="projectModalHeader" class="text-sm font-bold uppercase tracking-wider text-white">Создать проект</h3>
@@ -470,14 +436,12 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО: ПАНЕЛЬ РАЗРАБОТЧИКА -->
     <div id="devModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full p-4 sm:p-6 space-y-6 my-auto max-h-[92vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400">⚙ Панель Разработчика (Управление системой)</h3>
                 <button onclick="closeDevModal()" class="text-slate-400 hover:text-white text-xl font-bold">✕</button>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                 <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
                     <div class="font-bold text-white">Виды металлов</div>
@@ -504,7 +468,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
                 <div class="font-bold text-amber-300 uppercase tracking-wider">Конструктор: Добавить / Настроить вид изделия</div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -526,28 +489,26 @@
                     </div>
                 </div>
                 <div>
-                    <div class="text-slate-400 mb-1.5">Отметьте галочками параметры, которые будут запрашиваться у работника:</div>
+                    <div class="text-slate-400 mb-1.5">Отметьте параметры, которые будут запрашиваться у работника:</div>
                     <div id="customFitParamsCheckboxes" class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900 p-3 rounded-lg border border-slate-800"></div>
                 </div>
                 <button onclick="saveCustomFitting()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-2.5 rounded-xl uppercase">
                     + Сохранить изделие в справочник
                 </button>
             </div>
-
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
-                <div class="font-bold text-blue-400 uppercase tracking-wider">Пользователи, привилегии и статистика участия</div>
+                <div class="font-bold text-blue-400 uppercase tracking-wider">Пользователи цеха и выработка</div>
                 <div id="devUsersStatsList" class="space-y-2"></div>
             </div>
-
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
-                <div class="font-bold text-emerald-400 uppercase tracking-wider">Архивация по месяцам (Экспорт на компьютер и очистка)</div>
-                <p class="text-slate-400">Вы можете скачать полную копию базы за текущий месяц в отдельный файл, открыть любой прошлый месяц для просмотра или очистить завершенные проекты для нового месяца.</p>
+                <div class="font-bold text-emerald-400 uppercase tracking-wider">Архивация по месяцам</div>
+                <p class="text-slate-400">Скачивание полного архива заказов в JSON или очистка завершенных объектов для нового месяца.</p>
                 <div class="flex flex-wrap gap-2">
                     <button onclick="exportMonthlyArchive()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl">
-                        ⬇ Скачать файл архива месяца (.json)
+                        ⬇ Скачать архив месяца (.json)
                     </button>
                     <label class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-xl cursor-pointer">
-                        📂 Открыть файл прошлого месяца
+                        📂 Открыть архив прошлого месяца
                         <input type="file" accept=".json" onchange="importMonthlyArchive(event)" class="hidden">
                     </label>
                     <button onclick="startNewMonthClean()" class="bg-rose-900/70 hover:bg-rose-800 text-rose-200 font-bold px-4 py-2.5 rounded-xl">
@@ -558,7 +519,6 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО: ГЛОБАЛЬНЫЕ ФИНАНСЫ -->
     <div id="globalFinanceModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full p-4 sm:p-6 space-y-5 my-auto max-h-[92vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -569,7 +529,7 @@
         </div>
     </div>
 
-    <!-- ПОДКЛЮЧЕНИЕ СКРИПТА ЛОГИКИ -->
+    <!-- ПОДКЛЮЧЕНИЕ ЧИСТОЙ ОНЛАЙН-ЛОГИКИ -->
     <script src="app.js"></script>
 </body>
 </html>
