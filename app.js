@@ -147,21 +147,37 @@ function showToast(message, type = 'info', duration = 3000) {
     }, duration);
 }
 
+function parseFlangeScrapItem(s, defCount) {
+    if (typeof s === 'number') return { len: s, count: defCount };
+    if (typeof s === 'object' && s !== null) {
+        return { len: Number(s.len) || 1000, count: Number(s.count) || defCount };
+    }
+    if (typeof s === 'string') {
+        const mLen = s.match(/len\s*=\s*(\d+)/i);
+        const mCnt = s.match(/count\s*=\s*(\d+)/i);
+        if (mLen) return { len: Number(mLen[1]), count: mCnt ? Number(mCnt[1]) : defCount };
+        const num = Number(s);
+        if (!isNaN(num) && num > 0) return { len: num, count: defCount };
+    }
+    return { len: 1000, count: defCount };
+}
+
 // Хелперы припусков фальцев и пачек шинки для проекта
 function getProjectFlangeData(p) {
     if (!p) return { scraps: [], seams: { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 }, pack_qty: 10 };
     if (Array.isArray(p.flange_scraps)) {
         return {
-            scraps: p.flange_scraps.map(s => typeof s === 'number' ? { len: s, count: 10 } : s),
+            scraps: p.flange_scraps.map(s => parseFlangeScrapItem(s, 10)),
             seams: { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 },
             pack_qty: 10
         };
     }
     if (typeof p.flange_scraps === 'object' && p.flange_scraps !== null) {
+        const pQty = Number(p.flange_scraps.pack_qty) || 10;
         return {
-            scraps: (p.flange_scraps.scraps || []).map(s => typeof s === 'number' ? { len: s, count: p.flange_scraps.pack_qty || 10 } : s),
+            scraps: (p.flange_scraps.scraps || []).map(s => parseFlangeScrapItem(s, pQty)),
             seams: p.flange_scraps.seams || { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 },
-            pack_qty: Number(p.flange_scraps.pack_qty) || 10
+            pack_qty: pQty
         };
     }
     return { scraps: [], seams: { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 }, pack_qty: 10 };
@@ -241,6 +257,10 @@ function getItemFrames(it) {
     if (it.frames && Array.isArray(it.frames) && it.frames.length) {
         return it.frames;
     }
+    if (it.frames && typeof it.frames === 'string' && it.frames.trim().length > 0) {
+        const parts = it.frames.trim().split(/\s+/).map(s => s.replace('x', '×')).filter(Boolean);
+        if (parts.length) return parts;
+    }
     const frames = [];
     if (it.shape === 'rect' || it.shape === 'smooth') {
         if ((it.fittingId === 'r_tee' || it.title === 'Тройник') && it.descDetail) {
@@ -253,8 +273,8 @@ function getItemFrames(it) {
             const parts = raw.split('/').map(s => s.trim().replace('x', '×')).filter(Boolean);
             if (parts.length) return parts;
         }
-        const w1 = it.w || it.w1 || 400;
-        const h1 = it.h || it.h1 || 300;
+        const w1 = it.w1 || it.w || 400;
+        const h1 = it.h1 || it.h || 300;
         const w2 = it.w2 || it.w || 400;
         const h2 = it.h2 || it.h || 300;
         if (it.flange1) frames.push(`${w1}×${h1}`);
@@ -645,9 +665,9 @@ function formatPreviewItems(items, isFitting) {
             out += `<div class="text-[10px] font-bold text-slate-400 pl-2 mt-0.5">${mKey}</div>`;
             arr.forEach(it => {
                 let dimText = '';
-                if (it.shape === 'rect') dimText = `${it.w}х${it.h} | L=${it.l || 1250}`;
+                if (it.shape === 'rect') dimText = `${it.w}×${it.h} | L=${it.l || 1250}`;
                 else if (it.shape === 'round') dimText = `Ø${it.d} | L=${it.l || 1250}`;
-                else dimText = `${it.w1 || it.w}х${it.h1 || it.h} → Ø${it.d}`;
+                else dimText = `${it.w1 || it.w}×${it.h1 || it.h} → Ø${it.d}${it.l ? ` | L=${it.l}` : ''}`;
                 out += `<div class="pl-4 text-[11px] text-slate-200 mono">${dimText} | <strong class="text-blue-300">${it.qty} шт</strong></div>`;
             });
         }
@@ -942,31 +962,37 @@ function selectCategory(cat) {
     document.getElementById('btnCatDuct').className = cat === 'duct' ? 'py-3 text-xs font-bold uppercase tracking-wider rounded-xl bg-blue-600 text-white' : 'py-3 text-xs font-bold uppercase tracking-wider rounded-xl bg-slate-800 text-slate-300';
     document.getElementById('btnCatFitting').className = cat === 'fitting' ? 'py-3 text-xs font-bold uppercase tracking-wider rounded-xl bg-blue-600 text-white' : 'py-3 text-xs font-bold uppercase tracking-wider rounded-xl bg-slate-800 text-slate-300';
 
-    const smoothBtn = document.getElementById('btnShapeSmooth');
-    const shapeWrap = document.getElementById('shapeButtonsWrap');
-    if (cat === 'duct') {
-        smoothBtn.classList.add('hidden');
-        if (shapeWrap) { shapeWrap.classList.remove('grid-cols-3'); shapeWrap.classList.add('grid-cols-2'); }
-        if (session.activeShape === 'smooth') session.activeShape = 'rect';
-    } else {
-        smoothBtn.classList.remove('hidden');
-        if (shapeWrap) { shapeWrap.classList.remove('grid-cols-2'); shapeWrap.classList.add('grid-cols-3'); }
+    if (cat === 'duct' && session.activeShape === 'smooth') {
+        session.activeShape = 'rect';
     }
 
-    selectShape(session.activeShape);
     document.getElementById('fittingSelectWrap').classList.toggle('hidden', cat !== 'fitting');
-    updateFittingDropdown();
-    renderDynamicInputs();
+    selectShape(session.activeShape);
 }
 
 function selectShape(sh) {
+    if (session.activeCategory === 'duct' && sh === 'smooth') {
+        sh = 'rect';
+    }
     session.activeShape = sh;
+    const isDuct = session.activeCategory === 'duct';
+    const shapeWrap = document.getElementById('shapeButtonsWrap');
+    if (shapeWrap) {
+        if (isDuct) {
+            shapeWrap.classList.remove('grid-cols-3');
+            shapeWrap.classList.add('grid-cols-2');
+        } else {
+            shapeWrap.classList.remove('grid-cols-2');
+            shapeWrap.classList.add('grid-cols-3');
+        }
+    }
     ['rect', 'round', 'smooth'].forEach(s => {
         const btn = document.getElementById('btnShape' + s.charAt(0).toUpperCase() + s.slice(1));
         if (btn) {
-            btn.className = s === sh ? 'py-2.5 text-xs font-bold rounded-xl bg-blue-600 text-white' : 'py-2.5 text-xs font-bold rounded-xl bg-slate-800 text-slate-300';
-            if (s === 'smooth' && session.activeCategory === 'duct') {
-                btn.classList.add('hidden');
+            if (s === 'smooth' && isDuct) {
+                btn.className = 'hidden';
+            } else {
+                btn.className = s === sh ? 'py-2.5 text-xs font-bold rounded-xl bg-blue-600 text-white' : 'py-2.5 text-xs font-bold rounded-xl bg-slate-800 text-slate-300';
             }
         }
     });
@@ -1091,11 +1117,12 @@ function renderDynamicInputs() {
     }
 
     if (fitDef.params.includes('w1') && fitDef.params.includes('h1')) {
+        const isSmoothTrans = fitDef.id === 's_trans' || session.activeShape === 'smooth';
         html += `
             <div class="bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/80 space-y-2">
                 <div class="flex justify-between items-center">
-                    <span class="text-[11px] font-bold text-slate-300">Рамка 1 (Вход):</span>
-                    <button type="button" onclick="swapDims('f_w1', 'f_h1')" class="text-[10px] text-blue-400 hover:text-blue-300 font-bold transition">⇄ A1 ↔ B1</button>
+                    <span class="text-[11px] font-bold text-slate-300">${isSmoothTrans ? 'Прямоугольное сечение (Вход):' : 'Рамка 1 (Вход):'}</span>
+                    <button type="button" onclick="swapDims('f_w1', 'f_h1')" class="text-[10px] text-blue-400 hover:text-blue-300 font-bold transition">⇄ Поменять A1 ↔ B1</button>
                 </div>
                 <div><label class="block text-[10px] text-slate-400 mb-0.5">Ширина 1 (мм)</label><input type="number" id="f_w1" value="400" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 mono text-white text-xs">${renderChipScroller('f_w1', POPULAR_RECT)}</div>
                 <div><label class="block text-[10px] text-slate-400 mb-0.5">Высота 1 (мм)</label><input type="number" id="f_h1" value="300" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 mono text-white text-xs">${renderChipScroller('f_h1', POPULAR_RECT)}</div>
@@ -1116,7 +1143,10 @@ function renderDynamicInputs() {
         `;
     }
 
-    if (fitDef.params.includes('d')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр Ø (мм)</label><input type="number" id="f_d" value="200" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d', POPULAR_DIAM)}</div>`;
+    if (fitDef.params.includes('d')) {
+        const isSmoothTrans = fitDef.id === 's_trans' || session.activeShape === 'smooth';
+        html += `<div><label class="block text-xs text-slate-400 mb-1">${isSmoothTrans ? 'Диаметр Ø (Выход) мм' : 'Диаметр Ø (мм)'}</label><input type="number" id="f_d" value="200" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d', POPULAR_DIAM)}</div>`;
+    }
     if (fitDef.params.includes('d1')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр 1 Ø (мм)</label><input type="number" id="f_d1" value="250" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d1', POPULAR_DIAM)}</div>`;
     if (fitDef.params.includes('d2')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр 2 Ø (мм)</label><input type="number" id="f_d2" value="200" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d2', POPULAR_DIAM)}</div>`;
     if (fitDef.params.includes('d_main')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр основного воздуховода Ø (мм)</label><input type="number" id="f_d_main" value="315" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d_main', POPULAR_DIAM)}</div>`;
@@ -1226,6 +1256,8 @@ function updateFrameLabels() {
     if (l1) {
         if (document.getElementById('f_w1') && document.getElementById('f_w2')) {
             l1.textContent = `Рамка 1: ${w1}×${h1} мм`;
+        } else if (document.getElementById('f_w1')) {
+            l1.textContent = `Рамка: ${w1}×${h1} мм`;
         } else {
             l1.textContent = l2 ? `Рамка 1: ${w}×${h} мм` : `Рамка: ${w}×${h} мм`;
         }
@@ -1375,6 +1407,9 @@ async function saveProjectItem(e) {
             if (dims.w1 && dims.h1 && dims.w2 && dims.h2) {
                 if (dims.flange1) frames.push(`${dims.w1}×${dims.h1}`);
                 if (dims.flange2) frames.push(`${dims.w2}×${dims.h2}`);
+            } else if (dims.w1 && dims.h1) {
+                if (dims.flange1) frames.push(`${dims.w1}×${dims.h1}`);
+                if (dims.flange2 && dims.w2 && dims.h2) frames.push(`${dims.w2}×${dims.h2}`);
             } else if (dims.w && dims.h) {
                 if (dims.flange1) frames.push(`${dims.w}×${dims.h}`);
                 if (dims.flange2) frames.push(`${dims.w}×${dims.h}`);
@@ -1549,10 +1584,23 @@ function renderSpecItemRow(it) {
         if (it.hood_type) descParts.push(it.hood_type);
         if (it.deg) descParts.push(`${it.deg}°`);
         if (it.descDetail) descParts.push(it.descDetail);
-        if (it.w1 && it.w2) descParts.push(`${it.w1}×${it.h1} → ${it.w2}×${it.h2}`);
-        else if (it.w && it.h) descParts.push(`${it.w}×${it.h}`);
-        if (it.d1 && it.d2) descParts.push(`Ø${it.d1} → Ø${it.d2}`);
-        else if (it.d) descParts.push(`Ø${it.d}`);
+        if (it.w1 && it.w2) {
+            descParts.push(`${it.w1}×${it.h1} → ${it.w2}×${it.h2}`);
+        } else if (it.w1 && it.h1 && it.d) {
+            descParts.push(`${it.w1}×${it.h1} → Ø${it.d}`);
+        } else if (it.w && it.h && it.d && (it.shape === 'smooth' || it.fittingId === 's_trans')) {
+            descParts.push(`${it.w}×${it.h} → Ø${it.d}`);
+        } else if (it.w1 && it.h1) {
+            descParts.push(`${it.w1}×${it.h1}`);
+        } else if (it.w && it.h) {
+            descParts.push(`${it.w}×${it.h}`);
+        }
+
+        if (it.d1 && it.d2) {
+            descParts.push(`Ø${it.d1} → Ø${it.d2}`);
+        } else if (it.d && !it.w1 && !(it.w && (it.shape === 'smooth' || it.fittingId === 's_trans'))) {
+            descParts.push(`Ø${it.d}`);
+        }
         if (it.d_main) descParts.push(`Осн: Ø${it.d_main}`);
         if (it.l) descParts.push(`L=${it.l}`);
         if (it.hood_seat) descParts.push(`Посадка: ${it.hood_seat} мм`);
@@ -1680,8 +1728,8 @@ function editProjectItem(id) {
     if (document.getElementById('f_h')) document.getElementById('f_h').value = it.h || 300;
     if (document.getElementById('f_d')) document.getElementById('f_d').value = it.d || 200;
     if (document.getElementById('f_l')) document.getElementById('f_l').value = it.l || 1250;
-    if (document.getElementById('f_w1')) document.getElementById('f_w1').value = it.w1 || 400;
-    if (document.getElementById('f_h1')) document.getElementById('f_h1').value = it.h1 || 300;
+    if (document.getElementById('f_w1')) document.getElementById('f_w1').value = it.w1 || it.w || 400;
+    if (document.getElementById('f_h1')) document.getElementById('f_h1').value = it.h1 || it.h || 300;
     if (document.getElementById('f_w2')) document.getElementById('f_w2').value = it.w2 || 300;
     if (document.getElementById('f_h2')) document.getElementById('f_h2').value = it.h2 || 250;
     if (document.getElementById('f_d1')) document.getElementById('f_d1').value = it.d1 || 250;
@@ -1693,6 +1741,7 @@ function editProjectItem(id) {
     if (document.getElementById('f_inlets_cnt')) document.getElementById('f_inlets_cnt').value = it.inlets_cnt || 2;
     if (document.getElementById('f_flange1')) document.getElementById('f_flange1').checked = !!it.flange1;
     if (document.getElementById('f_flange2')) document.getElementById('f_flange2').checked = !!it.flange2;
+    updateFrameLabels();
 
     document.querySelectorAll('input[name="assignWorker"]').forEach(cb => {
         cb.checked = (it.workers || []).includes(cb.value);
@@ -1822,52 +1871,153 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, roundMode, scrapsLis
         return sum + (2 * (parts[0] + parts[1]) * cnt);
     }, 0) / 1000;
 
-    const packCuts = [];
-    const singleTails = [];
+    const remainingDemand = { ...cutsNeeded };
 
-    for (let [cutLenStr, qty] of Object.entries(cutsNeeded)) {
-        const len = Number(cutLenStr);
-        const fullPacks = Math.floor(qty / packQty);
-        const rem = qty % packQty;
-        for (let i = 0; i < fullPacks; i++) packCuts.push(len);
-        if (rem > 0) {
-            if (roundMode === 'up') packCuts.push(len);
-            else singleTails.push({ len, qty: rem });
+    // Нормализация имеющихся обрезков
+    const availableScraps = (scrapsList || []).map(s => {
+        let totalLen = typeof s === 'number' ? s : Number(s.len);
+        let count = typeof s === 'number' ? packQty : (Number(s.count) || packQty);
+        if (isNaN(totalLen) && typeof s === 'string') {
+            const mLen = s.match(/len\s*=\s*(\d+)/i);
+            const mCnt = s.match(/count\s*=\s*(\d+)/i);
+            totalLen = mLen ? Number(mLen[1]) : 1000;
+            count = mCnt ? Number(mCnt[1]) : packQty;
         }
+        return {
+            totalLen: totalLen || 1000,
+            count: count || packQty,
+            isScrap: true,
+            cuts: []
+        };
+    });
+
+    // Оптимальный поиск комбинации резов из пула под заданную длину пачки/обрезка
+    function findBestFit(poolMap, capLen) {
+        const keys = Object.keys(poolMap).map(Number).sort((a, b) => b - a);
+        let bestCombo = [];
+        let bestUsed = -1;
+
+        function search(idx, currentCombo, currentLen) {
+            const cutsCount = currentCombo.length;
+            const totalWithKerf = cutsCount > 0 ? (currentLen + (cutsCount - 1) * kerf) : 0;
+            if (totalWithKerf > capLen) return;
+
+            if (totalWithKerf > bestUsed || (totalWithKerf === bestUsed && currentCombo.length < bestCombo.length)) {
+                bestUsed = totalWithKerf;
+                bestCombo = [...currentCombo];
+            }
+
+            for (let i = idx; i < keys.length; i++) {
+                const len = keys[i];
+                if (poolMap[len] > 0) {
+                    poolMap[len]--;
+                    currentCombo.push(len);
+                    search(i, currentCombo, currentLen + len);
+                    currentCombo.pop();
+                    poolMap[len]++;
+                }
+            }
+        }
+
+        search(0, [], 0);
+        return bestCombo;
     }
-
-    packCuts.sort((a, b) => b - a);
-
-    const availableScraps = (scrapsList || []).map(s => ({
-        totalLen: typeof s === 'number' ? s : s.len,
-        count: typeof s === 'number' ? packQty : (s.count || packQty),
-        isScrap: true,
-        cuts: []
-    }));
 
     const resultPacks = [];
 
-    packCuts.forEach(c => {
-        let placed = false;
-        for (let p of resultPacks) {
-            const used = p.cuts.reduce((s, x) => s + x + kerf, 0);
-            if (used + c <= p.totalLen) {
-                p.cuts.push(c);
-                placed = true;
-                break;
+    // Шаг 1: Раскрой обрезков, в которых количество шинок >= стандартной пачки (приоритет утилизации цеховых остатков)
+    const scrapsStep1 = availableScraps.filter(s => s.count >= packQty).sort((a, b) => a.totalLen - b.totalLen);
+    for (let scrap of scrapsStep1) {
+        const pool = {};
+        for (let [lStr, rem] of Object.entries(remainingDemand)) {
+            const l = Number(lStr);
+            const maxC = Math.floor(rem / scrap.count);
+            if (maxC > 0) pool[l] = maxC;
+        }
+        if (Object.keys(pool).length > 0) {
+            const combo = findBestFit(pool, scrap.totalLen);
+            if (combo.length > 0) {
+                scrap.cuts = combo;
+                for (let c of combo) {
+                    remainingDemand[c] -= scrap.count;
+                }
+                resultPacks.push(scrap);
+                const idx = availableScraps.indexOf(scrap);
+                if (idx !== -1) availableScraps.splice(idx, 1);
             }
         }
-        if (!placed) {
-            const scrapIdx = availableScraps.findIndex(s => s.totalLen >= c);
-            if (scrapIdx !== -1) {
-                const scr = availableScraps.splice(scrapIdx, 1)[0];
-                scr.cuts.push(c);
-                resultPacks.push(scr);
+    }
+
+    // Шаг 2: Раскрой новых стандартных пачек (длина packLen, кол-во packQty) под кратные потребности
+    while (true) {
+        const pool = {};
+        for (let [lStr, rem] of Object.entries(remainingDemand)) {
+            const l = Number(lStr);
+            const maxC = Math.floor(rem / packQty);
+            if (maxC > 0) pool[l] = maxC;
+        }
+        if (Object.keys(pool).length === 0) break;
+
+        const combo = findBestFit(pool, packLen);
+        if (combo.length === 0) break;
+
+        const newPack = { totalLen: packLen, count: packQty, isScrap: false, cuts: combo };
+        for (let c of combo) {
+            remainingDemand[c] -= packQty;
+        }
+        resultPacks.push(newPack);
+    }
+
+    // Шаг 3: Раскрой оставшихся обрезков под неполные потребности (хвостики < packQty)
+    availableScraps.sort((a, b) => b.count - a.count || a.totalLen - b.totalLen);
+    for (let i = 0; i < availableScraps.length; i++) {
+        const scrap = availableScraps[i];
+        const pool = {};
+        for (let [lStr, rem] of Object.entries(remainingDemand)) {
+            const l = Number(lStr);
+            if (rem > 0) {
+                const maxC = Math.floor(rem / scrap.count);
+                if (maxC > 0) pool[l] = maxC;
+            }
+        }
+        if (Object.keys(pool).length > 0) {
+            const combo = findBestFit(pool, scrap.totalLen);
+            if (combo.length > 0) {
+                scrap.cuts = combo;
+                for (let c of combo) {
+                    remainingDemand[c] -= scrap.count;
+                }
+                resultPacks.push(scrap);
+                availableScraps.splice(i, 1);
+                i--;
+            }
+        }
+    }
+
+    // Шаг 4: Обработка оставшихся единичных заготовок
+    const singleTails = [];
+    for (let [lStr, rem] of Object.entries(remainingDemand)) {
+        const l = Number(lStr);
+        if (rem > 0) {
+            if (roundMode === 'up') {
+                let placed = false;
+                for (let p of resultPacks) {
+                    const used = p.cuts.length > 0 ? (p.cuts.reduce((s, x) => s + x, 0) + (p.cuts.length - 1) * kerf) : 0;
+                    if (used + kerf + l <= p.totalLen) {
+                        p.cuts.push(l);
+                        placed = true;
+                        break;
+                    }
+                }
+                if (!placed) {
+                    resultPacks.push({ totalLen: packLen, count: packQty, isScrap: false, cuts: [l] });
+                }
+                remainingDemand[l] = 0;
             } else {
-                resultPacks.push({ totalLen: packLen, count: packQty, isScrap: false, cuts: [c] });
+                singleTails.push({ len: l, qty: rem });
             }
         }
-    });
+    }
 
     let html = `
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -1925,12 +2075,12 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, roundMode, scrapsLis
     `;
 
     resultPacks.forEach((p, idx) => {
-        const used = p.cuts.reduce((s, x) => s + x + kerf, 0);
-        const rem = p.totalLen - used;
+        const used = p.cuts.length > 0 ? (p.cuts.reduce((s, x) => s + x, 0) + (p.cuts.length - 1) * kerf) : 0;
+        const rem = Math.max(0, p.totalLen - used);
         html += `
             <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
                 <div class="flex justify-between text-xs">
-                    <span class="font-bold text-white">${p.isScrap ? `✂ Обрезок пачки (${p.count} шт в пачке)` : `Пачка №${idx + 1} (${p.count} шт в пачке)`} — ${p.totalLen} мм</span>
+                    <span class="font-bold text-white">${p.isScrap ? `✂ Обрезок (${p.count} шт в пачке)` : `Пачка №${idx + 1} (${p.count} шт в пачке)`} — ${p.totalLen} мм</span>
                     <span class="text-slate-400">Деловой остаток: <strong class="text-amber-400 mono">${rem} мм</strong></span>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -1953,6 +2103,13 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, roundMode, scrapsLis
                 <div class="flex flex-wrap gap-2 mono">
                     ${singleTails.map(t => `<span class="bg-amber-900/40 text-amber-200 px-3 py-1 rounded-lg">${t.len} мм — ${t.qty} шт</span>`).join('')}
                 </div>
+            </div>
+        `;
+    } else {
+        html += `
+            <div class="bg-emerald-950/30 border border-emerald-800/60 p-3.5 rounded-xl text-xs text-emerald-300 font-semibold flex items-center gap-2">
+                <span>✓</span>
+                <span>Все заготовки полностью на 100% раскроены в пачках, штучных хвостиков нет!</span>
             </div>
         `;
     }
