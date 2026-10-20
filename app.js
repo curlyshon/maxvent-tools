@@ -115,7 +115,8 @@ let session = {
     workerSplitMode: 'equal',
     workerProfSelectedUser: null,
     workerProfActiveTab: 'by-project',
-    workerSharesState: {}
+    workerSharesState: {},
+    workerAccordions: {}
 };
 
 // ==========================================
@@ -4012,7 +4013,9 @@ function renderWorkerProjectsSummary() {
 
         const totalQty = items.reduce((s, i) => s + (Number(i.qty) || 1), 0);
         const pct = totalQty > 0 ? Math.round((doneCount / totalQty) * 100) : 0;
+        const isOpen = !!(session.workerAccordions && session.workerAccordions[p.id]);
         const accordionId = `wpProjAcc_${p.id}`;
+        const btnId = `wpProjAccBtn_${p.id}`;
 
         const itemsHtml = items.map(it => {
             const desc = [];
@@ -4102,16 +4105,35 @@ function renderWorkerProjectsSummary() {
                     </div>
                 </div>
 
-                <button type="button" onclick="document.getElementById('${accordionId}').classList.toggle('hidden')" class="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800/70 border border-slate-800 rounded-xl text-xs font-semibold text-slate-300 flex items-center justify-between transition">
+                <button type="button" id="${btnId}" data-count="${items.length}" onclick="toggleWorkerProjectAccordion(${p.id})" class="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800/70 border border-slate-800 rounded-xl text-xs font-semibold text-slate-300 flex items-center justify-between transition">
                     <span>Позиции мастера на объекте (${items.length} поз.)</span>
-                    <span class="text-blue-400 font-bold">Развернуть ▼</span>
+                    <span class="text-blue-400 font-bold">${isOpen ? 'Свернуть ▲' : 'Развернуть ▼'}</span>
                 </button>
-                <div id="${accordionId}" class="hidden space-y-2 pt-1 border-t border-slate-800">
+                <div id="${accordionId}" class="${isOpen ? '' : 'hidden'} space-y-2 pt-1 border-t border-slate-800">
                     ${itemsHtml}
                 </div>
             </div>
         `;
     }).join('');
+}
+
+function toggleWorkerProjectAccordion(projectId) {
+    if (!session.workerAccordions) session.workerAccordions = {};
+    session.workerAccordions[projectId] = !session.workerAccordions[projectId];
+    const isOpen = !!session.workerAccordions[projectId];
+
+    const accEl = document.getElementById(`wpProjAcc_${projectId}`);
+    const btnEl = document.getElementById(`wpProjAccBtn_${projectId}`);
+    if (accEl) {
+        accEl.classList.toggle('hidden', !isOpen);
+    }
+    if (btnEl) {
+        const count = btnEl.dataset.count || '';
+        btnEl.innerHTML = `
+            <span>Позиции мастера на объекте (${count} поз.)</span>
+            <span class="text-blue-400 font-bold">${isOpen ? 'Свернуть ▲' : 'Развернуть ▼'}</span>
+        `;
+    }
 }
 
 function renderWorkerAllItems() {
@@ -4206,6 +4228,9 @@ async function toggleWorkerItemStatus(itemId) {
     const it = appState.allItems.find(x => x.id === itemId);
     if (!it) return;
 
+    if (!session.workerAccordions) session.workerAccordions = {};
+    session.workerAccordions[it.project_id] = true;
+
     const nextMap = { queue: 'cut', cut: 'done', done: 'queue' };
     const cur = it.item_status || 'queue';
     const next = nextMap[cur] || 'queue';
@@ -4223,8 +4248,17 @@ async function toggleWorkerItemStatus(itemId) {
     await supabaseClient.from('items').update({ dimensions: it.dimensions }).eq('id', itemId);
     showToast(`Этап обновлен: ${next === 'done' ? '✓ Собрано' : next === 'cut' ? '✂ Отрезано' : '⏳ В очереди'}`, next === 'done' ? 'success' : 'info');
 
+    // Сохраняем положение скролла в модалке, чтобы страница не дергалась
+    const scrollContainer = document.querySelector('#workerProfileModal > div');
+    const prevScroll = scrollContainer ? scrollContainer.scrollTop : 0;
+
     updateHeaderUI();
     renderWorkerProfileContent();
+
+    if (scrollContainer) {
+        scrollContainer.scrollTop = prevScroll;
+    }
+
     if (session.insideProjectId === it.project_id) {
         renderSpecification();
     }
