@@ -220,7 +220,7 @@
             <div class="flex gap-1.5 overflow-x-auto pb-1 lg:pb-0">
                 <button onclick="switchInnerTab('items')" id="inTab-items" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white whitespace-nowrap">1. Изделия и заказ</button>
                 <button onclick="switchInnerTab('flange')" id="inTab-flange" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 whitespace-nowrap">2. Шинка</button>
-                <button onclick="switchInnerTab('nesting')" id="inTab-nesting" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 whitespace-nowrap">3. Раскрой листа 2D</button>
+                <button onclick="switchInnerTab('nesting')" id="inTab-nesting" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 whitespace-nowrap">3. Раскрой листа</button>
                 <button onclick="switchInnerTab('finance')" id="inTab-finance" class="hidden px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 whitespace-nowrap">4. Финансы (₸)</button>
             </div>
         </div>
@@ -320,7 +320,7 @@
                             </div>
                         </div>
                         <button type="submit" id="submitItemBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl shadow-lg transition">
-                            Добавить в спецификацию
+                            Добавить
                         </button>
                     </form>
                 </div>
@@ -328,10 +328,10 @@
                 <!-- СПЕЦИФИКАЦИЯ -->
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-3">
-                        <div class="flex items-center gap-3 flex-wrap">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <h3 class="text-sm font-bold uppercase tracking-wider text-white">Спецификация изделий</h3>
-                            <button id="bulkDeleteBtn" onclick="deleteSelectedItems()" class="hidden bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-1 rounded-lg">
-                                Удалить выбранные (<span id="bulkCount">0</span>)
+                            <button type="button" onclick="toggleSelectAllSpecItems()" id="btnSelectAllSpec" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 transition">
+                                <span>☑</span> <span id="lblSelectAllSpec">Выделить все</span>
                             </button>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto text-xs">
@@ -348,6 +348,31 @@
                                     <option value="all">Все</option>
                                 </select>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- ПАНЕЛЬ ГРУППОВЫХ ДЕЙСТВИЙ (МАССОВОЕ РЕДАКТИРОВАНИЕ) -->
+                    <div id="specBatchToolbar" class="hidden bg-blue-950/70 border border-blue-600/50 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2 shadow-lg">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse"></span>
+                            <span class="text-xs font-bold text-white">Выбрано: <strong id="batchSelectedCount" class="mono text-blue-300">0</strong> поз.</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                            <button type="button" onclick="batchSetStatus('done')" title="Пометить все выбранные как 'Готово'" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow">
+                                <span>✓</span> <span>Готово</span>
+                            </button>
+                            <button type="button" onclick="batchSetStatus('queue')" title="Пометить все выбранные как 'Не готово'" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow">
+                                <span>⏳</span> <span>Не готово</span>
+                            </button>
+                            <button type="button" onclick="openBulkEditModal()" title="Массово изменить металл, толщину, тариф или мастеров" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow">
+                                <span>⚙</span> <span>Изменить группой...</span>
+                            </button>
+                            <button type="button" onclick="deleteSelectedItems()" title="Удалить выбранные" class="bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 border border-rose-700/60">
+                                <span>🗑</span> <span>Удалить (<span id="bulkCount">0</span>)</span>
+                            </button>
+                            <button type="button" onclick="clearSpecSelection()" class="text-slate-400 hover:text-white px-2 py-1 text-xs">
+                                ✕ Сброс
+                            </button>
                         </div>
                     </div>
                     <div id="specProgressBar" class="w-full bg-slate-950 rounded-xl p-2.5 border border-slate-800 text-xs hidden">
@@ -414,11 +439,11 @@
                 </div>
             </div>
 
-            <!-- РАСКРОЙ ЛИСТА 2D -->
+            <!-- РАСКРОЙ ЛИСТА -->
             <div id="view-nesting" class="hidden space-y-6">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-5">
                     <div class="border-b border-slate-800 pb-3">
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-white">Раскрой листа 2D (Только воздуховоды)</h2>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-white">Раскрой листа (Только воздуховоды)</h2>
                         <p class="text-xs text-slate-400">Стандартный лист 2500 × 1250 мм. Без вращения деталей.</p>
                     </div>
                     <div>
@@ -516,6 +541,79 @@
                 </div>
             </div>
             <div id="stFlangeOutput" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА ГРУППОВОГО ИЗМЕНЕНИЯ ИЗДЕЛИЙ (МАССОВОЕ РЕДАКТИРОВАНИЕ) -->
+    <div id="bulkEditModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print" onclick="if(event.target===this)closeBulkEditModal()">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-4 sm:p-6 space-y-4 my-auto max-h-[92vh] overflow-y-auto shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <div>
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-white">Групповое изменение изделий</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Выбрано позиций: <strong id="bulkEditItemsCount" class="text-blue-400 mono">0</strong> шт</p>
+                </div>
+                <button type="button" onclick="closeBulkEditModal()" class="text-slate-400 hover:text-white text-xl font-bold px-2">✕</button>
+            </div>
+
+            <p class="text-xs text-slate-400">Отметьте галочками только те параметры, которые вы хотите изменить у всех выбранных изделий:</p>
+
+            <div class="space-y-3 text-xs">
+                <!-- 1. ВИД МЕТАЛЛА -->
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <label class="flex items-center gap-2 font-bold text-slate-200 cursor-pointer">
+                        <input type="checkbox" id="bulkCheckMetal" onchange="toggleBulkField('bulkCheckMetal', 'bulkWrapMetal')" class="rounded text-blue-600">
+                        <span>Изменить вид металла</span>
+                    </label>
+                    <div id="bulkWrapMetal" class="opacity-40 pointer-events-none pl-6 transition-all">
+                        <select id="bulkSelectMetal" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs"></select>
+                    </div>
+                </div>
+
+                <!-- 2. ТОЛЩИНА МЕТАЛЛА -->
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <label class="flex items-center gap-2 font-bold text-slate-200 cursor-pointer">
+                        <input type="checkbox" id="bulkCheckThick" onchange="toggleBulkField('bulkCheckThick', 'bulkWrapThick')" class="rounded text-blue-600">
+                        <span>Изменить толщину металла</span>
+                    </label>
+                    <div id="bulkWrapThick" class="opacity-40 pointer-events-none pl-6 transition-all">
+                        <select id="bulkSelectThick" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs mono"></select>
+                    </div>
+                </div>
+
+                <!-- 3. ТАРИФ / ЦЕНА -->
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <label class="flex items-center gap-2 font-bold text-slate-200 cursor-pointer">
+                        <input type="checkbox" id="bulkCheckPrice" onchange="toggleBulkField('bulkCheckPrice', 'bulkWrapPrice')" class="rounded text-blue-600">
+                        <span>Изменить тариф изготовления (₸ / шт)</span>
+                    </label>
+                    <div id="bulkWrapPrice" class="opacity-40 pointer-events-none pl-6 transition-all">
+                        <input type="number" id="bulkInputPrice" value="1000" min="0" placeholder="Тариф в ₸" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white mono font-bold text-xs">
+                    </div>
+                </div>
+
+                <!-- 4. НАЗНАЧЕНИЕ МАСТЕРОВ И ДОЛЕЙ -->
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5">
+                    <label class="flex items-center gap-2 font-bold text-slate-200 cursor-pointer">
+                        <input type="checkbox" id="bulkCheckWorkers" onchange="toggleBulkField('bulkCheckWorkers', 'bulkWrapWorkers')" class="rounded text-blue-600">
+                        <span>Переназначить мастеров и доли</span>
+                    </label>
+                    <div id="bulkWrapWorkers" class="opacity-40 pointer-events-none pl-6 space-y-2 transition-all">
+                        <div class="text-[11px] text-slate-400">Выберите мастеров, которые будут назначены на эти изделия:</div>
+                        <div id="bulkWorkersCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+                        <div id="bulkSharesBox" class="hidden space-y-1.5 pt-2 border-t border-slate-800">
+                            <div class="text-[11px] font-bold text-amber-300">Распределение долей мастеров:</div>
+                            <div id="bulkSharesList" class="space-y-1"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <button type="button" onclick="closeBulkEditModal()" class="px-4 py-2 text-xs text-slate-400 hover:text-white transition">Отмена</button>
+                <button type="button" onclick="applyBulkEdit()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 text-xs rounded-xl uppercase transition shadow-lg">
+                    ✓ Применить к выбранным
+                </button>
+            </div>
         </div>
     </div>
 
@@ -659,8 +757,12 @@
                 </div>
             </div>
 
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
-                <div class="font-bold text-amber-300 uppercase tracking-wider">Конструктор: Добавить / Настроить вид изделия</div>
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4 text-xs">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <div id="customFitHeaderTitle" class="font-bold text-amber-300 uppercase tracking-wider">Конструктор: Добавить / Настроить вид изделия</div>
+                    <button type="button" id="btnCancelCustomFit" onclick="cancelEditCustomFitting()" class="hidden text-rose-400 hover:underline font-bold text-xs">✕ Отмена редактирования</button>
+                </div>
+                <input type="hidden" id="customFitId" value="">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-slate-400 mb-1">Название изделия</label>
@@ -680,12 +782,34 @@
                     </div>
                 </div>
                 <div>
-                    <div class="text-slate-400 mb-1.5">Отметьте параметры, которые будут запрашиваться у работника:</div>
+                    <div class="text-slate-400 mb-1.5 font-semibold">Отметьте параметры, которые будут запрашиваться у работника:</div>
                     <div id="customFitParamsCheckboxes" class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900 p-3 rounded-lg border border-slate-800"></div>
                 </div>
-                <button onclick="saveCustomFitting()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-2.5 rounded-xl uppercase">
-                    + Сохранить изделие в справочник
-                </button>
+                <div class="flex gap-2">
+                    <button onclick="saveCustomFitting()" id="btnSaveCustomFit" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-2.5 rounded-xl uppercase transition">
+                        + Сохранить изделие в справочник
+                    </button>
+                </div>
+
+                <!-- СОЗДАНИЕ СВОЕГО ПАРАМЕТРА -->
+                <div class="border-t border-slate-800 pt-3 space-y-2">
+                    <div class="font-bold text-slate-300">Создать свой параметр для изделий:</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input type="text" id="newParamLabel" placeholder="Название по-русски (напр: Вылет фланца)" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs">
+                        <input type="text" id="newParamCode" placeholder="Код на англ. (напр: flange_offset)" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white mono text-xs">
+                        <button type="button" onclick="addNewCustomParam()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg py-2 uppercase text-xs transition shadow">+ Добавить параметр</button>
+                    </div>
+                    <p class="text-[11px] text-slate-500">В базе Supabase параметр сохранится под английским кодом, а в интерфейсе цеха отображается русское название.</p>
+                </div>
+
+                <!-- СПИСОК СУЩЕСТВУЮЩИХ ИЗДЕЛИЙ С РЕДАКТИРОВАНИЕМ -->
+                <div class="border-t border-slate-800 pt-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="font-bold text-slate-300">Существующие изделия в справочнике:</div>
+                        <span id="devFittingsCountBadge" class="text-slate-500 text-[11px] mono">0 шт</span>
+                    </div>
+                    <div id="devFittingsList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+                </div>
             </div>
 
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
@@ -785,10 +909,9 @@
                     <input type="text" id="wpSearchInput" oninput="renderWorkerAllItems()" placeholder="🔍 Поиск позиции (400, тройник, объект...)" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 w-full sm:w-64">
                     <div class="flex items-center gap-2 flex-wrap text-xs">
                         <select id="wpStatusFilter" onchange="renderWorkerAllItems()" class="bg-slate-900 border border-slate-800 text-slate-300 px-2.5 py-1.5 rounded-lg">
-                            <option value="all">Все этапы</option>
-                            <option value="done">✓ Собрано</option>
-                            <option value="cut">✂ Отрезано</option>
-                            <option value="queue">⏳ В очереди</option>
+                            <option value="all">Все статусы</option>
+                            <option value="done">✓ Готово</option>
+                            <option value="queue">⏳ Не готово</option>
                         </select>
                         <select id="wpCategoryFilter" onchange="renderWorkerAllItems()" class="bg-slate-900 border border-slate-800 text-slate-300 px-2.5 py-1.5 rounded-lg">
                             <option value="all">Все типы</option>

@@ -325,7 +325,16 @@ async function loadInitialData() {
             if (Array.isArray(setts.metals) && setts.metals.length) appState.metals = setts.metals;
             if (Array.isArray(setts.thicknesses) && setts.thicknesses.length) appState.thicknesses = setts.thicknesses;
             if (Array.isArray(setts.groups) && setts.groups.length) appState.groups = setts.groups;
-            if (setts.fittings && setts.fittings.rect) appState.fittings = setts.fittings;
+            if (setts.fittings && setts.fittings.rect) {
+                appState.fittings = setts.fittings;
+                if (Array.isArray(setts.fittings.__custom_params)) {
+                    setts.fittings.__custom_params.forEach(p => {
+                        if (p && p.code && !ALL_PARAM_DEFS.some(x => x.code === p.code)) {
+                            ALL_PARAM_DEFS.push(p);
+                        }
+                    });
+                }
+            }
             if (setts.standalone_flange) appState.standaloneFlange = setts.standalone_flange;
         }
 
@@ -461,6 +470,14 @@ function logout() {
 
 function isDev() {
     return session.user?.role === 'developer' && session.devMode;
+}
+
+function isChingisOrDev(userName) {
+    if (!userName) return false;
+    const lower = String(userName).toLowerCase().trim();
+    if (lower.includes('чингис') || lower.includes('chingis')) return true;
+    const u = (appState.users || []).find(x => x.name === userName);
+    return u && u.role === 'developer';
 }
 
 function toggleDevMode() {
@@ -634,8 +651,7 @@ function renderMainMenuProjects() {
         const pItems = appState.allItems.filter(x => x.project_id === p.id);
         const totalQty = pItems.reduce((s, i) => s + (Number(i.qty) || 1), 0);
         const doneQty = pItems.filter(i => i.item_status === 'done').reduce((s, i) => s + (Number(i.qty) || 1), 0);
-        const cutQty = pItems.filter(i => i.item_status === 'cut').reduce((s, i) => s + (Number(i.qty) || 1), 0);
-        const pct = totalQty > 0 ? Math.round(((doneQty + cutQty * 0.5) / totalQty) * 100) : 0;
+        const pct = totalQty > 0 ? Math.round((doneQty / totalQty) * 100) : 0;
 
         let ductsArea = 0;
         let fittingsCount = 0;
@@ -1083,6 +1099,9 @@ function populateFormDropdowns() {
     const tSel = document.getElementById('inThickness');
     mSel.innerHTML = appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
     tSel.innerHTML = appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
+    if (appState.thicknesses.includes(0.5)) {
+        tSel.value = '0.5';
+    }
 
     const fmSel = document.getElementById('specFilterMetal');
     const ftSel = document.getElementById('specFilterThick');
@@ -1392,6 +1411,23 @@ function renderDynamicInputs() {
         `;
     }
 
+    // Кастомные пользовательские параметры изделия
+    const standardParamCodes = new Set(['deg', 'deg135', 'hood_type', 'w', 'h', 'w1', 'h1', 'w2', 'h2', 'd', 'd1', 'd2', 'd_main', 'len', 'len_silencer', 'hood_seat', 'offset', 'inlets_cnt', 'tee_rect', 'cross_rect', 'tee_round', 'cross_round', 'flange1', 'flange2']);
+    const customParamsList = (fitDef.params || []).filter(p => !standardParamCodes.has(p));
+    if (customParamsList.length > 0) {
+        html += `<div class="pt-2 border-t border-slate-800 space-y-2.5"><div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">Дополнительные параметры:</div>`;
+        customParamsList.forEach(code => {
+            const pDef = ALL_PARAM_DEFS.find(x => x.code === code) || { label: code, code };
+            html += `
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">${pDef.label}</label>
+                    <input type="text" id="f_${code}" placeholder="Введите ${pDef.label}..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white text-xs">
+                </div>
+            `;
+        });
+        html += `</div>`;
+    }
+
     html += '</div>';
     box.innerHTML = html;
     updateFrameLabels();
@@ -1582,6 +1618,17 @@ async function saveProjectItem(e) {
             dims.descDetail = `Ø${document.getElementById('f_cr1').value} / Ø${document.getElementById('f_cr2').value} / Ø${document.getElementById('f_cr3').value} / Ø${document.getElementById('f_cr4').value}`;
         }
 
+        // Сбор значений всех дополнительных/пользовательских параметров изделия
+        if (fitDef && Array.isArray(fitDef.params)) {
+            fitDef.params.forEach(pCode => {
+                const inputEl = document.getElementById(`f_${pCode}`);
+                if (inputEl) {
+                    const val = inputEl.value.trim();
+                    dims[pCode] = (val !== '' && !isNaN(Number(val))) ? Number(val) : val;
+                }
+            });
+        }
+
         dims.frames = frames;
         itemKey = `fit_${title}_${dims.w || 0}_${dims.h || 0}_${dims.w1 || 0}_${dims.h1 || 0}_${dims.w2 || 0}_${dims.h2 || 0}_${dims.d || 0}_${dims.d1 || 0}_${dims.d2 || 0}_${dims.d_main || 0}_${dims.l || 0}_${dims.deg || 0}_${dims.offset || 0}_${dims.hood_seat || 0}_${dims.inlets_cnt || 0}_${dims.flange1}_${dims.flange2}_${dims.descDetail || ''}_${frames.join('_')}_${metal}_${thickness}`;
     }
@@ -1644,7 +1691,11 @@ function resetItemForm() {
     document.getElementById('editItemId').value = '';
     document.getElementById('formHeaderTitle').textContent = 'Добавить в проект';
     document.getElementById('cancelEditBtn').classList.add('hidden');
-    document.getElementById('submitItemBtn').textContent = 'Добавить в спецификацию';
+    document.getElementById('submitItemBtn').textContent = 'Добавить';
+    const tSel = document.getElementById('inThickness');
+    if (tSel && appState.thicknesses.includes(0.5)) {
+        tSel.value = '0.5';
+    }
     renderDynamicInputs();
     onWorkerSelectionChanged();
 }
@@ -1670,13 +1721,12 @@ function renderSpecification() {
 
     const totalQty = appState.activeProjectItems.reduce((s, i) => s + i.qty, 0);
     const doneQty = appState.activeProjectItems.filter(i => i.item_status === 'done').reduce((s, i) => s + i.qty, 0);
-    const cutQty = appState.activeProjectItems.filter(i => i.item_status === 'cut').reduce((s, i) => s + i.qty, 0);
-    const pct = totalQty > 0 ? Math.round(((doneQty + cutQty * 0.5) / totalQty) * 100) : 0;
+    const pct = totalQty > 0 ? Math.round((doneQty / totalQty) * 100) : 0;
     const pBar = document.getElementById('specProgressBar');
     if (pBar) {
         if (totalQty > 0) {
             pBar.classList.remove('hidden');
-            document.getElementById('specProgressLabel').textContent = `Готово: ${doneQty} шт, Отрезано: ${cutQty} шт из ${totalQty} шт (${pct}%)`;
+            document.getElementById('specProgressLabel').textContent = `Готово: ${doneQty} из ${totalQty} шт (${pct}%)`;
             document.getElementById('specProgressFill').style.width = `${pct}%`;
         } else {
             pBar.classList.add('hidden');
@@ -1686,10 +1736,24 @@ function renderSpecification() {
     const container = document.getElementById('specificationAccordionList');
     container.innerHTML = '';
 
+    const selCount = session.selectedSpecIds.length;
+    const totalItemsCount = appState.activeProjectItems.length;
+
+    // Панель массовых действий
+    const batchToolbar = document.getElementById('specBatchToolbar');
+    const batchCount = document.getElementById('batchSelectedCount');
+    const lblSelectAll = document.getElementById('lblSelectAllSpec');
+
+    if (batchToolbar) batchToolbar.classList.toggle('hidden', selCount === 0);
+    if (batchCount) batchCount.textContent = selCount;
+    if (lblSelectAll) {
+        lblSelectAll.textContent = (totalItemsCount > 0 && selCount === totalItemsCount) ? 'Снять выделение' : 'Выделить все';
+    }
+
     const bulkBtn = document.getElementById('bulkDeleteBtn');
     const bulkCount = document.getElementById('bulkCount');
-    bulkCount.textContent = session.selectedSpecIds.length;
-    bulkBtn.classList.toggle('hidden', session.selectedSpecIds.length === 0);
+    if (bulkCount) bulkCount.textContent = selCount;
+    if (bulkBtn) bulkBtn.classList.toggle('hidden', selCount === 0);
 
     if (items.length === 0) {
         container.innerHTML = `<div class="bg-slate-950 border border-slate-800 rounded-xl p-8 text-center text-xs text-slate-500">По выбранным фильтрам позиции не найдены</div>`;
@@ -1768,6 +1832,14 @@ function renderSpecItemRow(it) {
         if (it.hood_seat) descParts.push(`Посадка: ${it.hood_seat} мм`);
         if (it.offset) descParts.push(`Смещение: ${it.offset} мм`);
         if (it.inlets_cnt) descParts.push(`Врезок: ${it.inlets_cnt} шт`);
+
+        // Отображение кастомных параметров если они заданы
+        const standardParamCodes = new Set(['deg', 'deg135', 'hood_type', 'w', 'h', 'w1', 'h1', 'w2', 'h2', 'd', 'd1', 'd2', 'd_main', 'len', 'len_silencer', 'hood_seat', 'offset', 'inlets_cnt', 'tee_rect', 'cross_rect', 'tee_round', 'cross_round', 'flange1', 'flange2']);
+        ALL_PARAM_DEFS.forEach(pDef => {
+            if (!standardParamCodes.has(pDef.code) && it[pDef.code] !== undefined && it[pDef.code] !== '') {
+                descParts.push(`${pDef.label}: ${it[pDef.code]}`);
+            }
+        });
     }
 
     const frames = getItemFrames(it);
@@ -1784,9 +1856,8 @@ function renderSpecItemRow(it) {
 
     const st = it.item_status || 'queue';
     const stConfig = {
-        queue: { text: '⏳ В очереди', cls: 'bg-slate-800 text-slate-300 border-slate-700 hover:border-amber-500' },
-        cut: { text: '✂ Отрезано', cls: 'bg-amber-950/70 text-amber-300 border-amber-700 hover:border-emerald-500' },
-        done: { text: '✓ Собрано', cls: 'bg-emerald-950/70 text-emerald-300 border-emerald-700 hover:border-blue-500' }
+        queue: { text: '⏳ Не готово', cls: 'bg-slate-800 text-slate-300 border-slate-700 hover:border-emerald-500' },
+        done: { text: '✓ Готово', cls: 'bg-emerald-950/70 text-emerald-300 border-emerald-700 hover:border-amber-500' }
     };
     const curSt = stConfig[st] || stConfig.queue;
 
@@ -1820,9 +1891,8 @@ function renderSpecItemRow(it) {
 async function toggleItemStatus(id) {
     const it = appState.activeProjectItems.find(x => x.id === id);
     if (!it) return;
-    const nextMap = { queue: 'cut', cut: 'done', done: 'queue' };
     const cur = it.item_status || 'queue';
-    const next = nextMap[cur] || 'queue';
+    const next = (cur === 'done') ? 'queue' : 'done';
     it.item_status = next;
     if (!it.dimensions) it.dimensions = {};
     it.dimensions.item_status = next;
@@ -1837,8 +1907,211 @@ async function toggleItemStatus(id) {
 
     updateHeaderUI();
     renderSpecification();
-    const statusTitles = { queue: 'В очереди ⏳', cut: 'Отрезано ✂', done: 'Собрано ✓' };
-    showToast(`Этап: ${statusTitles[next]}`, next === 'done' ? 'success' : 'info');
+    showToast(`Статус: ${next === 'done' ? '✓ Готово' : '⏳ Не готово'}`, next === 'done' ? 'success' : 'info');
+}
+
+function toggleSelectAllSpecItems() {
+    if (!appState.activeProjectItems || appState.activeProjectItems.length === 0) return;
+    if (session.selectedSpecIds.length === appState.activeProjectItems.length) {
+        session.selectedSpecIds = [];
+    } else {
+        session.selectedSpecIds = appState.activeProjectItems.map(it => it.id);
+    }
+    renderSpecification();
+}
+
+async function batchSetStatus(newStatus) {
+    if (!session.selectedSpecIds || session.selectedSpecIds.length === 0) {
+        alert('Выберите хотя бы одно изделие');
+        return;
+    }
+    const count = session.selectedSpecIds.length;
+    for (const id of session.selectedSpecIds) {
+        const it = appState.activeProjectItems.find(x => x.id === id);
+        if (it) {
+            it.item_status = newStatus;
+            if (!it.dimensions) it.dimensions = {};
+            it.dimensions.item_status = newStatus;
+            await supabaseClient.from('items').update({ dimensions: it.dimensions }).eq('id', id);
+        }
+        const globalIt = appState.allItems.find(x => x.id === id);
+        if (globalIt) {
+            globalIt.item_status = newStatus;
+            if (!globalIt.dimensions) globalIt.dimensions = {};
+            globalIt.dimensions.item_status = newStatus;
+        }
+    }
+    updateHeaderUI();
+    renderSpecification();
+    showToast(`Статус ${newStatus === 'done' ? '✓ Готово' : '⏳ Не готово'} установлен для ${count} поз.`, 'success');
+}
+
+// ==========================================
+// ГРУППОВОЕ РЕДАКТИРОВАНИЕ ПОЗИЦИЙ
+// ==========================================
+let bulkSharesState = {};
+
+function toggleBulkField(checkId, targetWrapperId) {
+    const checked = document.getElementById(checkId)?.checked;
+    const wrapper = document.getElementById(targetWrapperId);
+    if (wrapper) {
+        wrapper.classList.toggle('opacity-40', !checked);
+        wrapper.classList.toggle('pointer-events-none', !checked);
+    }
+}
+
+function openBulkEditModal() {
+    if (!session.selectedSpecIds || session.selectedSpecIds.length === 0) {
+        alert('Выберите изделия галочками для группового изменения');
+        return;
+    }
+
+    const modal = document.getElementById('bulkEditModal');
+    if (!modal) return;
+
+    document.getElementById('bulkEditItemsCount').textContent = session.selectedSpecIds.length;
+
+    ['bulkCheckMetal', 'bulkCheckThick', 'bulkCheckPrice', 'bulkCheckWorkers'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = false;
+    });
+    toggleBulkField('bulkCheckMetal', 'bulkWrapMetal');
+    toggleBulkField('bulkCheckThick', 'bulkWrapThick');
+    toggleBulkField('bulkCheckPrice', 'bulkWrapPrice');
+    toggleBulkField('bulkCheckWorkers', 'bulkWrapWorkers');
+
+    const selMetal = document.getElementById('bulkSelectMetal');
+    selMetal.innerHTML = appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
+
+    const selThick = document.getElementById('bulkSelectThick');
+    selThick.innerHTML = appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
+    if (appState.thicknesses.includes(0.5)) selThick.value = '0.5';
+
+    const wBox = document.getElementById('bulkWorkersCheckboxes');
+    wBox.innerHTML = appState.users.map(u => `
+        <label class="bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer hover:border-slate-700 transition text-xs">
+            <input type="checkbox" name="bulkAssignWorker" onchange="onBulkWorkersSelectionChanged()" value="${u.name}" class="rounded text-blue-600">
+            <span class="text-slate-300 font-medium truncate">${u.name}</span>
+        </label>
+    `).join('');
+
+    bulkSharesState = {};
+    const sharesBox = document.getElementById('bulkSharesBox');
+    if (sharesBox) sharesBox.classList.add('hidden');
+
+    modal.classList.remove('hidden');
+}
+
+function closeBulkEditModal() {
+    const modal = document.getElementById('bulkEditModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function onBulkWorkersSelectionChanged() {
+    const checked = Array.from(document.querySelectorAll('input[name="bulkAssignWorker"]:checked')).map(cb => cb.value);
+    const sharesBox = document.getElementById('bulkSharesBox');
+    if (!sharesBox) return;
+
+    if (checked.length <= 1) {
+        sharesBox.classList.add('hidden');
+        bulkSharesState = {};
+        if (checked.length === 1) bulkSharesState[checked[0]] = 100;
+        return;
+    }
+
+    sharesBox.classList.remove('hidden');
+    bulkSharesState = calculateDefaultWorkerShares(checked);
+    renderBulkSharesList();
+}
+
+function renderBulkSharesList() {
+    const list = document.getElementById('bulkSharesList');
+    if (!list) return;
+    const checked = Array.from(document.querySelectorAll('input[name="bulkAssignWorker"]:checked')).map(cb => cb.value);
+    list.innerHTML = checked.map(w => {
+        const pct = bulkSharesState[w] !== undefined ? bulkSharesState[w] : Math.round(100 / checked.length);
+        return `
+            <div class="flex items-center justify-between gap-2 bg-slate-900 border border-slate-800 p-2 rounded-lg text-xs">
+                <span class="font-bold text-white">${w}</span>
+                <div class="flex items-center gap-1">
+                    <input type="number" min="0" max="100" value="${pct}" oninput="bulkSharesState['${w}'] = Number(this.value)" class="w-12 bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-center mono font-bold text-amber-300">
+                    <span class="text-slate-400 font-bold">%</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function applyBulkEdit() {
+    const changeMetal = document.getElementById('bulkCheckMetal')?.checked;
+    const changeThick = document.getElementById('bulkCheckThick')?.checked;
+    const changePrice = document.getElementById('bulkCheckPrice')?.checked;
+    const changeWorkers = document.getElementById('bulkCheckWorkers')?.checked;
+
+    if (!changeMetal && !changeThick && !changePrice && !changeWorkers) {
+        alert('Пожалуйста, отметьте хотя бы один параметр для изменения');
+        return;
+    }
+
+    const valMetal = document.getElementById('bulkSelectMetal')?.value;
+    const valThick = Number(document.getElementById('bulkSelectThick')?.value);
+    const valPrice = Number(document.getElementById('bulkInputPrice')?.value);
+    const checkedWorkers = Array.from(document.querySelectorAll('input[name="bulkAssignWorker"]:checked')).map(cb => cb.value);
+
+    const count = session.selectedSpecIds.length;
+
+    for (const id of session.selectedSpecIds) {
+        const it = appState.activeProjectItems.find(x => x.id === id);
+        if (!it) continue;
+        if (!it.dimensions) it.dimensions = {};
+
+        if (changeMetal) {
+            it.metal = valMetal;
+            it.dimensions.metal = valMetal;
+        }
+        if (changeThick) {
+            it.thickness = valThick;
+            it.dimensions.thickness = valThick;
+        }
+        if (changePrice) {
+            it.price = valPrice;
+            it.dimensions.price = valPrice;
+        }
+        if (changeWorkers) {
+            it.workers = checkedWorkers;
+            it.dimensions.workers = checkedWorkers;
+            const sharesToApply = (checkedWorkers.length <= 1) 
+                ? (checkedWorkers.length === 1 ? { [checkedWorkers[0]]: 100 } : {}) 
+                : { ...bulkSharesState };
+            it.dimensions.worker_shares = sharesToApply;
+            it.worker_shares = sharesToApply;
+        }
+
+        await supabaseClient.from('items').update({
+            metal: it.metal,
+            thickness: it.thickness,
+            price: it.price,
+            workers: it.workers,
+            dimensions: it.dimensions
+        }).eq('id', id);
+
+        const globalIt = appState.allItems.find(x => x.id === id);
+        if (globalIt) {
+            if (changeMetal) globalIt.metal = valMetal;
+            if (changeThick) globalIt.thickness = valThick;
+            if (changePrice) globalIt.price = valPrice;
+            if (changeWorkers) {
+                globalIt.workers = checkedWorkers;
+                globalIt.worker_shares = it.worker_shares;
+            }
+            globalIt.dimensions = { ...it.dimensions };
+        }
+    }
+
+    updateHeaderUI();
+    renderSpecification();
+    closeBulkEditModal();
+    showToast(`Успешно обновлено ${count} позиций!`, 'success');
 }
 
 function toggleSpecItemSelect(id, checked) {
@@ -3305,6 +3578,7 @@ function openDevModal() {
     document.getElementById('devModal').classList.remove('hidden');
     renderDevCatalogs();
     renderCustomFitParamsCheckboxes();
+    renderDevFittingsList();
     renderDevUsersStats();
 }
 
@@ -3411,6 +3685,7 @@ function renderDevUsersStats() {
 
 function renderCustomFitParamsCheckboxes() {
     const box = document.getElementById('customFitParamsCheckboxes');
+    if (!box) return;
     box.innerHTML = ALL_PARAM_DEFS.map(p => `
         <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
             <input type="checkbox" name="customParamCheckbox" value="${p.code}" class="rounded text-amber-500">
@@ -3419,7 +3694,116 @@ function renderCustomFitParamsCheckboxes() {
     `).join('');
 }
 
+function renderDevFittingsList() {
+    const list = document.getElementById('devFittingsList');
+    if (!list) return;
+
+    const shapes = [
+        { code: 'rect', label: 'Прямоугольные' },
+        { code: 'round', label: 'Круглые' },
+        { code: 'smooth', label: 'Плавные переходы' }
+    ];
+
+    let totalCount = 0;
+    const htmlParts = [];
+
+    shapes.forEach(sh => {
+        const fittings = appState.fittings[sh.code] || [];
+        totalCount += fittings.length;
+        if (fittings.length === 0) return;
+
+        htmlParts.push(`
+            <div class="pt-2">
+                <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">${sh.label}:</div>
+                <div class="space-y-1.5">
+                    ${fittings.map(f => {
+                        const paramNames = (f.params || []).map(pCode => {
+                            const pDef = ALL_PARAM_DEFS.find(x => x.code === pCode);
+                            return pDef ? pDef.label : pCode;
+                        }).join(', ');
+
+                        return `
+                            <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl flex items-center justify-between gap-2 text-xs">
+                                <div class="space-y-0.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-white">${f.name}</span>
+                                        <span class="mono text-emerald-400 font-bold bg-slate-950 px-2 py-0.5 rounded border border-slate-800">${f.price || 1000} ₸</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-400">
+                                        Параметры: <span class="text-slate-300">${paramNames || 'нет'}</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" onclick="editCustomFitting('${sh.code}', '${f.id}')" title="Редактировать изделие" class="bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white px-2 py-1 rounded-lg text-xs font-bold transition">
+                                        ✎ Изменить
+                                    </button>
+                                    <button type="button" onclick="deleteCustomFitting('${sh.code}', '${f.id}')" title="Удалить изделие" class="bg-rose-900/40 hover:bg-rose-800 text-rose-300 hover:text-white px-2 py-1 rounded-lg text-xs font-bold transition">
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `);
+    });
+
+    const badge = document.getElementById('devFittingsCountBadge');
+    if (badge) badge.textContent = `${totalCount} шт`;
+
+    list.innerHTML = htmlParts.length > 0 ? htmlParts.join('') : '<div class="text-slate-500 text-xs py-2 text-center">Изделия не найдены</div>';
+}
+
+function editCustomFitting(shape, id) {
+    const list = appState.fittings[shape] || [];
+    const fit = list.find(f => f.id === id);
+    if (!fit) return;
+
+    document.getElementById('customFitId').value = fit.id;
+    document.getElementById('customFitName').value = fit.name;
+    document.getElementById('customFitShape').value = shape;
+    document.getElementById('customFitPrice').value = fit.price || 1000;
+
+    const header = document.getElementById('customFitHeaderTitle');
+    if (header) header.textContent = `Редактирование: ${fit.name}`;
+
+    const btnSave = document.getElementById('btnSaveCustomFit');
+    if (btnSave) btnSave.textContent = '✓ Сохранить изменения';
+
+    const btnCancel = document.getElementById('btnCancelCustomFit');
+    if (btnCancel) btnCancel.classList.remove('hidden');
+
+    const fitParams = new Set(fit.params || []);
+    document.querySelectorAll('input[name="customParamCheckbox"]').forEach(cb => {
+        cb.checked = fitParams.has(cb.value);
+    });
+
+    const nameInput = document.getElementById('customFitName');
+    if (nameInput) nameInput.focus();
+}
+
+function cancelEditCustomFitting() {
+    document.getElementById('customFitId').value = '';
+    document.getElementById('customFitName').value = '';
+    document.getElementById('customFitPrice').value = '1000';
+
+    const header = document.getElementById('customFitHeaderTitle');
+    if (header) header.textContent = 'Конструктор: Добавить / Настроить вид изделия';
+
+    const btnSave = document.getElementById('btnSaveCustomFit');
+    if (btnSave) btnSave.textContent = '+ Сохранить изделие в справочник';
+
+    const btnCancel = document.getElementById('btnCancelCustomFit');
+    if (btnCancel) btnCancel.classList.add('hidden');
+
+    document.querySelectorAll('input[name="customParamCheckbox"]').forEach(cb => {
+        cb.checked = false;
+    });
+}
+
 async function saveCustomFitting() {
+    const editId = document.getElementById('customFitId').value.trim();
     const name = document.getElementById('customFitName').value.trim();
     const shape = document.getElementById('customFitShape').value;
     const price = Number(document.getElementById('customFitPrice').value) || 1000;
@@ -3428,14 +3812,74 @@ async function saveCustomFitting() {
     if (!name) { alert('Укажите название изделия'); return; }
     if (params.length === 0) { alert('Отметьте хотя бы один параметр'); return; }
 
-    const newId = 'cust_' + Date.now();
     if (!appState.fittings[shape]) appState.fittings[shape] = [];
-    appState.fittings[shape].push({ id: newId, name, params, price });
+
+    if (editId) {
+        ['rect', 'round', 'smooth'].forEach(sh => {
+            if (appState.fittings[sh]) {
+                appState.fittings[sh] = appState.fittings[sh].filter(f => f.id !== editId);
+            }
+        });
+        appState.fittings[shape].push({ id: editId, name, params, price });
+        showToast(`Изделие "${name}" успешно обновлено!`, 'success');
+    } else {
+        const newId = 'cust_' + Date.now();
+        appState.fittings[shape].push({ id: newId, name, params, price });
+        showToast(`Изделие "${name}" добавлено в справочник!`, 'success');
+    }
 
     await saveGlobalSettings();
-    alert(`Изделие "${name}" сохранено в справочник!`);
-    document.getElementById('customFitName').value = '';
-    document.querySelectorAll('input[name="customParamCheckbox"]').forEach(cb => cb.checked = false);
+    updateFittingDropdown();
+    renderDevFittingsList();
+    cancelEditCustomFitting();
+}
+
+async function deleteCustomFitting(shape, id) {
+    const fit = (appState.fittings[shape] || []).find(f => f.id === id);
+    const fitName = fit ? fit.name : 'изделие';
+    if (!confirm(`Удалить "${fitName}" из справочника изделий?`)) return;
+
+    appState.fittings[shape] = (appState.fittings[shape] || []).filter(f => f.id !== id);
+    await saveGlobalSettings();
+    updateFittingDropdown();
+    renderDevFittingsList();
+    showToast(`"${fitName}" удалено`, 'info');
+}
+
+async function addNewCustomParam() {
+    const labelInp = document.getElementById('newParamLabel');
+    const codeInp = document.getElementById('newParamCode');
+    const label = (labelInp?.value || '').trim();
+    let code = (codeInp?.value || '').trim().toLowerCase().replace(/\s+/g, '_');
+
+    if (!label) { alert('Введите русское название параметра'); return; }
+    if (!code) { alert('Введите код параметра на английском'); return; }
+
+    if (!/^[a-z0-9_]+$/.test(code)) {
+        alert('Код параметра должен содержать только строчные латинские буквы, цифры и знак подчеркивания _');
+        return;
+    }
+
+    if (ALL_PARAM_DEFS.some(p => p.code === code)) {
+        alert(`Параметр с кодом "${code}" уже существует!`);
+        return;
+    }
+
+    const newParam = { code, label };
+    ALL_PARAM_DEFS.push(newParam);
+
+    if (!appState.fittings.__custom_params) {
+        appState.fittings.__custom_params = [];
+    }
+    appState.fittings.__custom_params.push(newParam);
+
+    await saveGlobalSettings();
+    renderCustomFitParamsCheckboxes();
+
+    if (labelInp) labelInp.value = '';
+    if (codeInp) codeInp.value = '';
+
+    showToast(`Параметр "${label}" (${code}) добавлен!`, 'success');
 }
 
 // --- АРХИВ ---
@@ -3525,6 +3969,35 @@ function formatItemWorkersDisplay(it) {
 }
 
 // --- УПРАВЛЕНИЕ РАСПРЕДЕЛЕНИЕМ ДОЛЕЙ В ФОРМЕ ДОБАВЛЕНИЯ ---
+function calculateDefaultWorkerShares(checked) {
+    const shares = {};
+    if (!checked || checked.length === 0) return shares;
+    if (checked.length === 1) {
+        shares[checked[0]] = 100;
+        return shares;
+    }
+
+    const devWorker = checked.find(w => isChingisOrDev(w));
+    if (devWorker) {
+        shares[devWorker] = 50;
+        const otherWorkers = checked.filter(w => w !== devWorker);
+        const count = otherWorkers.length;
+        const base = Math.floor(50 / count);
+        const rem = 50 - base * count;
+        otherWorkers.forEach((w, idx) => {
+            shares[w] = idx === 0 ? (base + rem) : base;
+        });
+    } else {
+        const count = checked.length;
+        const base = Math.floor(100 / count);
+        const rem = 100 - base * count;
+        checked.forEach((w, idx) => {
+            shares[w] = idx === 0 ? (base + rem) : base;
+        });
+    }
+    return shares;
+}
+
 function onWorkerSelectionChanged(presetShares = null) {
     const checked = Array.from(document.querySelectorAll('input[name="assignWorker"]:checked')).map(cb => cb.value);
     const badge = document.getElementById('workersCountBadge');
@@ -3548,15 +4021,10 @@ function onWorkerSelectionChanged(presetShares = null) {
         session.workerSharesState = { ...presetShares };
         session.workerSplitMode = 'custom';
     } else {
-        const newShares = {};
         if (session.workerSplitMode === 'equal') {
-            const count = checked.length;
-            const base = Math.floor(100 / count);
-            const rem = 100 - base * count;
-            checked.forEach((w, idx) => {
-                newShares[w] = idx === 0 ? (base + rem) : base;
-            });
+            session.workerSharesState = calculateDefaultWorkerShares(checked);
         } else {
+            const newShares = {};
             let sumExisting = 0;
             const missing = [];
             checked.forEach(w => {
@@ -3575,8 +4043,8 @@ function onWorkerSelectionChanged(presetShares = null) {
                     newShares[w] = idx === 0 ? (each + lastRem) : each;
                 });
             }
+            session.workerSharesState = newShares;
         }
-        session.workerSharesState = newShares;
     }
 
     renderWorkerSharesList();
@@ -3599,13 +4067,7 @@ function setWorkersSplitMode(mode) {
 
     const checked = Array.from(document.querySelectorAll('input[name="assignWorker"]:checked')).map(cb => cb.value);
     if (mode === 'equal' && checked.length > 0) {
-        const count = checked.length;
-        const base = Math.floor(100 / count);
-        const rem = 100 - base * count;
-        session.workerSharesState = {};
-        checked.forEach((w, idx) => {
-            session.workerSharesState[w] = idx === 0 ? (base + rem) : base;
-        });
+        session.workerSharesState = calculateDefaultWorkerShares(checked);
     }
 
     renderWorkerSharesList();
@@ -3844,24 +4306,9 @@ function switchWorkerProfTab(tab) {
     }
 }
 
-function renderWorkerProfileContent() {
+function updateWorkerProfileKPIs() {
     const targetUser = session.workerProfSelectedUser || session.user?.name;
     const filterState = document.getElementById('wpProjStateFilter')?.value || 'active';
-
-    const uObj = appState.users.find(u => u.name === targetUser);
-    const profNameEl = document.getElementById('workerProfName');
-    const profAvatarEl = document.getElementById('workerProfAvatar');
-    const profRoleBadge = document.getElementById('workerProfRoleBadge');
-
-    if (targetUser === 'all') {
-        if (profNameEl) profNameEl.textContent = 'Сводная выработка всех мастеров цеха';
-        if (profAvatarEl) profAvatarEl.textContent = '🏆';
-        if (profRoleBadge) profRoleBadge.textContent = 'Цех';
-    } else {
-        if (profNameEl) profNameEl.textContent = `Кабинет: ${targetUser}`;
-        if (profAvatarEl) profAvatarEl.textContent = targetUser ? targetUser.charAt(0).toUpperCase() : '👤';
-        if (profRoleBadge) profRoleBadge.textContent = uObj?.role === 'developer' ? 'Разработчик / Админ' : 'Мастер цеха';
-    }
 
     let projectsList = appState.projects;
     if (filterState === 'active') {
@@ -3938,6 +4385,26 @@ function renderWorkerProfileContent() {
     if (elFittingsEarned) elFittingsEarned.textContent = `${fittingsEarned.toLocaleString()} ₸`;
     if (elDoneRatio) elDoneRatio.textContent = `${donePositions} / ${totalPositions} поз.`;
     if (elDonePct) elDonePct.textContent = `${pctDone}% завершено`;
+}
+
+function renderWorkerProfileContent() {
+    const targetUser = session.workerProfSelectedUser || session.user?.name;
+    const uObj = appState.users.find(u => u.name === targetUser);
+    const profNameEl = document.getElementById('workerProfName');
+    const profAvatarEl = document.getElementById('workerProfAvatar');
+    const profRoleBadge = document.getElementById('workerProfRoleBadge');
+
+    if (targetUser === 'all') {
+        if (profNameEl) profNameEl.textContent = 'Сводная выработка всех мастеров цеха';
+        if (profAvatarEl) profAvatarEl.textContent = '🏆';
+        if (profRoleBadge) profRoleBadge.textContent = 'Цех';
+    } else {
+        if (profNameEl) profNameEl.textContent = `Кабинет: ${targetUser || ''}`;
+        if (profAvatarEl) profAvatarEl.textContent = targetUser ? targetUser.charAt(0).toUpperCase() : '👤';
+        if (profRoleBadge) profRoleBadge.textContent = uObj?.role === 'developer' ? 'Разработчик / Админ' : 'Мастер цеха';
+    }
+
+    updateWorkerProfileKPIs();
 
     if (session.workerProfActiveTab === 'by-project') {
         renderWorkerProjectsSummary();
@@ -4033,9 +4500,8 @@ function renderWorkerProjectsSummary() {
                 : `${Math.round(shareInfo.percent)}% (${shareInfo.amount.toLocaleString()} ₸)`;
 
             const stConfig = {
-                queue: { text: '⏳ В очереди', cls: 'bg-slate-800 text-slate-300 border-slate-700' },
-                cut: { text: '✂ Отрезано', cls: 'bg-amber-950/70 text-amber-300 border-amber-700' },
-                done: { text: '✓ Собрано', cls: 'bg-emerald-950/70 text-emerald-300 border-emerald-700' }
+                queue: { text: '⏳ Не готово', cls: 'bg-slate-800 text-slate-300 border-slate-700' },
+                done: { text: '✓ Готово', cls: 'bg-emerald-950/70 text-emerald-300 border-emerald-700' }
             };
             const curSt = stConfig[it.item_status || 'queue'] || stConfig.queue;
 
@@ -4046,7 +4512,7 @@ function renderWorkerProjectsSummary() {
                             <span class="font-bold text-white">${it.title}</span>
                             <span class="mono text-blue-300 font-semibold">${desc.join(' ')}</span>
                             ${framesHtml}
-                            <button type="button" onclick="toggleWorkerItemStatus(${it.id})" title="Кликните для смены этапа" class="border px-2 py-0.5 rounded-md text-[10px] font-bold ${curSt.cls} transition hover:scale-105">
+                            <button type="button" id="wpItemBtn_${it.id}" onclick="toggleWorkerItemStatus(${it.id})" title="Кликните для смены этапа" class="border px-2 py-0.5 rounded-md text-[10px] font-bold ${curSt.cls} transition hover:scale-105">
                                 ${curSt.text}
                             </button>
                         </div>
@@ -4079,7 +4545,7 @@ function renderWorkerProjectsSummary() {
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                     <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800/80">
                         <span class="text-slate-400">Начислено (готово):</span>
-                        <div class="text-sm font-black mono text-emerald-400 mt-0.5">${earnedDone.toLocaleString()} ₸</div>
+                        <div id="wpEarnedDone_${p.id}" class="text-sm font-black mono text-emerald-400 mt-0.5">${earnedDone.toLocaleString()} ₸</div>
                     </div>
                     <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800/80">
                         <span class="text-slate-400">Всего по объекту:</span>
@@ -4098,10 +4564,10 @@ function renderWorkerProjectsSummary() {
                 <div class="space-y-1">
                     <div class="flex justify-between items-center text-[11px]">
                         <span class="text-slate-400">Готовность позиций мастера:</span>
-                        <span class="mono font-bold ${pct === 100 ? 'text-emerald-400' : 'text-slate-300'}">${doneCount} / ${totalQty} шт (${pct}%)</span>
+                        <span id="wpDoneCount_${p.id}" class="mono font-bold ${pct === 100 ? 'text-emerald-400' : 'text-slate-300'}">${doneCount} / ${totalQty} шт (${pct}%)</span>
                     </div>
                     <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
-                        <div class="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full" style="width: ${pct}%"></div>
+                        <div id="wpProgressBar_${p.id}" class="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full" style="width: ${pct}%"></div>
                     </div>
                 </div>
 
@@ -4194,9 +4660,8 @@ function renderWorkerAllItems() {
             : `${Math.round(shareInfo.percent)}% (${shareInfo.amount.toLocaleString()} ₸)`;
 
         const stConfig = {
-            queue: { text: '⏳ В очереди', cls: 'bg-slate-800 text-slate-300 border-slate-700' },
-            cut: { text: '✂ Отрезано', cls: 'bg-amber-950/70 text-amber-300 border-amber-700' },
-            done: { text: '✓ Собрано', cls: 'bg-emerald-950/70 text-emerald-300 border-emerald-700' }
+            queue: { text: '⏳ Не готово', cls: 'bg-slate-800 text-slate-300 border-slate-700' },
+            done: { text: '✓ Готово', cls: 'bg-emerald-950/70 text-emerald-300 border-emerald-700' }
         };
         const curSt = stConfig[it.item_status || 'queue'] || stConfig.queue;
 
@@ -4208,7 +4673,7 @@ function renderWorkerAllItems() {
                         <strong class="text-white">${it.title}</strong>
                         <span class="mono text-blue-300 font-semibold">${desc.join(' ')}</span>
                         ${framesHtml}
-                        <button type="button" onclick="toggleWorkerItemStatus(${it.id})" title="Кликните для переключения статуса" class="border px-2 py-0.5 rounded-md text-[10px] font-bold ${curSt.cls} transition hover:scale-105">
+                        <button type="button" id="wpAllItemBtn_${it.id}" onclick="toggleWorkerItemStatus(${it.id})" title="Кликните для переключения статуса" class="border px-2 py-0.5 rounded-md text-[10px] font-bold ${curSt.cls} transition hover:scale-105">
                             ${curSt.text}
                         </button>
                     </div>
@@ -4231,9 +4696,8 @@ async function toggleWorkerItemStatus(itemId) {
     if (!session.workerAccordions) session.workerAccordions = {};
     session.workerAccordions[it.project_id] = true;
 
-    const nextMap = { queue: 'cut', cut: 'done', done: 'queue' };
     const cur = it.item_status || 'queue';
-    const next = nextMap[cur] || 'queue';
+    const next = (cur === 'done') ? 'queue' : 'done';
     it.item_status = next;
     if (!it.dimensions) it.dimensions = {};
     it.dimensions.item_status = next;
@@ -4245,19 +4709,62 @@ async function toggleWorkerItemStatus(itemId) {
         actIt.dimensions.item_status = next;
     }
 
-    await supabaseClient.from('items').update({ dimensions: it.dimensions }).eq('id', itemId);
-    showToast(`Этап обновлен: ${next === 'done' ? '✓ Собрано' : next === 'cut' ? '✂ Отрезано' : '⏳ В очереди'}`, next === 'done' ? 'success' : 'info');
+    // Сохранение в Supabase в фоне
+    supabaseClient.from('items').update({ dimensions: it.dimensions }).eq('id', itemId);
+    showToast(`Статус: ${next === 'done' ? '✓ Готово' : '⏳ Не готово'}`, next === 'done' ? 'success' : 'info');
 
-    // Сохраняем положение скролла в модалке, чтобы страница не дергалась
-    const scrollContainer = document.querySelector('#workerProfileModal > div');
-    const prevScroll = scrollContainer ? scrollContainer.scrollTop : 0;
-
-    updateHeaderUI();
-    renderWorkerProfileContent();
-
-    if (scrollContainer) {
-        scrollContainer.scrollTop = prevScroll;
+    // 1. Точечное обновление кнопок в DOM БЕЗ перерисовки аккордеона!
+    const btnByProj = document.getElementById(`wpItemBtn_${itemId}`);
+    if (btnByProj) {
+        btnByProj.className = next === 'done'
+            ? "border px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-950/70 text-emerald-300 border-emerald-700 transition hover:scale-105"
+            : "border px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-slate-300 border-slate-700 transition hover:scale-105";
+        btnByProj.textContent = next === 'done' ? "✓ Готово" : "⏳ Не готово";
     }
+
+    const btnAll = document.getElementById(`wpAllItemBtn_${itemId}`);
+    if (btnAll) {
+        btnAll.className = next === 'done'
+            ? "border px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-950/70 text-emerald-300 border-emerald-700 transition hover:scale-105"
+            : "border px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-slate-300 border-slate-700 transition hover:scale-105";
+        btnAll.textContent = next === 'done' ? "✓ Готово" : "⏳ Не готово";
+    }
+
+    // 2. Обновление плашки проекта (начислено, готовность)
+    const p = appState.projects.find(x => x.id === it.project_id);
+    if (p) {
+        const targetUser = session.workerProfSelectedUser || session.user?.name;
+        const pItems = appState.allItems.filter(x => {
+            if (x.project_id !== p.id) return false;
+            return (targetUser === 'all') ? ((x.workers || []).length > 0) : (x.workers || []).includes(targetUser);
+        });
+        let pEarnedDone = 0;
+        let pDoneCount = 0;
+        const pTotalQty = pItems.reduce((s, i) => s + (Number(i.qty) || 1), 0);
+        pItems.forEach(x => {
+            const share = (targetUser === 'all') 
+                ? getItemPositionCost(x, p) 
+                : getWorkerItemShareInfo(x, targetUser, p).amount;
+            if (x.item_status === 'done') {
+                pEarnedDone += share;
+                pDoneCount += (Number(x.qty) || 1);
+            }
+        });
+        const pPct = pTotalQty > 0 ? Math.round((pDoneCount / pTotalQty) * 100) : 0;
+        const elEarned = document.getElementById(`wpEarnedDone_${p.id}`);
+        if (elEarned) elEarned.textContent = `${pEarnedDone.toLocaleString()} ₸`;
+        const elDone = document.getElementById(`wpDoneCount_${p.id}`);
+        if (elDone) {
+            elDone.textContent = `${pDoneCount} / ${pTotalQty} шт (${pPct}%)`;
+            elDone.className = `mono font-bold ${pPct === 100 ? 'text-emerald-400' : 'text-slate-300'}`;
+        }
+        const elBar = document.getElementById(`wpProgressBar_${p.id}`);
+        if (elBar) elBar.style.width = `${pPct}%`;
+    }
+
+    // 3. Обновление KPI шапки модалки и шапки приложения
+    updateWorkerProfileKPIs();
+    updateHeaderUI();
 
     if (session.insideProjectId === it.project_id) {
         renderSpecification();
@@ -4321,7 +4828,7 @@ function printWorkerReport() {
                 <td style="border: 1px solid #cbd5e1; padding: 6px;">${frames || '—'}</td>
                 <td style="border: 1px solid #cbd5e1; padding: 6px;">${it.metal} ${it.thickness} мм</td>
                 <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; font-weight: bold;">${it.qty} шт</td>
-                <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center;">${it.item_status === 'done' ? '✓ Собрано' : it.item_status === 'cut' ? '✂ Отрезано' : '⏳ В очереди'}</td>
+                <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center;">${it.item_status === 'done' ? '✓ Готово' : '⏳ Не готово'}</td>
                 <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: right;">${Math.round(sharePct)}%</td>
                 <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: right; font-weight: bold;">${shareAmt.toLocaleString()} ₸</td>
             </tr>
