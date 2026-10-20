@@ -1,13 +1,22 @@
 // Service Worker для Maxvent Tools PWA
-const CACHE_NAME = 'maxvent-tools-v1';
+const CACHE_NAME = 'maxvent-tools-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './app.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  './js/config.js',
+  './js/auth.js',
+  './js/projects.js',
+  './js/items.js',
+  './js/flange.js',
+  './js/nesting.js',
+  './js/finance.js',
+  './js/dev.js',
+  './js/workers.js',
+  './js/main.js'
 ];
 
 self.addEventListener('install', (event) => {
