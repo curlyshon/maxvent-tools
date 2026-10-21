@@ -3,6 +3,19 @@
 // Финансовый учет объектов, платежи и сводные отчеты
 // ==========================================
 
+function openProjectFinanceModal() {
+    triggerHaptic('light');
+    const modal = document.getElementById('projectFinanceModal');
+    if (modal) modal.classList.remove('hidden');
+    renderProjectFinance();
+}
+
+function closeProjectFinanceModal() {
+    triggerHaptic('light');
+    const modal = document.getElementById('projectFinanceModal');
+    if (modal) modal.classList.add('hidden');
+}
+
 function renderProjectFinance() {
     const p = appState.projects.find(x => x.id === session.insideProjectId);
     if (!p) return;
@@ -227,12 +240,9 @@ function printGlobalFinancialReport() {
     window.print();
 }
 
-async function openGlobalFinanceModal() {
-    document.getElementById('profileDropdown').classList.add('hidden');
-    const modal = document.getElementById('globalFinanceModal');
-    modal.classList.remove('hidden');
-
+function renderGlobalFinanceReport() {
     const content = document.getElementById('globalFinanceContent');
+    if (!content) return;
     let grandTotal = 0;
     let grandPaid = 0;
     let grandDebt = 0;
@@ -243,40 +253,47 @@ async function openGlobalFinanceModal() {
         grandPaid += fin.paid;
         grandDebt += fin.debt;
         return `
-            <tr class="border-b border-slate-800 hover:bg-slate-950">
-                <td class="p-3 font-bold text-white">${p.title} <span class="text-[10px] text-slate-500 block">${p.group_name || '—'}</span></td>
+            <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="p-3 font-bold text-white">${p.title} <span class="text-[10px] text-zinc-500 block">${p.group_name || '—'}</span></td>
                 <td class="p-3 mono">${fin.totalSum.toLocaleString()} ₸</td>
                 <td class="p-3 mono text-emerald-400">${fin.paid.toLocaleString()} ₸</td>
-                <td class="p-3 mono ${fin.debt > 0 ? 'text-amber-400 font-bold' : 'text-slate-500'}">${fin.debt.toLocaleString()} ₸</td>
-                <td class="p-3"><span class="text-[10px] px-2 py-0.5 rounded font-bold ${p.archive_state === 'archived' ? 'bg-slate-800 text-slate-400' : 'bg-blue-950 text-blue-300'}">${p.archive_state === 'archived' ? 'Архив' : 'Активен'}</span></td>
+                <td class="p-3 mono ${fin.debt > 0 ? 'text-amber-400 font-bold' : 'text-zinc-500'}">${fin.debt.toLocaleString()} ₸</td>
+                <td class="p-3"><span class="text-[10px] px-2 py-0.5 rounded font-bold ${p.archive_state === 'archived' ? 'bg-zinc-800 text-zinc-400' : 'bg-white/10 text-zinc-200'}">${p.archive_state === 'archived' ? 'Архив' : 'Активен'}</span></td>
             </tr>
         `;
     }).join('');
 
     content.innerHTML = `
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-slate-400">Сумма всех заказов:</div>
+            <div class="bg-[#181b26] p-4 rounded-2xl border border-white/5">
+                <div class="text-zinc-400">Сумма всех заказов:</div>
                 <div class="text-xl font-bold mono text-white mt-1">${grandTotal.toLocaleString()} ₸</div>
             </div>
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-slate-400">Всего оплачено:</div>
+            <div class="bg-[#181b26] p-4 rounded-2xl border border-white/5">
+                <div class="text-zinc-400">Всего оплачено:</div>
                 <div class="text-xl font-bold mono text-emerald-400 mt-1">${grandPaid.toLocaleString()} ₸</div>
             </div>
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-slate-400">Общий остаток долга:</div>
+            <div class="bg-[#181b26] p-4 rounded-2xl border border-white/5">
+                <div class="text-zinc-400">Общий остаток долга:</div>
                 <div class="text-xl font-bold mono text-amber-400 mt-1">${grandDebt.toLocaleString()} ₸</div>
             </div>
         </div>
-        <div class="overflow-x-auto bg-slate-950 rounded-xl border border-slate-800">
+        <div class="overflow-x-auto bg-[#181b26] rounded-2xl border border-white/5">
             <table class="w-full text-left text-xs">
-                <thead class="bg-slate-900 border-b border-slate-800 uppercase text-slate-400">
+                <thead class="bg-[#12141c] border-b border-white/5 uppercase text-zinc-400">
                     <tr><th class="p-3">Объект</th><th class="p-3">Смета</th><th class="p-3">Оплачено</th><th class="p-3">Долг</th><th class="p-3">Статус</th></tr>
                 </thead>
                 <tbody>${rows}</tbody>
             </table>
         </div>
     `;
+}
+
+async function openGlobalFinanceModal() {
+    document.getElementById('profileDropdown').classList.add('hidden');
+    const modal = document.getElementById('globalFinanceModal');
+    if (modal) modal.classList.remove('hidden');
+    renderGlobalFinanceReport();
 }
 
 function closeGlobalFinanceModal() {

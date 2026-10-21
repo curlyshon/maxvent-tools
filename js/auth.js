@@ -4,30 +4,97 @@
 // ==========================================
 
 // ==========================================
-// АВТОРИЗАЦИЯ СТРОГО ПО КОДУ ДОСТУПА
+// АВТОРИЗАЦИЯ СТРОГО ПО КОДУ ДОСТУПА И ЦИФРОВОЙ КЛАВИАТУРЕ
 // ==========================================
+let currentAuthPin = '';
+
+function pressAuthPin(digit) {
+    triggerHaptic('light');
+    if (currentAuthPin.length < 6) {
+        currentAuthPin += String(digit);
+        updateAuthPinUI();
+        const err = document.getElementById('authError');
+        if (err) err.classList.add('hidden');
+
+        // Проверяем, подошел ли пин-код
+        const u = appState.users.find(x => String(x.access_code || x.pass || '').trim() === currentAuthPin);
+        if (u) {
+            triggerHaptic('success');
+            session.user = u;
+            session.devMode = (u.role === 'developer');
+            localStorage.setItem('mv_online_session', JSON.stringify({ userId: u.id, devMode: session.devMode }));
+            clearAuthPin();
+            checkAuthState();
+            return;
+        }
+
+        if (currentAuthPin.length >= 4) {
+            setTimeout(() => {
+                const checkAgain = appState.users.find(x => String(x.access_code || x.pass || '').trim() === currentAuthPin);
+                if (!checkAgain && currentAuthPin.length >= 4) {
+                    triggerHaptic('warning');
+                    if (err) {
+                        err.textContent = 'Неверный код доступа';
+                        err.classList.remove('hidden');
+                    }
+                    setTimeout(() => clearAuthPin(), 600);
+                }
+            }, 250);
+        }
+    }
+}
+
+function backspaceAuthPin() {
+    triggerHaptic('light');
+    currentAuthPin = currentAuthPin.slice(0, -1);
+    updateAuthPinUI();
+}
+
+function clearAuthPin() {
+    currentAuthPin = '';
+    updateAuthPinUI();
+}
+
+function updateAuthPinUI() {
+    for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById(`pinDot-${i}`);
+        if (dot) {
+            if (i <= currentAuthPin.length) {
+                dot.className = 'w-4 h-4 rounded-full bg-white scale-110 shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all';
+            } else {
+                dot.className = 'w-4 h-4 rounded-full border-2 border-white/20 bg-transparent transition-all';
+            }
+        }
+    }
+    const input = document.getElementById('authCodeInput');
+    if (input) input.value = currentAuthPin;
+}
+
 async function handleAuthSubmit(e) {
-    e.preventDefault();
-    const code = document.getElementById('authCodeInput').value.trim();
+    if (e) e.preventDefault();
+    const code = (document.getElementById('authCodeInput')?.value || currentAuthPin).trim();
     const err = document.getElementById('authError');
-    err.classList.add('hidden');
+    if (err) err.classList.add('hidden');
 
     const u = appState.users.find(x => String(x.access_code || x.pass || '').trim() === code);
     if (!u) {
-        err.textContent = 'Неверный код доступа. Обратитесь к руководителю цеха.';
-        err.classList.remove('hidden');
+        if (err) {
+            err.textContent = 'Неверный код доступа. Обратитесь к руководителю цеха.';
+            err.classList.remove('hidden');
+        }
+        triggerHaptic('warning');
         return;
     }
 
+    triggerHaptic('success');
     session.user = u;
     session.devMode = (u.role === 'developer');
     localStorage.setItem('mv_online_session', JSON.stringify({ userId: u.id, devMode: session.devMode }));
-    document.getElementById('authCodeInput').value = '';
+    clearAuthPin();
     checkAuthState();
 }
 
 function checkAuthState() {
-    const screen = document.getElementById('authScreen');
     if (!session.user) {
         const saved = localStorage.getItem('mv_online_session');
         if (saved) {
@@ -43,21 +110,31 @@ function checkAuthState() {
     }
 
     if (!session.user) {
-        screen.classList.remove('hidden');
+        if (typeof navigateTo === 'function') {
+            navigateTo(SCREENS.AUTH);
+        } else {
+            document.getElementById('screen-auth')?.classList.remove('hidden');
+        }
     } else {
-        screen.classList.add('hidden');
         updateHeaderUI();
-        if (document.getElementById('projectScreen').classList.contains('hidden')) {
-            goToMainMenu();
+        if (typeof navigateTo === 'function') {
+            if (currentScreenId === SCREENS.AUTH) {
+                navigateTo(SCREENS.MENU);
+            }
         }
     }
 }
 
 function logout() {
+    triggerHaptic('light');
     session.user = null;
     localStorage.removeItem('mv_online_session');
-    document.getElementById('profileDropdown').classList.add('hidden');
-    checkAuthState();
+    const drop = document.getElementById('profileDropdown');
+    if (drop) drop.classList.add('hidden');
+    clearAuthPin();
+    if (typeof navigateTo === 'function') {
+        navigateTo(SCREENS.AUTH);
+    }
 }
 
 function isDev() {
@@ -83,10 +160,17 @@ function toggleDevMode() {
 function updateHeaderUI() {
     const u = session.user;
     if (!u) return;
-    document.getElementById('userNameHeader').textContent = u.name;
-    document.getElementById('userAvatar').textContent = u.name.charAt(0).toUpperCase();
-    document.getElementById('dropUserName').textContent = u.name;
-    document.getElementById('dropUserRole').textContent = isDev() ? 'Разработчик (Полный доступ)' : 'Работник цеха';
+
+    if (document.getElementById('userNameHeader')) document.getElementById('userNameHeader').textContent = u.name;
+    if (document.getElementById('userAvatar')) document.getElementById('userAvatar').textContent = u.name.charAt(0).toUpperCase();
+    if (document.getElementById('dropUserName')) document.getElementById('dropUserName').textContent = u.name;
+    if (document.getElementById('dropUserRole')) document.getElementById('dropUserRole').textContent = isDev() ? 'Разработчик (Полный доступ)' : 'Работник цеха';
+
+    // Главное меню профиль
+    if (document.getElementById('menuUserName')) document.getElementById('menuUserName').textContent = u.name;
+    if (document.getElementById('menuUserAvatar')) document.getElementById('menuUserAvatar').textContent = u.name.charAt(0).toUpperCase();
+    if (document.getElementById('menuUserRole')) document.getElementById('menuUserRole').textContent = isDev() ? 'Разработчик' : 'Работник цеха';
+    if (document.getElementById('menuAdminBtn')) document.getElementById('menuAdminBtn').classList.toggle('hidden', u.role !== 'developer');
 
     // Расчет заработка текущего мастера по собранным изделиям
     let userEarnedDone = 0;
@@ -105,23 +189,29 @@ function updateHeaderUI() {
     if (dBadge) dBadge.textContent = `${userEarnedDone.toLocaleString()} ₸`;
     const heroEarned = document.getElementById('heroWorkerEarned');
     if (heroEarned) heroEarned.textContent = `${userEarnedDone.toLocaleString()} ₸`;
+    const menuEarned = document.getElementById('menuEarnedAmount');
+    if (menuEarned) menuEarned.textContent = `${userEarnedDone.toLocaleString()} ₸`;
 
     renderMainMenuHeroStats();
 
     const devWrap = document.getElementById('devToggleWrap');
-    if (u.role === 'developer') {
-        devWrap.classList.remove('hidden');
-        devWrap.classList.add('flex');
-        document.getElementById('devToggleBtn').className = session.devMode ? "w-8 h-4 bg-blue-600 rounded-full relative transition flex items-center" : "w-8 h-4 bg-slate-700 rounded-full relative transition flex items-center";
-        document.getElementById('devToggleKnob').className = session.devMode ? "w-3 h-3 bg-white rounded-full absolute right-0.5 transition" : "w-3 h-3 bg-white rounded-full absolute left-0.5 transition";
-    } else {
-        devWrap.classList.add('hidden');
+    if (devWrap) {
+        if (u.role === 'developer') {
+            devWrap.classList.remove('hidden');
+            devWrap.classList.add('flex');
+            const devBtn = document.getElementById('devToggleBtn');
+            if (devBtn) devBtn.className = session.devMode ? "w-8 h-4 bg-blue-600 rounded-full relative transition flex items-center" : "w-8 h-4 bg-slate-700 rounded-full relative transition flex items-center";
+            const devKnob = document.getElementById('devToggleKnob');
+            if (devKnob) devKnob.className = session.devMode ? "w-3 h-3 bg-white rounded-full absolute right-0.5 transition" : "w-3 h-3 bg-white rounded-full absolute left-0.5 transition";
+        } else {
+            devWrap.classList.add('hidden');
+        }
     }
 
-    document.getElementById('menuBtnDevSettings').classList.toggle('hidden', !isDev());
-    document.getElementById('menuBtnGlobalFinance').classList.toggle('hidden', !isDev());
-    document.getElementById('priceInputWrap').classList.toggle('hidden', !isDev());
-    document.getElementById('inTab-finance').classList.toggle('hidden', !isDev());
+    if (document.getElementById('menuBtnDevSettings')) document.getElementById('menuBtnDevSettings').classList.toggle('hidden', !isDev());
+    if (document.getElementById('menuBtnGlobalFinance')) document.getElementById('menuBtnGlobalFinance').classList.toggle('hidden', !isDev());
+    if (document.getElementById('priceInputWrap')) document.getElementById('priceInputWrap').classList.toggle('hidden', !isDev());
+    if (document.getElementById('inTab-finance')) document.getElementById('inTab-finance').classList.toggle('hidden', !isDev());
 }
 
 function renderMainMenuHeroStats() {
@@ -184,8 +274,23 @@ async function openProfileEditModal() {
 }
 
 function refreshCurrentScreen() {
-    if (!document.getElementById('projectScreen').classList.contains('hidden')) {
-        renderProjectInside();
+    if (typeof currentScreenId !== 'undefined') {
+        if (currentScreenId === SCREENS.PROJECT_DETAIL && session.insideProjectId) {
+            renderProjectInside();
+        } else if (currentScreenId === SCREENS.PROJECTS) {
+            renderMainMenuProjects();
+        } else if (currentScreenId === SCREENS.MENU) {
+            renderMainMenuSummary();
+        } else if (currentScreenId === SCREENS.FLANGE) {
+            if (flangeSource === 'project' && session.insideProjectId) renderProjectFlange();
+            else renderStandaloneFlange();
+        } else if (currentScreenId === SCREENS.WORKER) {
+            renderWorkerProfileContent();
+        } else if (currentScreenId === SCREENS.ADMIN) {
+            renderDevDashboard();
+        } else if (currentScreenId === SCREENS.NESTING) {
+            renderProjectNesting();
+        }
     } else {
         renderMainMenuProjects();
     }

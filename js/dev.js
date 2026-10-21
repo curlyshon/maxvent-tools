@@ -3,16 +3,33 @@
 // Панель разработчика, конструктор изделий, кастомные параметры, архив
 // ==========================================
 
-function openDevModal() {
-    document.getElementById('profileDropdown').classList.add('hidden');
-    document.getElementById('devModal').classList.remove('hidden');
+function renderDevDashboard() {
     renderDevCatalogs();
     renderCustomFitParamsCheckboxes();
     renderDevFittingsList();
     renderDevUsersStats();
+    if (typeof renderGlobalFinanceReport === 'function') {
+        renderGlobalFinanceReport();
+    }
 }
 
-function closeDevModal() { document.getElementById('devModal').classList.add('hidden'); }
+function openDevModal() {
+    document.getElementById('profileDropdown')?.classList.add('hidden');
+    if (typeof navigateTo === 'function') {
+        navigateTo(SCREENS.ADMIN);
+    } else {
+        document.getElementById('devModal')?.classList.remove('hidden');
+        renderDevDashboard();
+    }
+}
+
+function closeDevModal() { 
+    if (typeof goBack === 'function') {
+        goBack();
+    } else {
+        document.getElementById('devModal')?.classList.add('hidden'); 
+    }
+}
 
 function renderDevCatalogs() {
     document.getElementById('devMetalsList').innerHTML = appState.metals.map((m, i) => `

@@ -70,6 +70,19 @@ function goToWizardStep(step) {
     }
 }
 
+function openItemAddSheet() {
+    triggerHaptic('light');
+    resetItemForm();
+    const modal = document.getElementById('itemFormModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeItemAddSheet() {
+    triggerHaptic('light');
+    const modal = document.getElementById('itemFormModal');
+    if (modal) modal.classList.add('hidden');
+}
+
 function adjustQtyStepper(delta) {
     triggerHaptic('medium');
     const input = document.getElementById('inQty');
@@ -680,6 +693,7 @@ async function saveProjectItem(e) {
     await supabaseClient.from('projects').update({ updated_at: new Date().toISOString() }).eq('id', projId);
     await loadProjectDetails(projId);
     resetItemForm();
+    closeItemAddSheet();
     renderProjectInside();
 }
 
@@ -1252,6 +1266,7 @@ function duplicateWithModal(id) {
     const it = appState.activeProjectItems.find(x => x.id === id);
     if (!it) return;
 
+    openItemAddSheet();
     editProjectItem(id);
     document.getElementById('editItemId').value = '';
     document.getElementById('formHeaderTitle').textContent = `Дубликат: ${it.title} (измените нужные параметры)`;
@@ -1259,13 +1274,13 @@ function duplicateWithModal(id) {
     document.getElementById('submitItemBtn').textContent = '+ Создать дубликат';
     goToWizardStep(2);
     triggerHaptic('light');
-    window.scrollTo({ top: document.getElementById('itemFormCard').offsetTop - 60, behavior: 'smooth' });
 }
 
 function editProjectItem(id) {
     const it = appState.activeProjectItems.find(x => x.id === id);
     if (!it) return;
 
+    openItemAddSheet();
     document.getElementById('editItemId').value = it.id;
     document.getElementById('formHeaderTitle').textContent = 'Редактировать позицию';
     document.getElementById('cancelEditBtn').classList.remove('hidden');
@@ -1308,5 +1323,4 @@ function editProjectItem(id) {
 
     goToWizardStep(2);
     triggerHaptic('light');
-    window.scrollTo({ top: document.getElementById('itemFormCard').offsetTop - 60, behavior: 'smooth' });
 }

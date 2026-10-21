@@ -7,11 +7,18 @@
 // ГЛАВНОЕ МЕНЮ И ПРОЕКТЫ
 // ==========================================
 function goToMainMenu() {
-    document.getElementById('profileDropdown').classList.add('hidden');
-    document.getElementById('projectScreen').classList.add('hidden');
-    document.getElementById('mainMenuScreen').classList.remove('hidden');
     session.clickedProjectId = null;
-    renderMainMenuProjects();
+    const drop = document.getElementById('profileDropdown');
+    if (drop) drop.classList.add('hidden');
+    if (typeof navigateTo === 'function') {
+        navigateTo(SCREENS.MENU);
+    }
+}
+
+function goToProjectsScreen() {
+    if (typeof navigateTo === 'function') {
+        navigateTo(SCREENS.PROJECTS);
+    }
 }
 
 function setProjectFilter(f) {
@@ -373,20 +380,29 @@ async function deleteProjectPermanent(id) {
 async function openInsideProject(id) {
     session.insideProjectId = id;
     session.selectedSpecIds = [];
-    document.getElementById('mainMenuScreen').classList.add('hidden');
-    document.getElementById('projectScreen').classList.remove('hidden');
 
     const p = appState.projects.find(x => x.id === id);
-    document.getElementById('activeProjTitleHeader').textContent = p ? p.title : 'Проект';
-    document.getElementById('activeProjCutBadge').classList.toggle('hidden', p?.status_text !== 'Воздуховоды отрезаны');
+    const titleHeader = document.getElementById('activeProjTitleHeader');
+    if (titleHeader) titleHeader.textContent = p ? p.title : 'Проект';
+
+    const statusBadge = document.getElementById('activeProjStatusBadge');
+    if (statusBadge) {
+        statusBadge.textContent = p ? (p.status_text || 'В работе') : 'В работе';
+    }
+
+    const cutBadge = document.getElementById('activeProjCutBadge');
+    if (cutBadge) cutBadge.classList.toggle('hidden', p?.status_text !== 'Воздуховоды отрезаны');
 
     await loadProjectDetails(id);
     updateProjectSeamsUI(p);
     populateFormDropdowns();
     selectCategory('duct');
     selectShape('rect');
-    switchInnerTab('items');
     renderProjectInside();
+
+    if (typeof navigateTo === 'function') {
+        navigateTo(SCREENS.PROJECT_DETAIL);
+    }
 }
 
 function switchInnerTab(tab) {
@@ -414,72 +430,99 @@ function renderProjectInside() {
 function toggleSummaryAccordion() {
     const body = document.getElementById('summaryBody');
     const arrow = document.getElementById('summaryArrow');
+    if (!body) return;
     const isHidden = body.classList.contains('hidden');
     body.classList.toggle('hidden', !isHidden);
-    arrow.textContent = isHidden ? '▼' : '▶';
+    if (arrow) arrow.textContent = isHidden ? '▼' : '▶';
 }
 
 function renderSummarySection() {
     const ducts = appState.activeProjectItems.filter(i => i.category === 'duct');
     const fittings = appState.activeProjectItems.filter(i => i.category === 'fitting');
 
-    document.getElementById('sumTotalDucts').textContent = ducts.reduce((s, i) => s + i.qty, 0) + ' шт';
-    document.getElementById('sumTotalFittings').textContent = fittings.reduce((s, i) => s + i.qty, 0) + ' шт';
+    const totalQty = appState.activeProjectItems.reduce((s, i) => s + (Number(i.qty) || 1), 0);
+    const doneQty = appState.activeProjectItems.filter(i => i.item_status === 'done').reduce((s, i) => s + (Number(i.qty) || 1), 0);
+    const pct = totalQty > 0 ? Math.round((doneQty / totalQty) * 100) : 0;
+
+    const p = appState.projects.find(x => x.id === session.insideProjectId);
+    const seams = getProjectSeams(p);
+
+    let totalDuctArea = 0;
+    ducts.forEach(it => {
+        const unfold = it.shape === 'rect' 
+            ? (2 * (Number(it.w || 0) + Number(it.h || 0)) + seams.lock_pittsburgh + seams.lock_single) 
+            : Math.round(Math.PI * Number(it.d || 0) + seams.round_seam);
+        totalDuctArea += (unfold * Number(it.l || 1250) * (Number(it.qty) || 1)) / 1e6;
+    });
+
+    const sumDucts = document.getElementById('sumTotalDucts');
+    if (sumDucts) sumDucts.textContent = ducts.reduce((s, i) => s + i.qty, 0) + ' шт';
+    const sumFittings = document.getElementById('sumTotalFittings');
+    if (sumFittings) sumFittings.textContent = fittings.reduce((s, i) => s + i.qty, 0) + ' шт';
+
+    const quickSummary = document.getElementById('activeProjQuickSummary');
+    if (quickSummary) {
+        quickSummary.textContent = `${totalQty} изд. • ${totalDuctArea.toFixed(1)} м² • Готово: ${pct}%`;
+    }
 
     const dBox = document.getElementById('summaryDuctsBox');
-    let dHtml = '<div class="font-bold text-blue-400 uppercase tracking-wider text-[11px] mb-1">1. Воздуховоды</div>';
+    if (dBox) {
+        let dHtml = '<div class="font-bold text-blue-400 uppercase tracking-wider text-[11px] mb-1">1. Воздуховоды</div>';
 
-    const dRect = ducts.filter(i => i.shape === 'rect');
-    if (dRect.length) {
-        dHtml += '<div class="text-[11px] font-bold text-slate-300 mt-1">Прямоугольные воздуховоды:</div>';
-        const grouped = groupSummaryDucts(dRect);
-        for (let [m, d] of Object.entries(grouped)) {
-            dHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${d.qty} шт</strong> | Площадь: <strong class="text-blue-300">${d.area.toFixed(2)} м²</strong></div>`;
+        const dRect = ducts.filter(i => i.shape === 'rect');
+        if (dRect.length) {
+            dHtml += '<div class="text-[11px] font-bold text-slate-300 mt-1">Прямоугольные воздуховоды:</div>';
+            const grouped = groupSummaryDucts(dRect);
+            for (let [m, d] of Object.entries(grouped)) {
+                dHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${d.qty} шт</strong> | Площадь: <strong class="text-blue-300">${d.area.toFixed(2)} м²</strong></div>`;
+            }
         }
-    }
 
-    const dRound = ducts.filter(i => i.shape === 'round');
-    if (dRound.length) {
-        dHtml += '<div class="text-[11px] font-bold text-slate-300 mt-2">Круглые воздуховоды:</div>';
-        const grouped = groupSummaryDucts(dRound);
-        for (let [m, d] of Object.entries(grouped)) {
-            dHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${d.qty} шт</strong> | Площадь: <strong class="text-blue-300">${d.area.toFixed(2)} м²</strong></div>`;
+        const dRound = ducts.filter(i => i.shape === 'round');
+        if (dRound.length) {
+            dHtml += '<div class="text-[11px] font-bold text-slate-300 mt-2">Круглые воздуховоды:</div>';
+            const grouped = groupSummaryDucts(dRound);
+            for (let [m, d] of Object.entries(grouped)) {
+                dHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${d.qty} шт</strong> | Площадь: <strong class="text-blue-300">${d.area.toFixed(2)} м²</strong></div>`;
+            }
         }
+        if (!dRect.length && !dRound.length) dHtml += '<div class="text-slate-500">Нет воздуховодов</div>';
+        dBox.innerHTML = dHtml;
     }
-    if (!dRect.length && !dRound.length) dHtml += '<div class="text-slate-500">Нет воздуховодов</div>';
-    dBox.innerHTML = dHtml;
 
     const fBox = document.getElementById('summaryFittingsBox');
-    let fHtml = '<div class="font-bold text-emerald-400 uppercase tracking-wider text-[11px] mb-1">2. Изделия (Фасонина)</div>';
+    if (fBox) {
+        let fHtml = '<div class="font-bold text-emerald-400 uppercase tracking-wider text-[11px] mb-1">2. Изделия (Фасонина)</div>';
 
-    const fRect = fittings.filter(i => i.shape === 'rect');
-    if (fRect.length) {
-        fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-1">Прямоугольные изделия:</div>';
-        const grouped = groupSummaryFittings(fRect);
-        for (let [m, q] of Object.entries(grouped)) {
-            fHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${q} шт</strong></div>`;
+        const fRect = fittings.filter(i => i.shape === 'rect');
+        if (fRect.length) {
+            fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-1">Прямоугольные изделия:</div>';
+            const grouped = groupSummaryFittings(fRect);
+            for (let [m, q] of Object.entries(grouped)) {
+                fHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${q} шт</strong></div>`;
+            }
         }
-    }
 
-    const fRound = fittings.filter(i => i.shape === 'round');
-    if (fRound.length) {
-        fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-2">Круглые изделия:</div>';
-        const grouped = groupSummaryFittings(fRound);
-        for (let [m, q] of Object.entries(grouped)) {
-            fHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${q} шт</strong></div>`;
+        const fRound = fittings.filter(i => i.shape === 'round');
+        if (fRound.length) {
+            fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-2">Круглые изделия:</div>';
+            const grouped = groupSummaryFittings(fRound);
+            for (let [m, q] of Object.entries(grouped)) {
+                fHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${q} шт</strong></div>`;
+            }
         }
-    }
 
-    const fSmooth = fittings.filter(i => i.shape === 'smooth');
-    if (fSmooth.length) {
-        fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-2">Плавные изделия:</div>';
-        const grouped = groupSummaryFittings(fSmooth);
-        for (let [m, q] of Object.entries(grouped)) {
-            fHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${q} шт</strong></div>`;
+        const fSmooth = fittings.filter(i => i.shape === 'smooth');
+        if (fSmooth.length) {
+            fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-2">Плавные изделия:</div>';
+            const grouped = groupSummaryFittings(fSmooth);
+            for (let [m, q] of Object.entries(grouped)) {
+                fHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${q} шт</strong></div>`;
+            }
         }
+        if (!fRect.length && !fRound.length && !fSmooth.length) fHtml += '<div class="text-slate-500">Нет фасонных изделий</div>';
+        fBox.innerHTML = fHtml;
     }
-    if (!fRect.length && !fRound.length && !fSmooth.length) fHtml += '<div class="text-slate-500">Нет изделий</div>';
-    fBox.innerHTML = fHtml;
 }
 
 function groupSummaryDucts(arr) {

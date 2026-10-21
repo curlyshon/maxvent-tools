@@ -335,37 +335,24 @@ function openWorkerProfileModal(specificWorkerName = null) {
     const dropdown = document.getElementById('profileDropdown');
     if (dropdown) dropdown.classList.add('hidden');
 
-    const modal = document.getElementById('workerProfileModal');
-    if (!modal) return;
-    modal.classList.remove('hidden');
-
-    const selectWrap = document.getElementById('workerProfSelectWrap');
-    const userSelect = document.getElementById('workerProfUserSelect');
-
-    if (userSelect) {
-        userSelect.innerHTML = `
-            <option value="${session.user?.name || ''}">👤 Мой профиль (${session.user?.name || ''})</option>
-            ${isDev() ? '<option value="all">🏆 Все мастера цеха (Сводка)</option>' : ''}
-            ${appState.users.filter(u => u.name !== session.user?.name).map(u => `<option value="${u.name}">${u.name} (${u.role === 'developer' ? 'Админ' : 'Мастер'})</option>`).join('')}
-        `;
-    }
-
-    if (isDev() && selectWrap) {
-        selectWrap.classList.remove('hidden');
-        selectWrap.classList.add('flex');
-    } else if (selectWrap) {
-        selectWrap.classList.add('hidden');
-    }
-
     session.workerProfSelectedUser = specificWorkerName || session.user?.name || appState.users[0]?.name;
-    if (userSelect) userSelect.value = session.workerProfSelectedUser;
 
-    renderWorkerProfileContent();
+    if (typeof navigateTo === 'function') {
+        navigateTo(SCREENS.WORKER);
+    } else {
+        const modal = document.getElementById('workerProfileModal');
+        if (modal) modal.classList.remove('hidden');
+        renderWorkerProfileContent();
+    }
 }
 
 function closeWorkerProfileModal() {
-    const modal = document.getElementById('workerProfileModal');
-    if (modal) modal.classList.add('hidden');
+    if (typeof goBack === 'function') {
+        goBack();
+    } else {
+        const modal = document.getElementById('workerProfileModal');
+        if (modal) modal.classList.add('hidden');
+    }
 }
 
 function switchWorkerProfileUser(userName) {
@@ -482,6 +469,25 @@ function renderWorkerProfileContent() {
     const profNameEl = document.getElementById('workerProfName');
     const profAvatarEl = document.getElementById('workerProfAvatar');
     const profRoleBadge = document.getElementById('workerProfRoleBadge');
+
+    const selectWrap = document.getElementById('workerProfSelectWrap');
+    const userSelect = document.getElementById('workerProfUserSelect');
+
+    if (userSelect && (!userSelect.children.length || userSelect.value !== targetUser)) {
+        userSelect.innerHTML = `
+            <option value="${session.user?.name || ''}">👤 Мой профиль (${session.user?.name || ''})</option>
+            ${isDev() ? '<option value="all">🏆 Все мастера цеха (Сводка)</option>' : ''}
+            ${appState.users.filter(u => u.name !== session.user?.name).map(u => `<option value="${u.name}">${u.name} (${u.role === 'developer' ? 'Админ' : 'Мастер'})</option>`).join('')}
+        `;
+        if (targetUser) userSelect.value = targetUser;
+    }
+
+    if (isDev() && selectWrap) {
+        selectWrap.classList.remove('hidden');
+        selectWrap.classList.add('flex');
+    } else if (selectWrap) {
+        selectWrap.classList.add('hidden');
+    }
 
     if (targetUser === 'all') {
         if (profNameEl) profNameEl.textContent = 'Сводная выработка всех мастеров цеха';
