@@ -4,6 +4,20 @@
 // ==========================================
 
 // ==========================================
+// HAPTIC FEEDBACK (ТАКТИЛЬНЫЙ ОТКЛИК НА СМАРТФОНЕ)
+// ==========================================
+function triggerHaptic(type = 'light') {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try {
+            if (type === 'light') navigator.vibrate(10);
+            else if (type === 'medium') navigator.vibrate(22);
+            else if (type === 'success') navigator.vibrate([15, 40, 25]);
+            else if (type === 'warning') navigator.vibrate([25, 40, 25]);
+        } catch (_) {}
+    }
+}
+
+// ==========================================
 // ЧАСТЬ 1: ИНИЦИАЛИЗАЦИЯ SUPABASE И КОНСТАНТЫ
 // ==========================================
 const SUPABASE_URL = "https://anwuikxtqesewifvipaw.supabase.co";

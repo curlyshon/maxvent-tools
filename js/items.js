@@ -4,6 +4,83 @@
 // ==========================================
 
 // ==========================================
+// ПОЭТАПНЫЙ МАСТЕР (WIZARD) И РЕЖИМЫ ФОРМЫ
+// ==========================================
+let currentFormStep = 1;
+let currentFormMode = localStorage.getItem('maxvent_form_mode') || 'wizard';
+
+function setFormMode(mode) {
+    currentFormMode = mode;
+    try { localStorage.setItem('maxvent_form_mode', mode); } catch (_) {}
+    triggerHaptic('light');
+
+    const isWiz = (mode === 'wizard');
+    const btnWiz = document.getElementById('btnModeWizard');
+    const btnAll = document.getElementById('btnModeAll');
+    if (btnWiz) {
+        btnWiz.className = isWiz 
+            ? 'px-2.5 py-1 rounded-lg font-bold bg-white text-black transition tap-spring' 
+            : 'px-2.5 py-1 rounded-lg font-semibold text-zinc-400 hover:text-white transition tap-spring';
+    }
+    if (btnAll) {
+        btnAll.className = !isWiz 
+            ? 'px-2.5 py-1 rounded-lg font-bold bg-white text-black transition tap-spring' 
+            : 'px-2.5 py-1 rounded-lg font-semibold text-zinc-400 hover:text-white transition tap-spring';
+    }
+
+    const stepIndicator = document.getElementById('wizardStepIndicator');
+    if (stepIndicator) stepIndicator.classList.toggle('hidden', !isWiz);
+
+    document.querySelectorAll('.step-nav-btn').forEach(el => el.classList.toggle('hidden', !isWiz));
+
+    if (!isWiz) {
+        const s1 = document.getElementById('wizStep-1');
+        const s2 = document.getElementById('wizStep-2');
+        const s3 = document.getElementById('wizStep-3');
+        if (s1) s1.classList.remove('hidden');
+        if (s2) s2.classList.remove('hidden');
+        if (s3) s3.classList.remove('hidden');
+    } else {
+        goToWizardStep(currentFormStep);
+    }
+}
+
+function goToWizardStep(step) {
+    currentFormStep = Math.max(1, Math.min(3, step));
+    triggerHaptic('light');
+
+    if (currentFormMode === 'wizard') {
+        [1, 2, 3].forEach(s => {
+            const stepEl = document.getElementById(`wizStep-${s}`);
+            if (stepEl) stepEl.classList.toggle('hidden', s !== currentFormStep);
+
+            const tabEl = document.getElementById(`stepTab-${s}`);
+            if (tabEl) {
+                if (s === currentFormStep) {
+                    tabEl.className = 'py-2 px-1 rounded-xl font-black bg-white text-black transition tap-spring flex items-center justify-center gap-1.5 shadow-sm';
+                    const numBadge = tabEl.querySelector('span:first-child');
+                    if (numBadge) numBadge.className = 'w-4 h-4 rounded-full bg-black text-white text-[10px] inline-flex items-center justify-center font-mono font-bold';
+                } else {
+                    tabEl.className = 'py-2 px-1 rounded-xl font-semibold text-zinc-400 hover:text-white transition tap-spring flex items-center justify-center gap-1.5';
+                    const numBadge = tabEl.querySelector('span:first-child');
+                    if (numBadge) numBadge.className = 'w-4 h-4 rounded-full bg-white/10 text-zinc-300 text-[10px] inline-flex items-center justify-center font-mono font-bold';
+                }
+            }
+        });
+    }
+}
+
+function adjustQtyStepper(delta) {
+    triggerHaptic('medium');
+    const input = document.getElementById('inQty');
+    if (!input) return;
+    let val = parseInt(input.value, 10) || 1;
+    val = Math.max(1, val + delta);
+    input.value = val;
+    input.dispatchEvent(new Event('input'));
+}
+
+// ==========================================
 // ФОРМА ДОБАВЛЕНИЯ И РЕДАКТИРОВАНИЯ ПОЗИЦИЙ
 // ==========================================
 function populateFormDropdowns() {
@@ -22,7 +99,7 @@ function populateFormDropdowns() {
 
     const wBox = document.getElementById('workersCheckboxes');
     wBox.innerHTML = appState.users.map(u => `
-        <label class="bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer hover:border-slate-700 transition">
+        <label class="bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer hover:border-slate-700 transition tap-spring">
             <input type="checkbox" name="assignWorker" onchange="onWorkerSelectionChanged()" value="${u.name}" ${session.user && session.user.name === u.name ? 'checked' : ''} class="rounded text-blue-600">
             <span class="text-slate-300 font-medium">${u.name}</span>
         </label>
@@ -40,6 +117,7 @@ function populateFormDropdowns() {
         inPrice.addEventListener('input', () => updateWorkerSharesTengeAmounts());
     }
 
+    setFormMode(currentFormMode);
     onWorkerSelectionChanged();
 }
 
@@ -401,7 +479,7 @@ function updateFrameLabels() {
 function renderChipScroller(targetId, arr) {
     return `
         <div class="chip-scroll mt-1.5">
-            ${arr.map(v => `<button type="button" onclick="document.getElementById('${targetId}').value = ${v}; updateFrameLabels();" class="chip-btn">${v}</button>`).join('')}
+            ${arr.map(v => `<button type="button" onclick="triggerHaptic('light'); document.getElementById('${targetId}').value = ${v}; updateFrameLabels();" class="chip-btn tap-spring">${v}</button>`).join('')}
         </div>
     `;
 }
@@ -616,6 +694,7 @@ function resetItemForm() {
     }
     renderDynamicInputs();
     onWorkerSelectionChanged();
+    goToWizardStep(1);
 }
 
 // ==========================================
@@ -707,6 +786,9 @@ function renderSpecification() {
         `;
         container.appendChild(block);
     });
+
+    // Привязываем свайп-жесты для сенсорных экранов
+    attachSpecSwipeHandlers();
 }
 
 function toggleSectionAccordion(secId) {
@@ -780,30 +862,139 @@ function renderSpecItemRow(it) {
     const curSt = stConfig[st] || stConfig.queue;
 
     return `
-        <div class="bg-[#12141c] border ${isSelected ? 'border-white/30 bg-[#181b26]' : 'border-white/5 hover:border-white/10'} rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition">
-            <div class="flex items-start gap-3 w-full sm:w-auto min-w-0">
-                <input type="checkbox" onchange="toggleSpecItemSelect(${it.id}, this.checked)" ${isSelected ? 'checked' : ''} class="mt-1 rounded text-white accent-white">
-                <div class="min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="font-extrabold text-xs sm:text-sm text-white">${it.title}</span>
-                        <button type="button" onclick="toggleItemStatus(${it.id})" title="Нажмите, чтобы переключить этап производства" class="border px-2.5 py-0.5 rounded-full text-[10px] font-bold transition ${curSt.cls}">${curSt.text}</button>
-                    </div>
-                    <div class="text-xs text-zinc-300 mono mt-0.5">${descParts.join(' | ')}</div>
-                    ${framesHtml}
-                    <div class="text-[11px] text-zinc-400 mt-0.5">Металл: <strong class="text-zinc-200">${it.metal} ${it.thickness} мм</strong> ${isDev() ? `| Тариф: <span class="mono text-emerald-400">${it.price} ₸</span>` : ''}</div>
-                    ${workersHtml}
-                </div>
+        <div class="spec-swipe-card relative overflow-hidden rounded-2xl group select-none" data-item-id="${it.id}">
+            <!-- Фоновый индикатор свайпа вправо (Готово) -->
+            <div class="swipe-hint-done absolute inset-y-0 left-0 w-32 bg-emerald-600/30 border border-emerald-500/40 rounded-2xl flex items-center px-4 gap-2 text-emerald-300 font-extrabold text-xs opacity-0 transition-opacity pointer-events-none z-0">
+                <span class="text-base">✓</span>
+                <span>Готово</span>
             </div>
-            <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                <div class="text-sm font-black mono text-white">${it.qty} шт</div>
-                <div class="flex gap-1.5">
-                    <button onclick="duplicateWithModal(${it.id})" title="Дублировать с изменением" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-white/5 transition">⧉</button>
-                    <button onclick="editProjectItem(${it.id})" title="Редактировать" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition">✎</button>
-                    <button onclick="deleteSingleItem(${it.id})" title="Удалить" class="bg-white/5 hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition">✕</button>
+
+            <!-- Фоновый индикатор свайпа влево (Действия: Редактировать / Удалить) -->
+            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-36 bg-[#181b26] border border-white/10 rounded-2xl flex items-center justify-end px-3 gap-2 opacity-0 transition-opacity z-0">
+                <button type="button" onclick="triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold tap-spring">✎</button>
+                <button type="button" onclick="triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold tap-spring">✕</button>
+            </div>
+
+            <!-- Основная карточка позиции -->
+            <div class="swipe-inner relative z-10 bg-[#12141c] border ${isSelected ? 'border-white/30 bg-[#181b26]' : 'border-white/5 hover:border-white/10'} rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition">
+                <div class="flex items-start gap-3 w-full sm:w-auto min-w-0">
+                    <input type="checkbox" onchange="toggleSpecItemSelect(${it.id}, this.checked)" ${isSelected ? 'checked' : ''} class="mt-1 rounded text-white accent-white">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-extrabold text-xs sm:text-sm text-white">${it.title}</span>
+                            <button type="button" onclick="triggerHaptic('light'); toggleItemStatus(${it.id})" title="Нажмите, чтобы переключить этап производства" class="border px-2.5 py-0.5 rounded-full text-[10px] font-bold transition tap-spring ${curSt.cls}">${curSt.text}</button>
+                        </div>
+                        <div class="text-xs text-zinc-300 mono mt-0.5">${descParts.join(' | ')}</div>
+                        ${framesHtml}
+                        <div class="text-[11px] text-zinc-400 mt-0.5">Металл: <strong class="text-zinc-200">${it.metal} ${it.thickness} мм</strong> ${isDev() ? `| Тариф: <span class="mono text-emerald-400">${it.price} ₸</span>` : ''}</div>
+                        ${workersHtml}
+                    </div>
+                </div>
+                <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                    <div class="text-sm font-black mono text-white">${it.qty} шт</div>
+                    <div class="flex gap-1.5">
+                        <button onclick="triggerHaptic('light'); duplicateWithModal(${it.id})" title="Дублировать с изменением" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-white/5 transition tap-spring">⧉</button>
+                        <button onclick="triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition tap-spring">✎</button>
+                        <button onclick="triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="bg-white/5 hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition tap-spring">✕</button>
+                    </div>
                 </div>
             </div>
         </div>
     `;
+}
+
+// ==========================================
+// СВАЙП-ЖЕСТЫ ДЛЯ ПОЗИЦИЙ СПЕЦИФИКАЦИИ (TOUCH SWIPES)
+// ==========================================
+function attachSpecSwipeHandlers() {
+    const cards = document.querySelectorAll('.spec-swipe-card');
+    cards.forEach(card => {
+        if (card.dataset.hasSwipeListener) return;
+        card.dataset.hasSwipeListener = 'true';
+
+        let startX = 0;
+        let startY = 0;
+        let currentX = 0;
+        let isSwiping = false;
+        let isDecided = false;
+        const row = card.querySelector('.swipe-inner');
+        const itemId = Number(card.dataset.itemId);
+
+        card.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            currentX = 0;
+            isSwiping = false;
+            isDecided = false;
+            if (row) row.style.transition = 'none';
+        }, { passive: true });
+
+        card.addEventListener('touchmove', (e) => {
+            if (e.touches.length !== 1) return;
+            const x = e.touches[0].clientX;
+            const y = e.touches[0].clientY;
+            const dx = x - startX;
+            const dy = y - startY;
+
+            if (!isDecided) {
+                if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+                    isDecided = true;
+                    if (Math.abs(dy) > Math.abs(dx)) {
+                        isSwiping = false;
+                        return;
+                    } else {
+                        isSwiping = true;
+                    }
+                } else {
+                    return;
+                }
+            }
+
+            if (!isSwiping || !row) return;
+
+            if (e.cancelable) e.preventDefault();
+
+            let clampedDx = dx;
+            if (clampedDx > 110) clampedDx = 110 + (clampedDx - 110) * 0.2;
+            if (clampedDx < -140) clampedDx = -140 + (clampedDx + 140) * 0.2;
+
+            currentX = clampedDx;
+            row.style.transform = `translateX(${clampedDx}px)`;
+
+            const leftHint = card.querySelector('.swipe-hint-done');
+            const rightHint = card.querySelector('.swipe-hint-actions');
+            if (leftHint) leftHint.style.opacity = clampedDx > 15 ? Math.min(1, clampedDx / 60) : 0;
+            if (rightHint) rightHint.style.opacity = clampedDx < -15 ? Math.min(1, Math.abs(clampedDx) / 80) : 0;
+        }, { passive: false });
+
+        const endSwipe = () => {
+            if (!isSwiping || !row) return;
+            isSwiping = false;
+            row.style.transition = 'transform 0.3s var(--ios-spring)';
+
+            const leftHint = card.querySelector('.swipe-hint-done');
+            const rightHint = card.querySelector('.swipe-hint-actions');
+
+            if (currentX > 75) {
+                triggerHaptic('success');
+                row.style.transform = 'translateX(0px)';
+                if (leftHint) leftHint.style.opacity = 0;
+                toggleItemStatus(itemId);
+            } else if (currentX < -80) {
+                triggerHaptic('light');
+                row.style.transform = 'translateX(-120px)';
+                if (rightHint) rightHint.style.opacity = 1;
+            } else {
+                row.style.transform = 'translateX(0px)';
+                if (leftHint) leftHint.style.opacity = 0;
+                if (rightHint) rightHint.style.opacity = 0;
+            }
+        };
+
+        card.addEventListener('touchend', endSwipe, { passive: true });
+        card.addEventListener('touchcancel', endSwipe, { passive: true });
+    });
 }
 
 async function toggleItemStatus(id) {
@@ -814,6 +1005,7 @@ async function toggleItemStatus(id) {
     it.item_status = next;
     if (!it.dimensions) it.dimensions = {};
     it.dimensions.item_status = next;
+    triggerHaptic(next === 'done' ? 'success' : 'light');
     await supabaseClient.from('items').update({ dimensions: it.dimensions }).eq('id', id);
 
     const globalIt = appState.allItems.find(x => x.id === id);
@@ -1065,6 +1257,8 @@ function duplicateWithModal(id) {
     document.getElementById('formHeaderTitle').textContent = `Дубликат: ${it.title} (измените нужные параметры)`;
     document.getElementById('cancelEditBtn').classList.remove('hidden');
     document.getElementById('submitItemBtn').textContent = '+ Создать дубликат';
+    goToWizardStep(2);
+    triggerHaptic('light');
     window.scrollTo({ top: document.getElementById('itemFormCard').offsetTop - 60, behavior: 'smooth' });
 }
 
@@ -1112,5 +1306,7 @@ function editProjectItem(id) {
     });
     onWorkerSelectionChanged(it.worker_shares || it.dimensions?.worker_shares);
 
+    goToWizardStep(2);
+    triggerHaptic('light');
     window.scrollTo({ top: document.getElementById('itemFormCard').offsetTop - 60, behavior: 'smooth' });
 }
