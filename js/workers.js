@@ -381,14 +381,14 @@ function switchWorkerProfTab(tab) {
     const viewItems = document.getElementById('wpView-all-items');
 
     if (tab === 'by-project') {
-        if (tabProj) tabProj.className = 'px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 text-white whitespace-nowrap transition';
-        if (tabItems) tabItems.className = 'px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-800 text-slate-300 hover:text-white whitespace-nowrap transition';
+        if (tabProj) tabProj.className = 'px-3.5 py-2 text-xs font-bold rounded-xl bg-white text-black whitespace-nowrap transition shadow-sm';
+        if (tabItems) tabItems.className = 'px-3.5 py-2 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white whitespace-nowrap transition';
         if (viewProj) viewProj.classList.remove('hidden');
         if (viewItems) viewItems.classList.add('hidden');
         renderWorkerProjectsSummary();
     } else {
-        if (tabProj) tabProj.className = 'px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-800 text-slate-300 hover:text-white whitespace-nowrap transition';
-        if (tabItems) tabItems.className = 'px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 text-white whitespace-nowrap transition';
+        if (tabProj) tabProj.className = 'px-3.5 py-2 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white whitespace-nowrap transition';
+        if (tabItems) tabItems.className = 'px-3.5 py-2 text-xs font-bold rounded-xl bg-white text-black whitespace-nowrap transition shadow-sm';
         if (viewProj) viewProj.classList.add('hidden');
         if (viewItems) viewItems.classList.remove('hidden');
         renderWorkerAllItems();

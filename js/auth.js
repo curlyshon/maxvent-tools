@@ -103,6 +103,8 @@ function updateHeaderUI() {
     if (hBadge) hBadge.textContent = `${userEarnedDone.toLocaleString()} ₸`;
     const dBadge = document.getElementById('dropEarnedBadge');
     if (dBadge) dBadge.textContent = `${userEarnedDone.toLocaleString()} ₸`;
+    const heroEarned = document.getElementById('heroWorkerEarned');
+    if (heroEarned) heroEarned.textContent = `${userEarnedDone.toLocaleString()} ₸`;
 
     renderMainMenuHeroStats();
 

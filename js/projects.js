@@ -17,8 +17,12 @@ function goToMainMenu() {
 function setProjectFilter(f) {
     session.projectFilter = f;
     session.clickedProjectId = null;
-    document.getElementById('btnProjActive').className = f === 'active' ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white' : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-400';
-    document.getElementById('btnProjArchived').className = f === 'archived' ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white' : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-400';
+    document.getElementById('btnProjActive').className = f === 'active' 
+        ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-black transition' 
+        : 'px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition';
+    document.getElementById('btnProjArchived').className = f === 'archived' 
+        ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-black transition' 
+        : 'px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition';
     renderMainMenuProjects();
 }
 
@@ -74,20 +78,20 @@ function renderMainMenuProjects() {
         });
 
         // Цвета статуса
-        let stColor = 'bg-blue-950/70 border-blue-700/60 text-blue-300';
+        let stColor = 'bg-white/10 border-white/15 text-zinc-300';
         if (p.status_text === 'Воздуховоды отрезаны' || p.status_text === 'Готов к отгрузке') {
-            stColor = 'bg-emerald-950/70 border-emerald-700/60 text-emerald-300';
+            stColor = 'bg-emerald-500/15 border-emerald-500/20 text-emerald-400';
         } else if (p.status_text === 'Ожидает металл') {
-            stColor = 'bg-amber-950/70 border-amber-700/60 text-amber-300';
+            stColor = 'bg-amber-500/15 border-amber-500/20 text-amber-300';
         } else if (p.status_text === 'Сдан') {
-            stColor = 'bg-slate-800 border-slate-700 text-slate-400';
+            stColor = 'bg-white/5 border-white/10 text-zinc-500';
         }
 
         const card = document.createElement('div');
-        card.className = `w-full text-left p-4 rounded-2xl border transition shadow-sm space-y-3 cursor-pointer ${
+        card.className = `w-full text-left p-4 sm:p-5 rounded-3xl border transition-all duration-200 shadow-sm space-y-3 cursor-pointer ${
             isSelected 
-                ? 'bg-blue-600/10 border-blue-500 shadow-blue-500/10' 
-                : 'bg-slate-900 border-slate-800 hover:border-slate-700 hover:bg-slate-900/90'
+                ? 'bg-[#181b26] border-white/30 shadow-lg' 
+                : 'bg-[#12141c] border-white/5 hover:border-white/20 hover:bg-[#151822]'
         }`;
 
         card.onclick = async (e) => {
@@ -104,15 +108,15 @@ function renderMainMenuProjects() {
             <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <h3 class="font-bold text-sm text-white truncate">${p.title}</h3>
-                        <span class="text-[10px] px-2 py-0.5 rounded-md font-bold border ${stColor}">${p.status_text || 'В работе'}</span>
+                        <h3 class="font-extrabold text-sm sm:text-base text-white truncate">${p.title}</h3>
+                        <span class="text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${stColor}">${p.status_text || 'В работе'}</span>
                     </div>
-                    <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-2">
+                    <div class="text-[11px] text-zinc-400 mt-1 flex items-center gap-2">
                         <span>🔧 ${p.group_name || 'Без бригады'}</span>
-                        ${p.description ? `<span>• <span class="truncate max-w-[150px] inline-block align-bottom text-slate-500">${p.description}</span></span>` : ''}
+                        ${p.description ? `<span>• <span class="truncate max-w-[150px] inline-block align-bottom text-zinc-500">${p.description}</span></span>` : ''}
                     </div>
                 </div>
-                <button type="button" onclick="openInsideProject(${p.id})" class="btn-direct-open bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow">
+                <button type="button" onclick="openInsideProject(${p.id})" class="btn-direct-open bg-white hover:bg-zinc-200 text-black text-xs font-extrabold px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm active:scale-95">
                     <span>Открыть</span> <span class="text-[10px]">→</span>
                 </button>
             </div>
@@ -120,17 +124,17 @@ function renderMainMenuProjects() {
             <!-- ПРОГРЕСС БАР -->
             <div class="space-y-1">
                 <div class="flex justify-between items-center text-[11px]">
-                    <span class="text-slate-400">Готовность:</span>
-                    <span class="mono font-bold ${pct === 100 ? 'text-emerald-400' : 'text-slate-300'}">${doneQty} / ${totalQty} шт (${pct}%)</span>
+                    <span class="text-zinc-400">Готовность:</span>
+                    <span class="mono font-bold ${pct === 100 ? 'text-emerald-400' : 'text-zinc-300'}">${doneQty} / ${totalQty} шт (${pct}%)</span>
                 </div>
-                <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
-                    <div class="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+                <div class="w-full bg-black/40 h-1.5 rounded-full overflow-hidden border border-white/5">
+                    <div class="h-full bg-white rounded-full transition-all duration-300" style="width: ${pct}%"></div>
                 </div>
             </div>
 
-            <div class="flex items-center justify-between text-[11px] pt-1 text-slate-400 border-t border-slate-800/80">
-                <span class="mono text-blue-300 font-semibold">${ductsArea.toFixed(1)} м² воздуховодов</span>
-                <span class="mono text-amber-300 font-semibold">${fittingsCount} шт изделий</span>
+            <div class="flex items-center justify-between text-[11px] pt-1 text-zinc-400 border-t border-white/5">
+                <span class="mono text-zinc-300 font-semibold">${ductsArea.toFixed(1)} м² воздуховодов</span>
+                <span class="mono text-zinc-300 font-semibold">${fittingsCount} шт изделий</span>
             </div>
         `;
         container.appendChild(card);
@@ -171,42 +175,42 @@ function renderProjectPreviewCard(projId) {
     if (fSmooth.length) treeHtml += `<div class="font-bold text-cyan-400 mt-2">Изделия плавные</div>` + formatPreviewItems(fSmooth, true);
 
     preview.innerHTML = `
-        <div class="flex flex-wrap justify-between items-start gap-2 border-b border-slate-800 pb-3">
+        <div class="flex flex-wrap justify-between items-start gap-2 border-b border-white/10 pb-3">
             <div>
                 <h3 class="text-base font-black text-white">${p.title}</h3>
-                <p class="text-xs text-slate-400 mt-0.5">${p.description || 'Описание не указано'}</p>
+                <p class="text-xs text-zinc-400 mt-0.5">${p.description || 'Описание не указано'}</p>
             </div>
             <div class="text-right">
-                <span class="text-xs px-2.5 py-1 rounded-lg font-bold ${p.status_text === 'Воздуховоды отрезаны' ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-blue-400 border border-slate-700'}">${p.status_text || 'В работе'}</span>
-                <div class="text-[11px] text-slate-400 mt-1">${p.group_name || 'Без бригады'}</div>
+                <span class="text-xs px-2.5 py-1 rounded-full font-bold ${p.status_text === 'Воздуховоды отрезаны' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-white/10 text-white border border-white/15'}">${p.status_text || 'В работе'}</span>
+                <div class="text-[11px] text-zinc-400 mt-1">${p.group_name || 'Без бригады'}</div>
             </div>
         </div>
 
         <div class="grid grid-cols-2 gap-2 text-xs">
-            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <span class="text-slate-400">Воздуховоды:</span> <strong class="text-blue-400 mono">${totalDuctQty} шт</strong>
+            <div class="bg-[#181b26] p-3 rounded-2xl border border-white/5">
+                <span class="text-zinc-400">Воздуховоды:</span> <strong class="text-white mono">${totalDuctQty} шт</strong>
             </div>
-            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <span class="text-slate-400">Изделия:</span> <strong class="text-emerald-400 mono">${totalFitQty} шт</strong>
+            <div class="bg-[#181b26] p-3 rounded-2xl border border-white/5">
+                <span class="text-zinc-400">Изделия:</span> <strong class="text-white mono">${totalFitQty} шт</strong>
             </div>
         </div>
 
-        <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1 bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs">
-            <div class="text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-1">Состав проекта:</div>
-            ${treeHtml || '<div class="text-slate-500">В проекте пока нет позиций</div>'}
+        <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1 bg-[#181b26] p-3.5 rounded-2xl border border-white/5 text-xs">
+            <div class="text-[11px] uppercase tracking-wider font-bold text-zinc-400 mb-1">Состав проекта:</div>
+            ${treeHtml || '<div class="text-zinc-500">В проекте пока нет позиций</div>'}
         </div>
 
-        <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800">
-            <button onclick="openInsideProject(${p.id})" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-3 rounded-xl text-xs uppercase tracking-wider transition text-center">
+        <div class="flex flex-wrap gap-2 pt-2 border-t border-white/10">
+            <button onclick="openInsideProject(${p.id})" class="flex-1 bg-white hover:bg-zinc-200 text-black font-extrabold py-3 px-3 rounded-xl text-xs uppercase tracking-wider transition text-center shadow-sm">
                 Открыть проект
             </button>
-            <button onclick="openProjectModal(${p.id})" class="bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 px-3 rounded-xl text-xs font-semibold">
-                ✎ Редактировать
+            <button onclick="openProjectModal(${p.id})" class="bg-white/5 hover:bg-white/10 text-zinc-200 py-3 px-3.5 rounded-xl text-xs font-semibold border border-white/5">
+                ✎ Изменить
             </button>
-            <button onclick="archiveProjectSafe(${p.id})" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white py-2.5 px-3 rounded-xl text-xs">
+            <button onclick="archiveProjectSafe(${p.id})" class="bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white py-3 px-3.5 rounded-xl text-xs border border-white/5">
                 ${p.archive_state === 'archived' ? 'Восстановить' : 'В архив'}
             </button>
-            ${isDev() && p.archive_state === 'archived' ? `<button onclick="deleteProjectPermanent(${p.id})" class="bg-rose-900/60 hover:bg-rose-800 text-rose-200 py-2.5 px-3 rounded-xl text-xs">Удалить</button>` : ''}
+            ${isDev() && p.archive_state === 'archived' ? `<button onclick="deleteProjectPermanent(${p.id})" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 py-3 px-3.5 rounded-xl text-xs font-semibold">Удалить</button>` : ''}
         </div>
     `;
 }
@@ -391,7 +395,9 @@ function switchInnerTab(tab) {
         const btn = document.getElementById('inTab-' + t);
         if (view) view.classList.toggle('hidden', t !== tab);
         if (btn) {
-            btn.className = t === tab ? "px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white whitespace-nowrap" : "px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 whitespace-nowrap";
+            btn.className = t === tab 
+                ? "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-black whitespace-nowrap shadow-sm transition" 
+                : "px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white/5 text-zinc-400 hover:text-white whitespace-nowrap transition";
         }
     });
 

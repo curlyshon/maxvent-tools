@@ -45,8 +45,12 @@ function populateFormDropdowns() {
 
 function selectCategory(cat) {
     session.activeCategory = cat;
-    document.getElementById('btnCatDuct').className = cat === 'duct' ? 'py-3 text-xs font-bold uppercase tracking-wider rounded-xl bg-blue-600 text-white' : 'py-3 text-xs font-bold uppercase tracking-wider rounded-xl bg-slate-800 text-slate-300';
-    document.getElementById('btnCatFitting').className = cat === 'fitting' ? 'py-3 text-xs font-bold uppercase tracking-wider rounded-xl bg-blue-600 text-white' : 'py-3 text-xs font-bold uppercase tracking-wider rounded-xl bg-slate-800 text-slate-300';
+    document.getElementById('btnCatDuct').className = cat === 'duct' 
+        ? 'py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition' 
+        : 'py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-white/5 text-zinc-400 hover:text-white transition';
+    document.getElementById('btnCatFitting').className = cat === 'fitting' 
+        ? 'py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition' 
+        : 'py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-white/5 text-zinc-400 hover:text-white transition';
 
     if (cat === 'duct' && session.activeShape === 'smooth') {
         session.activeShape = 'rect';
@@ -78,7 +82,9 @@ function selectShape(sh) {
             if (s === 'smooth' && isDuct) {
                 btn.className = 'hidden';
             } else {
-                btn.className = s === sh ? 'py-2.5 text-xs font-bold rounded-xl bg-blue-600 text-white' : 'py-2.5 text-xs font-bold rounded-xl bg-slate-800 text-slate-300';
+                btn.className = s === sh 
+                    ? 'py-2.5 text-xs font-extrabold rounded-xl bg-white text-black shadow-sm transition' 
+                    : 'py-2.5 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white transition';
             }
         }
     });
@@ -757,43 +763,43 @@ function renderSpecItemRow(it) {
     const frames = getItemFrames(it);
     const framesHtml = frames.length ? `
         <div class="flex items-center gap-1.5 flex-wrap mt-1">
-            <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Рамки:</span>
-            ${frames.map((fr, idx) => `<span class="bg-blue-950/80 border border-blue-700 text-blue-200 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md">№${idx + 1}: ${fr} мм</span>`).join('')}
+            <span class="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">Рамки:</span>
+            ${frames.map((fr, idx) => `<span class="bg-white/5 border border-white/10 text-zinc-200 text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg">№${idx + 1}: ${fr} мм</span>`).join('')}
         </div>
     ` : '';
 
     const workersHtml = (it.workers && it.workers.length) 
-        ? `<div class="text-[10px] text-amber-400 mt-0.5 font-medium">👷 Мастера: <strong class="text-slate-200">${formatItemWorkersDisplay(it)}</strong></div>` 
+        ? `<div class="text-[10px] text-amber-300 mt-0.5 font-medium">👷 Мастера: <strong class="text-white">${formatItemWorkersDisplay(it)}</strong></div>` 
         : '';
 
     const st = it.item_status || 'queue';
     const stConfig = {
-        queue: { text: '⏳ Не готово', cls: 'bg-slate-800 text-slate-300 border-slate-700 hover:border-emerald-500' },
-        done: { text: '✓ Готово', cls: 'bg-emerald-950/70 text-emerald-300 border-emerald-700 hover:border-amber-500' }
+        queue: { text: '⏳ Не готово', cls: 'bg-white/5 text-zinc-400 border-white/10 hover:border-emerald-500' },
+        done: { text: '✓ Готово', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20 hover:border-amber-500' }
     };
     const curSt = stConfig[st] || stConfig.queue;
 
     return `
-        <div class="bg-slate-900 border ${isSelected ? 'border-blue-500 bg-blue-950/20' : 'border-slate-800'} rounded-xl p-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div class="flex items-start gap-3 w-full sm:w-auto">
-                <input type="checkbox" onchange="toggleSpecItemSelect(${it.id}, this.checked)" ${isSelected ? 'checked' : ''} class="mt-1 rounded text-blue-600">
-                <div>
+        <div class="bg-[#12141c] border ${isSelected ? 'border-white/30 bg-[#181b26]' : 'border-white/5 hover:border-white/10'} rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition">
+            <div class="flex items-start gap-3 w-full sm:w-auto min-w-0">
+                <input type="checkbox" onchange="toggleSpecItemSelect(${it.id}, this.checked)" ${isSelected ? 'checked' : ''} class="mt-1 rounded text-white accent-white">
+                <div class="min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="font-bold text-xs text-white">${it.title}</span>
-                        <button type="button" onclick="toggleItemStatus(${it.id})" title="Нажмите, чтобы переключить этап производства" class="border px-2 py-0.5 rounded-lg text-[10px] font-bold transition ${curSt.cls}">${curSt.text}</button>
+                        <span class="font-extrabold text-xs sm:text-sm text-white">${it.title}</span>
+                        <button type="button" onclick="toggleItemStatus(${it.id})" title="Нажмите, чтобы переключить этап производства" class="border px-2.5 py-0.5 rounded-full text-[10px] font-bold transition ${curSt.cls}">${curSt.text}</button>
                     </div>
-                    <div class="text-xs text-blue-300 mono mt-0.5">${descParts.join(' | ')}</div>
+                    <div class="text-xs text-zinc-300 mono mt-0.5">${descParts.join(' | ')}</div>
                     ${framesHtml}
-                    <div class="text-[11px] text-slate-400 mt-0.5">Металл: <strong class="text-slate-200">${it.metal} ${it.thickness} мм</strong> ${isDev() ? `| Тариф: <span class="mono text-emerald-400">${it.price} ₸</span>` : ''}</div>
+                    <div class="text-[11px] text-zinc-400 mt-0.5">Металл: <strong class="text-zinc-200">${it.metal} ${it.thickness} мм</strong> ${isDev() ? `| Тариф: <span class="mono text-emerald-400">${it.price} ₸</span>` : ''}</div>
                     ${workersHtml}
                 </div>
             </div>
-            <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
+            <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                 <div class="text-sm font-black mono text-white">${it.qty} шт</div>
-                <div class="flex gap-1">
-                    <button onclick="duplicateWithModal(${it.id})" title="Дублировать с изменением" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-bold">⧉</button>
-                    <button onclick="editProjectItem(${it.id})" title="Редактировать" class="bg-slate-800 hover:bg-slate-700 text-blue-400 px-2.5 py-1.5 rounded-lg text-xs">✎</button>
-                    <button onclick="deleteSingleItem(${it.id})" title="Удалить" class="bg-slate-800 hover:bg-slate-700 text-rose-400 px-2.5 py-1.5 rounded-lg text-xs">✕</button>
+                <div class="flex gap-1.5">
+                    <button onclick="duplicateWithModal(${it.id})" title="Дублировать с изменением" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-white/5 transition">⧉</button>
+                    <button onclick="editProjectItem(${it.id})" title="Редактировать" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition">✎</button>
+                    <button onclick="deleteSingleItem(${it.id})" title="Удалить" class="bg-white/5 hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition">✕</button>
                 </div>
             </div>
         </div>
