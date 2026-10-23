@@ -25,8 +25,8 @@ function goToProjectsScreen() {
 function setProjectFilter(f) {
     session.projectFilter = f;
     session.clickedProjectId = null;
-    const btnActive = document.getElementById('btnProjActive');
-    const btnArchived = document.getElementById('btnProjArchived');
+    const btnActive = document.getElementById('filterActiveBtn') || document.getElementById('btnProjActive');
+    const btnArchived = document.getElementById('filterArchivedBtn') || document.getElementById('btnProjArchived');
     if (btnActive) {
         btnActive.className = f === 'active' 
             ? 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-black transition btn-press shadow-sm' 
@@ -163,6 +163,9 @@ function renderMainMenuProjects() {
                     : 'bg-[#121217] border-white/5 hover:border-white/20 hover:bg-[#18181f]'
             }">
                 <div class="flex items-start justify-between gap-2">
+                    ${session.projectReorderMode ? `
+                        <div class="cursor-grab active:cursor-grabbing text-zinc-400 text-lg pr-1 shrink-0 select-none">☰</div>
+                    ` : ''}
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 flex-wrap">
                             <h3 class="font-extrabold text-sm sm:text-base text-white truncate">${p.title}</h3>
@@ -176,9 +179,6 @@ function renderMainMenuProjects() {
                             ${p.description ? `<span>• <span class="truncate max-w-[150px] inline-block align-bottom text-zinc-500">${p.description}</span></span>` : ''}
                         </div>
                     </div>
-                    <button type="button" onclick="openInsideProject(${p.id})" class="btn-direct-open bg-white hover:bg-zinc-200 text-black text-xs font-extrabold px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm btn-press">
-                        <span>Открыть</span> <span class="text-[10px]">→</span>
-                    </button>
                 </div>
 
                 <!-- ПРОГРЕСС БАР -->
@@ -196,28 +196,33 @@ function renderMainMenuProjects() {
                     <span class="mono text-zinc-300 font-semibold">${ductsArea.toFixed(1)} м² воздуховодов</span>
                     <span class="mono text-zinc-300 font-semibold">${fittingsCount} шт изделий</span>
                 </div>
+
+                <div class="flex items-center justify-between text-[10px] text-zinc-500 pt-1 border-t border-white/5 font-mono">
+                    <span>📅 Создан: ${formatDateShort(p.created_at || p.id)}</span>
+                    <span>✎ Изменен: ${formatDateTimeShort(p.updated_at || p.created_at || p.id)}</span>
+                </div>
             </div>
         `;
 
-        cardWrap.onclick = async (e) => {
-            if (e.target.closest('.btn-direct-open') || e.target.closest('button')) return;
-            session.clickedProjectId = (session.clickedProjectId === p.id) ? null : p.id;
-            if (session.clickedProjectId) {
-                await loadProjectDetails(p.id);
-            }
-            renderMainMenuProjects();
-        };
+        if (session.projectReorderMode) {
+            cardWrap.draggable = true;
+            cardWrap.ondragstart = (e) => onProjectDragStart(e, p.id);
+            cardWrap.ondragover = (e) => onProjectDragOver(e);
+            cardWrap.ondrop = (e) => onProjectDrop(e, p.id);
+            cardWrap.ondragend = (e) => onProjectDragEnd(e);
+        } else {
+            cardWrap.onclick = (e) => {
+                if (e.target.closest('button')) return;
+                openInsideProject(p.id);
+            };
+        }
 
         container.appendChild(cardWrap);
     });
 
     attachProjectSwipeHandlers();
 
-    if (!session.clickedProjectId) {
-        if (preview) preview.classList.add('hidden');
-    } else {
-        renderProjectPreviewCard(session.clickedProjectId);
-    }
+    if (preview) preview.classList.add('hidden');
 }
 
 // Свайп-жесты для карточек проектов
@@ -712,13 +717,11 @@ async function openInsideProject(id) {
     await loadProjectDetails(id);
     updateProjectSeamsUI(p);
     populateFormDropdowns();
-    selectCategory('duct');
-    selectShape('rect');
     renderProjectPhases();
     renderProjectInside();
 
-    if (typeof navigateTo === 'function') {
-        navigateTo(SCREENS.PROJECT_DETAIL, { projectId: id });
+    if (typeof navigateTo === 'function' && currentScreenId !== SCREENS.PROJECT_DETAIL) {
+        navigateTo(SCREENS.PROJECT_DETAIL);
     }
 }
 
@@ -841,4 +844,70 @@ function groupSummaryFittings(arr) {
         res[k] = (res[k] || 0) + it.qty;
     });
     return res;
+}
+
+// ==========================================
+// РЕЖИМ СОРТИРОВКИ ПРОЕКТОВ (DRAG-AND-DROP)
+// ==========================================
+let draggedProjId = null;
+
+function toggleProjectReorderMode() {
+    triggerHaptic('light');
+    session.projectReorderMode = !session.projectReorderMode;
+    const btn = document.getElementById('btnToggleReorder');
+    if (btn) {
+        btn.className = session.projectReorderMode 
+            ? 'text-xs font-black text-black bg-white px-3 py-2 rounded-xl shadow-md btn-press' 
+            : 'text-xs font-bold text-zinc-300 bg-[#18181f] border border-white/10 px-3 py-2 rounded-xl btn-press';
+        btn.textContent = session.projectReorderMode ? '✓ Готово' : '⇅ Порядок';
+    }
+    renderMainMenuProjects();
+    if (!session.projectReorderMode) {
+        showToast('Порядок проектов сохранен', 'success');
+    }
+}
+
+function onProjectDragStart(e, id) {
+    draggedProjId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.classList.add('opacity-40');
+}
+
+function onProjectDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+}
+
+function onProjectDrop(e, targetId) {
+    e.preventDefault();
+    if (!draggedProjId || draggedProjId === targetId) return;
+
+    const fromIdx = appState.projects.findIndex(x => x.id === draggedProjId);
+    const toIdx = appState.projects.findIndex(x => x.id === targetId);
+    if (fromIdx !== -1 && toIdx !== -1) {
+        const [moved] = appState.projects.splice(fromIdx, 1);
+        appState.projects.splice(toIdx, 0, moved);
+
+        appState.projects.forEach((p, idx) => {
+            p.order_index = idx;
+        });
+
+        saveProjectsOrder();
+        renderMainMenuProjects();
+    }
+}
+
+function onProjectDragEnd(e) {
+    draggedProjId = null;
+    e.currentTarget.classList.remove('opacity-40');
+}
+
+async function saveProjectsOrder() {
+    try {
+        const orderMap = appState.projects.map((p, idx) => ({ id: p.id, order_index: idx }));
+        localStorage.setItem('mv_projects_order', JSON.stringify(orderMap));
+        for (const item of orderMap) {
+            supabaseClient.from('projects').update({ order_index: item.order_index }).eq('id', item.id).then(() => {});
+        }
+    } catch (_) {}
 }

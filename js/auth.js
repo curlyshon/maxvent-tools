@@ -15,32 +15,45 @@ function pressAuthPin(digit) {
         updateAuthPinUI();
         const err = document.getElementById('authError');
         if (err) err.classList.add('hidden');
+    }
+}
 
-        // Проверяем, подошел ли пин-код
-        const u = appState.users.find(x => String(x.access_code || x.pass || '').trim() === currentAuthPin);
-        if (u) {
-            triggerHaptic('success');
-            session.user = u;
-            session.devMode = (u.role === 'developer');
-            localStorage.setItem('mv_online_session', JSON.stringify({ userId: u.id, devMode: session.devMode }));
-            clearAuthPin();
-            checkAuthState();
-            return;
-        }
+function submitAuthPin() {
+    triggerHaptic('medium');
+    const pin = currentAuthPin.trim();
+    const err = document.getElementById('authError');
 
-        if (currentAuthPin.length >= 4) {
-            setTimeout(() => {
-                const checkAgain = appState.users.find(x => String(x.access_code || x.pass || '').trim() === currentAuthPin);
-                if (!checkAgain && currentAuthPin.length >= 4) {
-                    triggerHaptic('warning');
-                    if (err) {
-                        err.textContent = 'Неверный код доступа';
-                        err.classList.remove('hidden');
-                    }
-                    setTimeout(() => clearAuthPin(), 600);
-                }
-            }, 250);
+    if (!pin) {
+        if (err) {
+            err.textContent = 'Введите пин-код';
+            err.classList.remove('hidden');
         }
+        triggerHaptic('warning');
+        return;
+    }
+
+    const u = appState.users.find(x => String(x.access_code || x.pass || '').trim() === pin);
+    if (u) {
+        triggerHaptic('success');
+        session.user = u;
+        session.devMode = (u.role === 'developer');
+        
+        // Восстановление аватара из localStorage
+        try {
+            const savedAvatar = localStorage.getItem('mv_user_avatar_' + u.id);
+            if (savedAvatar) u.avatar = savedAvatar;
+        } catch (_) {}
+
+        localStorage.setItem('mv_online_session', JSON.stringify({ userId: u.id, devMode: session.devMode }));
+        clearAuthPin();
+        checkAuthState();
+    } else {
+        triggerHaptic('warning');
+        if (err) {
+            err.textContent = 'Неверный пин-код';
+            err.classList.remove('hidden');
+        }
+        setTimeout(() => clearAuthPin(), 700);
     }
 }
 
@@ -309,6 +322,9 @@ async function saveProfileModal() {
     if (session.selectedAvatar) {
         updatePayload.avatar = session.selectedAvatar;
         u.avatar = session.selectedAvatar;
+        try {
+            localStorage.setItem('mv_user_avatar_' + u.id, session.selectedAvatar);
+        } catch (_) {}
     }
 
     if (nPin) {
@@ -334,8 +350,12 @@ async function saveProfileModal() {
     }
 
     if (Object.keys(updatePayload).length > 0) {
-        await supabaseClient.from('users').update(updatePayload).eq('id', u.id);
-        showToast('Профиль успешно обновлен!', 'success');
+        try {
+            await supabaseClient.from('users').update(updatePayload).eq('id', u.id);
+        } catch (dbErr) {
+            console.warn('Supabase profile update warning:', dbErr);
+        }
+        showToast('Профиль успешно сохранен!', 'success');
     }
 
     closeProfileModal();

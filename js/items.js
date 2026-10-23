@@ -438,10 +438,20 @@ function updateFrameLabels() {
     }
 }
 
+function setChipValue(targetId, val) {
+    triggerHaptic('light');
+    const input = document.getElementById(targetId);
+    if (input) {
+        input.value = val;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    updateFrameLabels();
+}
+
 function renderChipScroller(targetId, arr) {
     return `
-        <div class="chip-scroll mt-1.5">
-            ${arr.map(v => `<button type="button" onclick="triggerHaptic('light'); document.getElementById('${targetId}').value = ${v}; updateFrameLabels();" class="chip-btn btn-press">${v}</button>`).join('')}
+        <div class="chip-scroll mt-1.5 flex gap-1.5 overflow-x-auto pb-1">
+            ${arr.map(v => `<button type="button" onclick="setChipValue('${targetId}', ${v})" class="chip-btn px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-zinc-300 font-mono text-xs font-bold hover:bg-white/15 btn-press">${v}</button>`).join('')}
         </div>
     `;
 }
@@ -922,7 +932,6 @@ function renderSpecification() {
             <div class="bg-[#121217] border border-white/5 rounded-3xl p-8 text-center text-xs text-zinc-500 space-y-2">
                 <span class="text-2xl block">📦</span>
                 <p>В этой очереди или по выбранным фильтрам нет позиций</p>
-                <button type="button" onclick="openItemAddSheet()" class="mt-2 bg-white text-black font-extrabold px-4 py-2 rounded-xl btn-press">+ Добавить изделие</button>
             </div>
         `;
         return;

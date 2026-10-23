@@ -1,3 +1,21 @@
+let currentAdminSection = 'users';
+
+function switchAdminSection(sec) {
+    triggerHaptic('light');
+    currentAdminSection = sec;
+    const sections = ['users', 'catalogs', 'fittings', 'notes', 'archive'];
+    sections.forEach(s => {
+        const secEl = document.getElementById(`adminSec-${s}`);
+        const tabEl = document.getElementById(`adminTab-${s}`);
+        if (secEl) secEl.classList.toggle('hidden', s !== sec);
+        if (tabEl) {
+            tabEl.className = (s === sec)
+                ? 'px-3 py-2 rounded-xl text-xs font-black bg-white text-black btn-press whitespace-nowrap shadow-sm'
+                : 'px-3 py-2 rounded-xl text-xs font-bold bg-[#18181f] text-zinc-400 hover:text-white btn-press whitespace-nowrap';
+        }
+    });
+}
+
 // ==========================================
 // MODULE: dev.js
 // Админ-меню руководителя, конструктор изделий, справочники с изменением очередности,
@@ -33,7 +51,7 @@ function renderDevCatalogs() {
         `).join('');
     }
 
-    const tBox = document.getElementById('devThickList');
+    const tBox = document.getElementById('devThicknessesList') || document.getElementById('devThickList');
     if (tBox) {
         tBox.innerHTML = appState.thicknesses.map((t, i) => `
             <div class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-white flex items-center justify-between text-xs mono">
@@ -171,6 +189,8 @@ async function deleteWorker(id) {
 function renderDevUsersStats() {
     const box = document.getElementById('devUsersStatsList');
     if (!box) return;
+    const countEl = document.getElementById('devUsersCount');
+    if (countEl) countEl.textContent = appState.users.length;
 
     box.innerHTML = appState.users.map(u => {
         let ductsArea = 0;

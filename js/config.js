@@ -329,23 +329,56 @@ function updateCloudIndicatorUI(status) {
     const ind = document.getElementById('cloudIndicator');
     const dot = document.getElementById('cloudDotIndicator');
     const authSt = document.getElementById('cloudStatusAuth');
+    const menuDot = document.getElementById('cloudDotIndicatorMenu');
+    const menuSt = document.getElementById('cloudStatusMenu');
 
     if (status === 'connecting') {
         if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+        if (menuDot) menuDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
         if (ind) { ind.textContent = '🔄 Подключение...'; ind.className = 'text-[10px] text-amber-400 font-medium cursor-pointer'; }
         if (authSt) authSt.textContent = '🔄 Подключение к базе...';
+        if (menuSt) menuSt.textContent = '🔄 Подключение...';
     } else if (status === 'loading') {
         if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        if (menuDot) menuDot.className = 'w-2 h-2 rounded-full bg-amber-400';
         if (ind) { ind.textContent = '● Загрузка...'; ind.className = 'text-[10px] text-amber-400 font-medium cursor-pointer'; }
         if (authSt) authSt.textContent = '● Загрузка данных...';
+        if (menuSt) menuSt.textContent = '● Загрузка...';
     } else if (status === 'online') {
         if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        if (menuDot) menuDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
         if (ind) { ind.textContent = '🟢 Онлайн'; ind.className = 'text-[10px] text-emerald-400 font-medium cursor-pointer'; }
         if (authSt) authSt.textContent = '🟢 Supabase: Онлайн (Синхронизировано)';
+        if (menuSt) menuSt.textContent = 'База онлайн';
     } else if (status === 'error') {
         if (dot) dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+        if (menuDot) menuDot.className = 'w-2 h-2 rounded-full bg-rose-500';
         if (ind) { ind.textContent = '🔴 Офлайн'; ind.className = 'text-[10px] text-rose-400 font-medium cursor-pointer'; }
         if (authSt) authSt.textContent = '🔴 Ошибка связи (Нажмите для повтора)';
+        if (menuSt) menuSt.textContent = '🔴 Офлайн';
+    }
+}
+
+function formatDateShort(val) {
+    if (!val) return '—';
+    try {
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch (_) {
+        return '—';
+    }
+}
+
+function formatDateTimeShort(val) {
+    if (!val) return '—';
+    try {
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) + ' ' + 
+               d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    } catch (_) {
+        return '—';
     }
 }
 
@@ -420,7 +453,7 @@ async function loadInitialData() {
         updateCloudIndicatorUI('online');
 
         checkAuthState();
-        refreshCurrentScreen();
+        if (typeof onScreenEnter === 'function' && typeof currentScreenId !== 'undefined' && currentScreenId) onScreenEnter(currentScreenId);
     } catch (err) {
         console.error('Supabase load error:', err);
         updateCloudIndicatorUI('error');

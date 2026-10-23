@@ -48,6 +48,10 @@ function navigateTo(screenId, options = {}) {
 
 function goBack() {
     triggerHaptic('light');
+    if ((currentScreenId === SCREENS.FLANGE || currentScreenId === SCREENS.NESTING) && session.insideProjectId) {
+        navigateTo(SCREENS.PROJECT_DETAIL, { isBack: true });
+        return;
+    }
     if (screenHistory.length > 0) {
         const prev = screenHistory.pop();
         navigateTo(prev, { isBack: true });
@@ -64,7 +68,7 @@ function onScreenEnter(screenId, options = {}) {
     } else if (screenId === SCREENS.PROJECTS) {
         renderMainMenuProjects();
     } else if (screenId === SCREENS.PROJECT_DETAIL) {
-        if (options.projectId) {
+        if (options.projectId && options.projectId !== session.insideProjectId) {
             openInsideProject(options.projectId);
         } else if (session.insideProjectId) {
             renderProjectInside();
