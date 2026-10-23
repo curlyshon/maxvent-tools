@@ -1,59 +1,155 @@
 // ==========================================
 // MODULE: flange.js
-// Калькулятор шинки 1D, раскрой пачек, учет обрезков
+// Калькулятор шинорейки 1D, раскрой пачек, учет обрезков и хвостиков/запаса
 // ==========================================
 
-// ==========================================
-// ЧАСТЬ 3: ШИНКА, РАСКРОЙ 2D, ФИНАНСЫ И ПАНЕЛЬ РАЗРАБОТЧИКА
-// ==========================================
+let flangeModalTarget = 'project'; // 'project' or 'standalone'
 
-// --- ШИНКА (РАСЧЕТ И РАСКРОЙ ПО ПАЧКАМ) ---
-async function addFlangeScrap(target) {
-    const isProj = target === 'project';
-    const inpLen = isProj ? document.getElementById('projScrapLenInput') : document.getElementById('stScrapInput');
-    const inpCount = isProj ? document.getElementById('projScrapCountInput') : document.getElementById('stScrapCountInput');
-    const len = Number(inpLen?.value);
+// ==========================================
+// НАСТРОЙКИ ПАЧКИ И ПРОПИЛА (FLANGE SETTINGS)
+// ==========================================
+function openFlangeSettingsModal() {
+    triggerHaptic('light');
+    const p = appState.projects.find(x => x.id === session.insideProjectId);
+    const data = getProjectFlangeData(p);
+
+    const lenInp = document.getElementById('settPackLen');
+    const qtyInp = document.getElementById('settPackQty');
+    const kerfInp = document.getElementById('settKerf');
+
+    if (lenInp) lenInp.value = data.pack_len || 3000;
+    if (qtyInp) qtyInp.value = data.pack_qty || 10;
+    if (kerfInp) kerfInp.value = data.kerf !== undefined ? data.kerf : 2;
+
+    const modal = document.getElementById('flangeSettingsModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeFlangeSettingsModal() {
+    triggerHaptic('light');
+    const modal = document.getElementById('flangeSettingsModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function saveFlangeSettingsModal() {
+    const len = Number(document.getElementById('settPackLen')?.value) || 3000;
+    const qty = Number(document.getElementById('settPackQty')?.value) || 10;
+    const kerf = Number(document.getElementById('settKerf')?.value) || 2;
+
+    const isProj = (flangeSource === 'project' && session.insideProjectId);
+    if (isProj) {
+        const p = appState.projects.find(x => x.id === session.insideProjectId);
+        if (p) {
+            const data = getProjectFlangeData(p);
+            data.pack_len = len;
+            data.pack_qty = qty;
+            data.kerf = kerf;
+            await saveProjectFlangeData(p, data);
+            renderProjectFlange();
+        }
+    } else {
+        if (!appState.standaloneFlange) appState.standaloneFlange = {};
+        appState.standaloneFlange.pack_len = len;
+        appState.standaloneFlange.pack_qty = qty;
+        appState.standaloneFlange.kerf = kerf;
+        await saveGlobalSettings();
+        renderStandaloneFlange();
+    }
+
+    closeFlangeSettingsModal();
+    showToast(`Настройки сохранены: Пачка ${len} мм (${qty} шт), рез ${kerf} мм`, 'success');
+}
+
+// ==========================================
+// ДОБАВЛЕНИЕ И УДАЛЕНИЕ ОБРЕЗКОВ ШИНКИ
+// ==========================================
+function openFlangeAddScrapModal(target) {
+    triggerHaptic('light');
+    flangeModalTarget = target || 'project';
+    const isProj = (flangeModalTarget === 'project');
+    const p = appState.projects.find(x => x.id === session.insideProjectId);
+    const defPackQty = isProj ? getProjectPackQty(p) : (appState.standaloneFlange?.pack_qty || 10);
+
+    const lenInp = document.getElementById('modalScrapLen');
+    const cntInp = document.getElementById('modalScrapCount');
+    if (lenInp) lenInp.value = '';
+    if (cntInp) cntInp.value = defPackQty;
+
+    const modal = document.getElementById('flangeAddScrapModal');
+    if (modal) modal.classList.remove('hidden');
+    setTimeout(() => lenInp?.focus(), 80);
+}
+
+function closeFlangeAddScrapModal() {
+    triggerHaptic('light');
+    const modal = document.getElementById('flangeAddScrapModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function submitFlangeAddScrapModal() {
+    const len = Number(document.getElementById('modalScrapLen')?.value);
+    const count = Number(document.getElementById('modalScrapCount')?.value) || 10;
+
     if (!len || len < 100) {
         showToast('Укажите длину обрезка (от 100 мм)', 'warning');
         return;
     }
 
-    const p = appState.projects.find(x => x.id === session.insideProjectId);
-    const defPackQty = isProj ? getProjectPackQty(p) : (appState.standaloneFlange.pack_qty || 10);
-    const count = Number(inpCount?.value) || defPackQty;
-
+    const isProj = (flangeModalTarget === 'project');
     if (isProj) {
-        const data = getProjectFlangeData(p);
-        data.scraps.push({ len, count });
-        await saveProjectFlangeData(p, data);
-        renderProjectFlange();
-        showToast(`Обрезок ${len} мм (${count} шт) добавлен`, 'success');
+        const p = appState.projects.find(x => x.id === session.insideProjectId);
+        if (p) {
+            const data = getProjectFlangeData(p);
+            data.scraps.push({ len, count });
+            await saveProjectFlangeData(p, data);
+            renderProjectFlange();
+        }
     } else {
+        if (!appState.standaloneFlange) appState.standaloneFlange = {};
         if (!appState.standaloneFlange.scraps) appState.standaloneFlange.scraps = [];
         appState.standaloneFlange.scraps.push({ len, count });
         await saveGlobalSettings();
         renderStandaloneFlange();
-        showToast(`Обрезок ${len} мм (${count} шт) добавлен`, 'success');
     }
-    if (inpLen) inpLen.value = '';
-    if (inpCount) inpCount.value = '';
+
+    closeFlangeAddScrapModal();
+    showToast(`Обрезок ${len} мм (${count} шт) добавлен`, 'success');
 }
 
 async function removeFlangeScrap(target, idx) {
+    triggerHaptic('warning');
     if (target === 'project') {
         const p = appState.projects.find(x => x.id === session.insideProjectId);
-        const data = getProjectFlangeData(p);
-        data.scraps.splice(idx, 1);
-        await saveProjectFlangeData(p, data);
-        renderProjectFlange();
+        if (p) {
+            const data = getProjectFlangeData(p);
+            data.scraps.splice(idx, 1);
+            await saveProjectFlangeData(p, data);
+            renderProjectFlange();
+        }
     } else {
-        appState.standaloneFlange.scraps.splice(idx, 1);
-        await saveGlobalSettings();
-        renderStandaloneFlange();
+        if (appState.standaloneFlange && appState.standaloneFlange.scraps) {
+            appState.standaloneFlange.scraps.splice(idx, 1);
+            await saveGlobalSettings();
+            renderStandaloneFlange();
+        }
     }
     showToast('Обрезок удален', 'info');
 }
 
+// Переключение режима «Хвостики на дорез» / «Пачка в запас»
+function setFlangeReserveMode(mode) {
+    triggerHaptic('medium');
+    session.flangeReserveMode = mode;
+    if (flangeSource === 'project') {
+        renderProjectFlange();
+    } else {
+        renderStandaloneFlange();
+    }
+}
+
+// ==========================================
+// РАСКРОЙ ШИНКИ ДЛЯ ПРОЕКТА
+// ==========================================
 function renderProjectFlange() {
     const p = appState.projects.find(x => x.id === session.insideProjectId);
     if (!p) return;
@@ -61,31 +157,34 @@ function renderProjectFlange() {
 
     const scrapBox = document.getElementById('projScrapChips');
     if (scrapBox) {
-        scrapBox.innerHTML = (data.scraps || []).map((s, i) => {
-            const sLen = typeof s === 'number' ? s : s.len;
-            const sCnt = typeof s === 'number' ? data.pack_qty : (s.count || data.pack_qty);
-            return `
-                <span class="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg text-slate-200 mono flex items-center gap-1.5 text-xs">
-                    ✂ ${sLen} мм <strong class="text-amber-400">(${sCnt} шт)</strong>
-                    <button onclick="removeFlangeScrap('project', ${i})" title="Удалить обрезок" class="text-slate-500 hover:text-rose-400 font-bold ml-1">×</button>
-                </span>
-            `;
-        }).join('');
+        if (!data.scraps || data.scraps.length === 0) {
+            scrapBox.innerHTML = '<span class="text-zinc-500 italic">Нет обрезков. Добавьте, если в цехе есть остатки пачек.</span>';
+        } else {
+            scrapBox.innerHTML = data.scraps.map((s, i) => {
+                const sLen = typeof s === 'number' ? s : s.len;
+                const sCnt = typeof s === 'number' ? data.pack_qty : (s.count || data.pack_qty);
+                return `
+                    <span class="bg-[#181b26] border border-white/10 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-1.5 text-xs font-bold">
+                        ✂ ${sLen} мм <strong class="text-amber-300">(${sCnt} шт)</strong>
+                        <button type="button" onclick="removeFlangeScrap('project', ${i})" title="Удалить обрезок" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 tap-spring">×</button>
+                    </span>
+                `;
+            }).join('');
+        }
     }
 
-    const packLen = Number(document.getElementById('projPackLen')?.value) || 3000;
-    const packQtyInp = Number(document.getElementById('projPackQty')?.value);
-    const packQty = packQtyInp > 0 ? packQtyInp : (data.pack_qty || 10);
-    const kerf = Number(document.getElementById('projKerf')?.value) || 2;
-    const roundMode = document.getElementById('projFlangeRound')?.value || 'down';
+    const packLen = data.pack_len || 3000;
+    const packQty = data.pack_qty || 10;
+    const kerf = data.kerf !== undefined ? data.kerf : 2;
+    const reserveMode = session.flangeReserveMode || 'spare'; // 'spare' (запас) or 'tail' (хвостики)
 
-    if (packQty !== data.pack_qty) {
-        data.pack_qty = packQty;
-        saveProjectFlangeData(p, data);
+    let items = appState.activeProjectItems;
+    if (session.activePhaseId && session.activePhaseId !== 'all') {
+        items = items.filter(i => (i.phase_id || i.dimensions?.phase_id || 'main') === session.activePhaseId);
     }
 
     const framesObj = {};
-    appState.activeProjectItems.forEach(it => {
+    items.forEach(it => {
         const frames = getItemFrames(it);
         frames.forEach(fr => {
             const normalized = fr.replace('x', '×').trim();
@@ -93,12 +192,97 @@ function renderProjectFlange() {
         });
     });
 
-    document.getElementById('projFlangeOutput').innerHTML = buildFlangeCalculationUI(
-        framesObj, packLen, kerf, roundMode, data.scraps || [], packQty
-    );
+    const outEl = document.getElementById('projFlangeOutput');
+    if (outEl) {
+        outEl.innerHTML = buildFlangeCalculationUI(
+            framesObj, packLen, kerf, reserveMode, data.scraps || [], packQty, 'project'
+        );
+    }
 }
 
-function buildFlangeCalculationUI(framesObj, packLen, kerf, roundMode, scrapsList, packQty) {
+// ==========================================
+// АВТОНОМНЫЙ КАЛЬКУЛЯТОР ШИНКИ
+// ==========================================
+function renderStandaloneFlange() {
+    if (!appState.standaloneFlange) {
+        appState.standaloneFlange = { items: [], scraps: [], pack_qty: 10, pack_len: 3000, kerf: 2 };
+    }
+    const stData = appState.standaloneFlange;
+
+    const scrapBox = document.getElementById('stScrapChips');
+    if (scrapBox) {
+        if (!stData.scraps || stData.scraps.length === 0) {
+            scrapBox.innerHTML = '<span class="text-zinc-500 italic">Нет обрезков. Добавьте, если в цехе есть остатки пачек.</span>';
+        } else {
+            scrapBox.innerHTML = stData.scraps.map((s, i) => `
+                <span class="bg-[#181b26] border border-white/10 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-1.5 text-xs font-bold">
+                    ✂ ${s.len} мм <strong class="text-amber-300">(${s.count} шт)</strong>
+                    <button type="button" onclick="removeFlangeScrap('standalone', ${i})" title="Удалить обрезок" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 tap-spring">×</button>
+                </span>
+            `).join('');
+        }
+    }
+
+    const packLen = stData.pack_len || 3000;
+    const packQty = stData.pack_qty || 10;
+    const kerf = stData.kerf !== undefined ? stData.kerf : 2;
+    const reserveMode = session.flangeReserveMode || 'spare';
+
+    const framesObj = {};
+    (stData.items || []).forEach(it => {
+        framesObj[it.size] = (framesObj[it.size] || 0) + it.qty;
+    });
+
+    const outEl = document.getElementById('stFlangeOutput');
+    if (outEl) {
+        outEl.innerHTML = buildFlangeCalculationUI(
+            framesObj, packLen, kerf, reserveMode, stData.scraps || [], packQty, 'standalone'
+        );
+    }
+}
+
+function addStandaloneFlangeRow() {
+    triggerHaptic('light');
+    const w = Number(document.getElementById('stW')?.value);
+    const h = Number(document.getElementById('stH')?.value);
+    const sides = Number(document.getElementById('stSides')?.value) || 2;
+    const qty = Number(document.getElementById('stQty')?.value) || 1;
+
+    if (!w || !h || w < 50 || h < 50) {
+        showToast('Укажите корректные размеры рамки (W и H)', 'warning');
+        return;
+    }
+
+    const totalFrames = sides * qty;
+    const sizeStr = `${w}×${h}`;
+
+    if (!appState.standaloneFlange) appState.standaloneFlange = { items: [], scraps: [], pack_qty: 10 };
+    if (!appState.standaloneFlange.items) appState.standaloneFlange.items = [];
+
+    const existing = appState.standaloneFlange.items.find(x => x.size === sizeStr);
+    if (existing) {
+        existing.qty += totalFrames;
+    } else {
+        appState.standaloneFlange.items.push({ size: sizeStr, qty: totalFrames });
+    }
+
+    saveGlobalSettings();
+    renderStandaloneFlange();
+    showToast(`Добавлено: ${sizeStr} мм (${totalFrames} рамок)`, 'success');
+}
+
+function clearStandaloneFlange() {
+    triggerHaptic('warning');
+    if (!confirm('Очистить введенные рамки автономного расчета?')) return;
+    if (appState.standaloneFlange) appState.standaloneFlange.items = [];
+    saveGlobalSettings();
+    renderStandaloneFlange();
+}
+
+// ==========================================
+// ЯДРО РАСКРОЯ ПАЧЕК ШИНКИ 1D
+// ==========================================
+function buildFlangeCalculationUI(framesObj, packLen, kerf, reserveMode, scrapsList, packQty, sourceMode) {
     const cutsNeeded = {};
     for (let [sizeStr, frameCount] of Object.entries(framesObj)) {
         const parts = sizeStr.split('×').map(Number);
@@ -111,13 +295,18 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, roundMode, scrapsLis
     }
 
     if (Object.keys(cutsNeeded).length === 0) {
-        return `<div class="bg-slate-950 p-6 rounded-xl border border-slate-800 text-center text-xs text-slate-500">В проекте нет прямоугольных изделий с включенной шинкой</div>`;
+        return `
+            <div class="bg-[#12141c] p-8 rounded-3xl border border-white/5 text-center text-xs text-zinc-500 space-y-1">
+                <span class="text-2xl block">📐</span>
+                <p>Нет рамок с шинорейкой для расчета</p>
+                <p class="text-[11px] text-zinc-600">Добавьте прямоугольные воздуховоды или фасонину с включенными рамками</p>
+            </div>
+        `;
     }
 
     const totalFrames = Object.values(framesObj).reduce((s, v) => s + v, 0);
     const exactTotalShinkas = Object.values(cutsNeeded).reduce((s, v) => s + v, 0);
-    // Точное количество уголков всегда строго равно суммарному количеству шинок (по 4 шт на каждую рамку):
-    const totalCorners = exactTotalShinkas;
+    const totalCorners = exactTotalShinkas; // 4 уголка на каждую рамку = ровно сумме шинок
 
     const totalShinkaMeters = Object.entries(cutsNeeded).reduce((sum, [len, q]) => sum + (Number(len) * q), 0) / 1000;
     const tapeMeters = Object.entries(framesObj).reduce((sum, [sz, cnt]) => {
@@ -127,16 +316,10 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, roundMode, scrapsLis
 
     const remainingDemand = { ...cutsNeeded };
 
-    // Нормализация имеющихся обрезков
+    // Подготовка доступных цеховых обрезков
     const availableScraps = (scrapsList || []).map(s => {
-        let totalLen = typeof s === 'number' ? s : Number(s.len);
-        let count = typeof s === 'number' ? packQty : (Number(s.count) || packQty);
-        if (isNaN(totalLen) && typeof s === 'string') {
-            const mLen = s.match(/len\s*=\s*(\d+)/i);
-            const mCnt = s.match(/count\s*=\s*(\d+)/i);
-            totalLen = mLen ? Number(mLen[1]) : 1000;
-            count = mCnt ? Number(mCnt[1]) : packQty;
-        }
+        const totalLen = typeof s === 'number' ? s : Number(s.len);
+        const count = typeof s === 'number' ? packQty : (Number(s.count) || packQty);
         return {
             totalLen: totalLen || 1000,
             count: count || packQty,
@@ -145,7 +328,7 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, roundMode, scrapsLis
         };
     });
 
-    // Оптимальный поиск комбинации резов из пула под заданную длину пачки/обрезка
+    // Алгоритм поиска наилучшей комбинации резов под длину пачки/обрезка
     function findBestFit(poolMap, capLen) {
         const keys = Object.keys(poolMap).map(Number).sort((a, b) => b - a);
         let bestCombo = [];
@@ -222,7 +405,7 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, roundMode, scrapsLis
         resultPacks.push(newPack);
     }
 
-    // Шаг 3: Раскрой оставшихся обрезков под неполные потребности (хвостики < packQty)
+    // Шаг 3: Раскрой оставшихся обрезков под неполные потребности (< packQty)
     availableScraps.sort((a, b) => b.count - a.count || a.totalLen - b.totalLen);
     for (let i = 0; i < availableScraps.length; i++) {
         const scrap = availableScraps[i];
@@ -249,81 +432,119 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, roundMode, scrapsLis
     }
 
     // Шаг 4: Обработка оставшихся единичных заготовок
+    // Режим reserveMode: 'spare' (Пачка в запас) vs 'tail' (Хвостики на дорез)
     const singleTails = [];
+    const spareProduced = {}; // Сколько штук отрезано в запас сверх потребности
+
     for (let [lStr, rem] of Object.entries(remainingDemand)) {
         const l = Number(lStr);
         if (rem > 0) {
-            if (roundMode === 'up') {
+            if (reserveMode === 'spare') {
+                // Добавляем в пачку, производя остаток в запас
                 let placed = false;
                 for (let p of resultPacks) {
                     const used = p.cuts.length > 0 ? (p.cuts.reduce((s, x) => s + x, 0) + (p.cuts.length - 1) * kerf) : 0;
                     if (used + kerf + l <= p.totalLen) {
                         p.cuts.push(l);
                         placed = true;
+                        const extraInPack = p.count - rem;
+                        if (extraInPack > 0) {
+                            spareProduced[l] = (spareProduced[l] || 0) + extraInPack;
+                        }
                         break;
                     }
                 }
                 if (!placed) {
                     resultPacks.push({ totalLen: packLen, count: packQty, isScrap: false, cuts: [l] });
+                    const extraInPack = packQty - rem;
+                    if (extraInPack > 0) {
+                        spareProduced[l] = (spareProduced[l] || 0) + extraInPack;
+                    }
                 }
                 remainingDemand[l] = 0;
             } else {
+                // Режим 'tail': оставляем хвостики для штучного дореза
                 singleTails.push({ len: l, qty: rem });
             }
         }
     }
 
+    // Сортировка резов в каждой пачке по возрастанию (от меньшего к большему)
+    resultPacks.forEach(p => {
+        p.cuts.sort((a, b) => a - b);
+    });
+
+    const isSpare = (reserveMode === 'spare');
+
+    // Формирование HTML
     let html = `
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Уголки УГФ (точно):</div>
-                <div class="text-2xl font-black mono text-emerald-400 mt-1">${totalCorners} шт</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">по 4 шт на каждую рамку</div>
+        <!-- KPI КАРТОЧКИ -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/5 space-y-1">
+                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Уголки УГФ (точно):</div>
+                <div class="text-xl sm:text-2xl font-black mono text-emerald-400">${totalCorners} шт</div>
+                <div class="text-[10px] text-zinc-500">по 4 шт на каждую рамку</div>
             </div>
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Всего рамок:</div>
-                <div class="text-2xl font-black mono text-blue-400 mt-1">${totalFrames} шт</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">${exactTotalShinkas} заготовок шинки</div>
+            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/5 space-y-1">
+                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Всего рамок:</div>
+                <div class="text-xl sm:text-2xl font-black mono text-white">${totalFrames} шт</div>
+                <div class="text-[10px] text-zinc-500">${exactTotalShinkas} заготовок шинки</div>
             </div>
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Шинка в метрах:</div>
-                <div class="text-2xl font-black mono text-white mt-1">${totalShinkaMeters.toFixed(1)} м</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">чистая длина заготовок</div>
+            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/5 space-y-1">
+                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Шинка (метраж):</div>
+                <div class="text-xl sm:text-2xl font-black mono text-white">${totalShinkaMeters.toFixed(1)} м</div>
+                <div class="text-[10px] text-zinc-500">чистая длина заготовок</div>
             </div>
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Лента межфланцевая:</div>
-                <div class="text-2xl font-black mono text-cyan-400 mt-1">${tapeMeters.toFixed(1)} м</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">периметр всех рамок</div>
+            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/5 space-y-1">
+                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Межфланцевая лента:</div>
+                <div class="text-xl sm:text-2xl font-black mono text-cyan-400">${tapeMeters.toFixed(1)} м</div>
+                <div class="text-[10px] text-zinc-500">периметр всех рамок</div>
             </div>
         </div>
 
-        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-            <div class="font-bold text-blue-400 uppercase tracking-wider text-xs">Готовые рамки шинорейки для сборки:</div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mono text-xs">
-                ${Object.entries(framesObj).map(([k, v]) => `
-                    <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex justify-between items-center">
-                        <span class="text-slate-300">${k} мм</span>
-                        <strong class="text-white">${v} рамок</strong>
+        <!-- ТОЧНОЕ КОЛИЧЕСТВО ШИНОК ПО РАЗМЕРАМ С КНОПКАМИ РЕЖИМА -->
+        <div class="bg-[#12141c] p-4 sm:p-5 rounded-3xl border border-white/5 space-y-3">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-white/5 pb-3">
+                <div>
+                    <h3 class="font-extrabold text-sm text-white">Количество заготовок шинки</h3>
+                    <p class="text-[11px] text-zinc-400">Сторона рамки − 30 мм (припуск на уголки)</p>
+                </div>
+                <!-- Сегментированный переключатель режима раскроя -->
+                <div class="flex items-center bg-black/40 border border-white/10 rounded-2xl p-1 gap-1">
+                    <button type="button" onclick="setFlangeReserveMode('tail')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition tap-spring ${
+                        !isSpare 
+                            ? 'bg-amber-400 text-black shadow-md' 
+                            : 'text-zinc-400 hover:text-white'
+                    }">
+                        ✂️ Хвостики на дорез
+                    </button>
+                    <button type="button" onclick="setFlangeReserveMode('spare')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition tap-spring ${
+                        isSpare 
+                            ? 'bg-white text-black shadow-md' 
+                            : 'text-zinc-400 hover:text-white'
+                    }">
+                        📦 Пачка в запас
+                    </button>
+                </div>
+            </div>
+
+            <!-- Список точных размеров шинок -->
+            <div class="flex flex-wrap gap-2 mono text-xs">
+                ${Object.entries(cutsNeeded).map(([k, v]) => `
+                    <div class="bg-[#181b26] border border-white/5 px-3 py-2 rounded-2xl flex items-center gap-2">
+                        <span class="text-zinc-300 font-bold">${k} мм</span>
+                        <span class="text-zinc-500">—</span>
+                        <strong class="text-emerald-400">${v} шт</strong>
                     </div>
                 `).join('')}
             </div>
         </div>
 
-        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-            <div class="font-bold text-emerald-400 uppercase tracking-wider text-xs">Количество заготовок шинки (Сторона рамки − 30 мм):</div>
-            <div class="flex flex-wrap gap-2 mono text-xs">
-                ${Object.entries(cutsNeeded).map(([k, v]) => `
-                    <span class="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-200">
-                        ${k} мм — <strong class="text-emerald-400">${v} шт</strong>
-                    </span>
-                `).join('')}
-            </div>
-        </div>
-
+        <!-- КАРТЫ РАСПИЛА ПАЧЕК -->
         <div class="space-y-3">
             <div class="flex justify-between items-center text-xs">
-                <span class="font-bold text-white uppercase tracking-wider">Карты реза пачек (1 рез = кол-во шинок в пачке):</span>
-                <span class="text-slate-400">Всего пачек на распил: <strong class="text-blue-400 mono">${resultPacks.length} шт</strong></span>
+                <span class="font-bold text-white uppercase tracking-wider">Карты реза пачек (${packQty} шт в пачке, резы от меньшего к большему):</span>
+                <span class="text-zinc-400">Всего пачек: <strong class="text-white mono">${resultPacks.length} шт</strong></span>
             </div>
             <div class="space-y-2.5">
     `;
@@ -332,14 +553,14 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, roundMode, scrapsLis
         const used = p.cuts.length > 0 ? (p.cuts.reduce((s, x) => s + x, 0) + (p.cuts.length - 1) * kerf) : 0;
         const rem = Math.max(0, p.totalLen - used);
         html += `
-            <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                <div class="flex justify-between text-xs">
-                    <span class="font-bold text-white">${p.isScrap ? `✂ Обрезок (${p.count} шт в пачке)` : `Пачка №${idx + 1} (${p.count} шт в пачке)`} — ${p.totalLen} мм</span>
-                    <span class="text-slate-400">Деловой остаток: <strong class="text-amber-400 mono">${rem} мм</strong></span>
+            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/5 space-y-3">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-extrabold text-white">${p.isScrap ? `✂ Обрезок (${p.count} шт в пачке)` : `Пачка №${idx + 1} (${p.count} шт в пачке)`} — ${p.totalLen} мм</span>
+                    <span class="text-zinc-400">Деловой остаток: <strong class="text-amber-400 mono">${rem} мм</strong></span>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     ${p.cuts.map(c => `
-                        <span class="bg-blue-950 border border-blue-700 text-blue-200 px-3 py-1 rounded-lg text-xs mono font-bold">
+                        <span class="bg-white/10 border border-white/15 text-white px-3 py-1.5 rounded-xl text-xs mono font-black">
                             Рез ${c} мм → ${p.count} шт
                         </span>
                     `).join('')}
@@ -350,51 +571,93 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, roundMode, scrapsLis
 
     html += `</div></div>`;
 
-    if (singleTails.length > 0) {
-        html += `
-            <div class="bg-amber-950/30 border border-amber-800/60 p-4 rounded-xl text-xs space-y-2">
-                <div class="font-bold text-amber-300 uppercase tracking-wider">Памятка: Хвостики на штучный дорез (некратные количеству в пачке):</div>
-                <div class="flex flex-wrap gap-2 mono">
-                    ${singleTails.map(t => `<span class="bg-amber-900/40 text-amber-200 px-3 py-1 rounded-lg">${t.len} мм — ${t.qty} шт</span>`).join('')}
+    // Информационный блок внизу (Хвостики или Запас)
+    if (!isSpare) {
+        if (singleTails.length > 0) {
+            const totalTails = singleTails.reduce((s, t) => s + t.qty, 0);
+            html += `
+                <div class="bg-amber-500/10 border border-amber-500/25 p-4 rounded-3xl text-xs space-y-2">
+                    <div class="flex items-center gap-2 text-amber-300 font-extrabold">
+                        <span>✂️</span>
+                        <span>Штучные хвостики на дорез (всего ${totalTails} шт надо дорезать штучно):</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mono">
+                        ${singleTails.map(t => `
+                            <span class="bg-[#12141c] border border-amber-500/30 text-amber-200 px-3 py-1.5 rounded-xl font-bold">
+                                ${t.len} мм — ${t.qty} шт
+                            </span>
+                        `).join('')}
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        } else {
+            html += `
+                <div class="bg-emerald-500/10 border border-emerald-500/25 p-4 rounded-3xl text-xs text-emerald-300 font-bold flex items-center gap-2">
+                    <span>✓</span>
+                    <span>Все заготовки полностью на 100% кратны пачкам, штучных хвостиков нет!</span>
+                </div>
+            `;
+        }
     } else {
-        html += `
-            <div class="bg-emerald-950/30 border border-emerald-800/60 p-3.5 rounded-xl text-xs text-emerald-300 font-semibold flex items-center gap-2">
-                <span>✓</span>
-                <span>Все заготовки полностью на 100% раскроены в пачках, штучных хвостиков нет!</span>
-            </div>
-        `;
+        const spareEntries = Object.entries(spareProduced);
+        if (spareEntries.length > 0) {
+            const totalSpare = spareEntries.reduce((s, [, q]) => s + q, 0);
+            html += `
+                <div class="bg-blue-500/10 border border-blue-500/25 p-4 rounded-3xl text-xs space-y-2">
+                    <div class="flex items-center gap-2 text-blue-300 font-extrabold">
+                        <span>📦</span>
+                        <span>Отрезано в запас на склад (всего +${totalSpare} шт готовых шинок в запасе):</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mono">
+                        ${spareEntries.map(([len, q]) => `
+                            <span class="bg-[#12141c] border border-blue-500/30 text-blue-200 px-3 py-1.5 rounded-xl font-bold">
+                                ${len} мм — +${q} шт
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="bg-emerald-500/10 border border-emerald-500/25 p-4 rounded-3xl text-xs text-emerald-300 font-bold flex items-center gap-2">
+                    <span>✓</span>
+                    <span>Идеальный раскрой: пачки заполнены точно под заказ без излишков.</span>
+                </div>
+            `;
+        }
     }
 
     return html;
 }
 
+// ==========================================
+// ЭКСПОРТ И ПЕЧАТЬ
+// ==========================================
 function exportFlangeText(mode) {
     const isProj = mode === 'project';
     const p = isProj ? appState.projects.find(x => x.id === session.insideProjectId) : null;
     const title = p ? p.title : 'Автономный расчет';
 
     let text = `MAXVENT TOOLS — НАРЯД НА ШИНКУ И УГОЛКИ\nОбъект: ${title}\nДата: ${new Date().toLocaleDateString()}\n\n`;
-
     const outEl = document.getElementById(isProj ? 'projFlangeOutput' : 'stFlangeOutput');
     if (outEl) {
         text += outEl.innerText || '';
     }
 
     navigator.clipboard.writeText(text);
-    showToast('Наряд на шинку скопирован в буфер обмена!', 'success');
+    showToast('Наряд скопирован в буфер обмена!', 'success');
 }
 
 function printFlangeOrder(mode) {
     const isProj = mode === 'project';
     const p = isProj ? appState.projects.find(x => x.id === session.insideProjectId) : null;
-    const title = p ? p.title : 'Автономный расчет шинки';
+    const title = p ? p.title : 'Автономный расчет';
     const outEl = document.getElementById(isProj ? 'projFlangeOutput' : 'stFlangeOutput');
     if (!outEl) return;
 
     const printArea = document.getElementById('printReportArea');
+    if (!printArea) return;
+
     printArea.innerHTML = `
         <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; color: #000; font-size: 13px;">
             <div style="border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
@@ -417,5 +680,3 @@ function printFlangeOrder(mode) {
     `;
     window.print();
 }
-
-// --- 2D РАСКРОЙ ЛИСТА (УМНОЕ РАЗДЕЛЕНИЕ КОРОБОВ И УЧЕТ ФАЛЬЦЕВ) ---

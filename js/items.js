@@ -1,10 +1,11 @@
 // ==========================================
 // MODULE: items.js
-// Форма добавления изделий, динамические поля, спецификация и групповые действия
+// Поэтапный мастер добавления изделий, динамические формы,
+// спецификация со свайпами, режим группового выделения и умный балансировщик долей
 // ==========================================
 
 // ==========================================
-// ПОЭТАПНЫЙ МАСТЕР (WIZARD) И РЕЖИМЫ ФОРМЫ
+// СОСТОЯНИЕ МАСТЕРА (WIZARD)
 // ==========================================
 let currentFormStep = 1;
 let currentFormMode = localStorage.getItem('maxvent_form_mode') || 'wizard';
@@ -19,12 +20,12 @@ function setFormMode(mode) {
     const btnAll = document.getElementById('btnModeAll');
     if (btnWiz) {
         btnWiz.className = isWiz 
-            ? 'px-2.5 py-1 rounded-lg font-bold bg-white text-black transition tap-spring' 
+            ? 'px-2.5 py-1 rounded-lg font-bold bg-white text-black transition tap-spring shadow-sm' 
             : 'px-2.5 py-1 rounded-lg font-semibold text-zinc-400 hover:text-white transition tap-spring';
     }
     if (btnAll) {
         btnAll.className = !isWiz 
-            ? 'px-2.5 py-1 rounded-lg font-bold bg-white text-black transition tap-spring' 
+            ? 'px-2.5 py-1 rounded-lg font-bold bg-white text-black transition tap-spring shadow-sm' 
             : 'px-2.5 py-1 rounded-lg font-semibold text-zinc-400 hover:text-white transition tap-spring';
     }
 
@@ -68,6 +69,10 @@ function goToWizardStep(step) {
             }
         });
     }
+
+    if (currentFormStep === 3) {
+        onWorkerSelectionChanged();
+    }
 }
 
 function openItemAddSheet() {
@@ -91,34 +96,28 @@ function adjustQtyStepper(delta) {
     val = Math.max(1, val + delta);
     input.value = val;
     input.dispatchEvent(new Event('input'));
+    updateWorkerSharesTengeAmounts();
 }
 
 // ==========================================
-// ФОРМА ДОБАВЛЕНИЯ И РЕДАКТИРОВАНИЯ ПОЗИЦИЙ
+// ФОРМА ДОБАВЛЕНИЯ И ВЫПАДАЮЩИЕ СПИСКИ
 // ==========================================
 function populateFormDropdowns() {
     const mSel = document.getElementById('inMetal');
     const tSel = document.getElementById('inThickness');
-    mSel.innerHTML = appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
-    tSel.innerHTML = appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
-    if (appState.thicknesses.includes(0.5)) {
-        tSel.value = '0.5';
+    if (mSel) mSel.innerHTML = appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (tSel) {
+        tSel.innerHTML = appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
+        if (appState.thicknesses.includes(0.5)) tSel.value = '0.5';
     }
 
     const fmSel = document.getElementById('specFilterMetal');
     const ftSel = document.getElementById('specFilterThick');
-    fmSel.innerHTML = '<option value="all">Все</option>' + appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
-    ftSel.innerHTML = '<option value="all">Все</option>' + appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
+    if (fmSel) fmSel.innerHTML = '<option value="all">Все</option>' + appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (ftSel) ftSel.innerHTML = '<option value="all">Все</option>' + appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
 
-    const wBox = document.getElementById('workersCheckboxes');
-    wBox.innerHTML = appState.users.map(u => `
-        <label class="bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer hover:border-slate-700 transition tap-spring">
-            <input type="checkbox" name="assignWorker" onchange="onWorkerSelectionChanged()" value="${u.name}" ${session.user && session.user.name === u.name ? 'checked' : ''} class="rounded text-blue-600">
-            <span class="text-slate-300 font-medium">${u.name}</span>
-        </label>
-    `).join('');
+    renderWorkersCheckboxes();
 
-    // Слушатели на поля количества и цены для живого пересчета долей
     const inQty = document.getElementById('inQty');
     const inPrice = document.getElementById('inPrice');
     if (inQty && !inQty.dataset.hasShareListener) {
@@ -131,23 +130,42 @@ function populateFormDropdowns() {
     }
 
     setFormMode(currentFormMode);
-    onWorkerSelectionChanged();
+}
+
+function renderWorkersCheckboxes() {
+    const wBox = document.getElementById('itemWorkersCheckboxes');
+    if (!wBox) return;
+
+    wBox.innerHTML = appState.users.map(u => `
+        <label class="bg-[#12141c] border border-white/5 hover:border-white/20 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer transition tap-spring">
+            <input type="checkbox" name="assignWorker" onchange="onWorkerSelectionChanged()" value="${u.name}" ${session.user && session.user.name === u.name ? 'checked' : ''} class="rounded text-white accent-white">
+            <span class="text-zinc-200 text-xs font-bold truncate">${u.name}</span>
+        </label>
+    `).join('');
 }
 
 function selectCategory(cat) {
     session.activeCategory = cat;
-    document.getElementById('btnCatDuct').className = cat === 'duct' 
-        ? 'py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition' 
-        : 'py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-white/5 text-zinc-400 hover:text-white transition';
-    document.getElementById('btnCatFitting').className = cat === 'fitting' 
-        ? 'py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition' 
-        : 'py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-white/5 text-zinc-400 hover:text-white transition';
+    const btnDuct = document.getElementById('btnCatDuct');
+    const btnFitting = document.getElementById('btnCatFitting');
+    if (btnDuct) {
+        btnDuct.className = cat === 'duct' 
+            ? 'py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition tap-spring' 
+            : 'py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-white/5 text-zinc-400 hover:text-white transition tap-spring';
+    }
+    if (btnFitting) {
+        btnFitting.className = cat === 'fitting' 
+            ? 'py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition tap-spring' 
+            : 'py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-white/5 text-zinc-400 hover:text-white transition tap-spring';
+    }
 
     if (cat === 'duct' && session.activeShape === 'smooth') {
         session.activeShape = 'rect';
     }
 
-    document.getElementById('fittingSelectWrap').classList.toggle('hidden', cat !== 'fitting');
+    const fitWrap = document.getElementById('fittingSelectWrap');
+    if (fitWrap) fitWrap.classList.toggle('hidden', cat !== 'fitting');
+
     selectShape(session.activeShape);
 }
 
@@ -174,8 +192,8 @@ function selectShape(sh) {
                 btn.className = 'hidden';
             } else {
                 btn.className = s === sh 
-                    ? 'py-2.5 text-xs font-extrabold rounded-xl bg-white text-black shadow-sm transition' 
-                    : 'py-2.5 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white transition';
+                    ? 'py-2.5 text-xs font-extrabold rounded-xl bg-white text-black shadow-sm transition tap-spring' 
+                    : 'py-2.5 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white transition tap-spring';
             }
         }
     });
@@ -186,22 +204,30 @@ function selectShape(sh) {
 function updateFittingDropdown() {
     if (session.activeCategory !== 'fitting') return;
     const sel = document.getElementById('fittingTypeSelect');
+    if (!sel) return;
     const list = appState.fittings[session.activeShape] || [];
     sel.innerHTML = list.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
     if (list.length > 0) onFittingTypeChange();
 }
 
 function onFittingTypeChange() {
-    const fitId = document.getElementById('fittingTypeSelect').value;
+    const sel = document.getElementById('fittingTypeSelect');
+    if (!sel) return;
+    const fitId = sel.value;
     const fitDef = (appState.fittings[session.activeShape] || []).find(f => f.id === fitId);
     if (fitDef && fitDef.price) {
-        document.getElementById('inPrice').value = fitDef.price;
+        const inPrice = document.getElementById('inPrice');
+        if (inPrice) inPrice.value = fitDef.price;
     }
     renderDynamicInputs();
 }
 
+// ==========================================
+// ДИНАМИЧЕСКИЕ ПОЛЯ С ЦИФРОВОЙ КЛАВИАТУРОЙ (inputmode="numeric")
+// ==========================================
 function renderDynamicInputs() {
     const box = document.getElementById('dynamicFieldsBox');
+    if (!box) return;
     box.innerHTML = '';
 
     if (session.activeCategory === 'duct') {
@@ -210,32 +236,32 @@ function renderDynamicInputs() {
                 <div class="space-y-3">
                     <div>
                         <div class="flex justify-between items-center mb-1">
-                            <label class="block text-xs text-slate-400">Ширина (А) мм</label>
-                            <button type="button" onclick="swapDims('f_w', 'f_h')" class="text-[11px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 transition">⇄ Поменять A ↔ B</button>
+                            <label class="block text-xs font-semibold text-zinc-400">Ширина (А) мм</label>
+                            <button type="button" onclick="swapDims('f_w', 'f_h')" class="text-[11px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 transition tap-spring">⇄ Поменять A ↔ B</button>
                         </div>
-                        <input type="number" id="f_w" value="400" oninput="updateFrameLabels()" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm mono text-white">
+                        <input type="number" id="f_w" value="400" inputmode="numeric" oninput="updateFrameLabels()" required class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
                         ${renderChipScroller('f_w', POPULAR_RECT)}
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Высота (В) мм</label>
-                        <input type="number" id="f_h" value="300" oninput="updateFrameLabels()" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm mono text-white">
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Высота (В) мм</label>
+                        <input type="number" id="f_h" value="300" inputmode="numeric" oninput="updateFrameLabels()" required class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
                         ${renderChipScroller('f_h', POPULAR_RECT)}
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Длина (L) мм (стандарт 1250)</label>
-                        <input type="number" id="f_l" value="1250" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm mono text-white">
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Длина (L) мм (стандарт 1250)</label>
+                        <input type="number" id="f_l" value="1250" inputmode="numeric" required class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
                         ${renderChipScroller('f_l', [500, 1000, 1250, 1500, 2000, 2500])}
                     </div>
-                    <div class="pt-2 border-t border-slate-800">
-                        <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2">Рамки шинорейки:</div>
+                    <div class="pt-2 border-t border-white/5">
+                        <div class="text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-2">Рамки шинорейки:</div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                            <label class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-slate-700">
-                                <input type="checkbox" id="f_flange1" checked onchange="updateFrameLabels()" class="rounded text-blue-600">
-                                <span id="label_flange1" class="font-semibold text-slate-200">Рамка 1: 400×300 мм</span>
+                            <label class="bg-[#181b26] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition tap-spring">
+                                <input type="checkbox" id="f_flange1" checked onchange="updateFrameLabels()" class="rounded text-white accent-white">
+                                <span id="label_flange1" class="font-bold text-zinc-200">Рамка 1: 400×300 мм</span>
                             </label>
-                            <label class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-slate-700">
-                                <input type="checkbox" id="f_flange2" checked onchange="updateFrameLabels()" class="rounded text-blue-600">
-                                <span id="label_flange2" class="font-semibold text-slate-200">Рамка 2: 400×300 мм</span>
+                            <label class="bg-[#181b26] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition tap-spring">
+                                <input type="checkbox" id="f_flange2" checked onchange="updateFrameLabels()" class="rounded text-white accent-white">
+                                <span id="label_flange2" class="font-bold text-zinc-200">Рамка 2: 400×300 мм</span>
                             </label>
                         </div>
                     </div>
@@ -245,13 +271,13 @@ function renderDynamicInputs() {
             box.innerHTML = `
                 <div class="space-y-3">
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Диаметр (Ø) мм</label>
-                        <input type="number" id="f_d" value="200" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm mono text-white">
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Диаметр (Ø) мм</label>
+                        <input type="number" id="f_d" value="200" inputmode="numeric" required class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
                         ${renderChipScroller('f_d', POPULAR_DIAM)}
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Длина (L) мм (стандарт 1250)</label>
-                        <input type="number" id="f_l" value="1250" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm mono text-white">
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Длина (L) мм (стандарт 1250)</label>
+                        <input type="number" id="f_l" value="1250" inputmode="numeric" required class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
                         ${renderChipScroller('f_l', [500, 1000, 1250, 1500, 2000, 2500])}
                     </div>
                 </div>
@@ -261,15 +287,15 @@ function renderDynamicInputs() {
         return;
     }
 
-    const fitId = document.getElementById('fittingTypeSelect').value;
+    const fitId = document.getElementById('fittingTypeSelect')?.value;
     const fitDef = (appState.fittings[session.activeShape] || []).find(f => f.id === fitId) || { params: ['w', 'h', 'len'] };
     let html = '<div class="space-y-3">';
 
     if (fitDef.params.includes('hood_type')) {
         html += `
             <div>
-                <label class="block text-xs text-slate-400 mb-1">Вид зонта</label>
-                <select id="f_hood_type" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white">
+                <label class="block text-xs font-semibold text-zinc-400 mb-1">Вид зонта</label>
+                <select id="f_hood_type" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-bold">
                     <option value="Пристенный">Пристенный</option>
                     <option value="Островной">Островной</option>
                 </select>
@@ -277,142 +303,83 @@ function renderDynamicInputs() {
         `;
     }
 
-    if (fitDef.params.includes('deg')) html += `<div><label class="block text-xs text-slate-400 mb-1">Градус (°)</label><input type="number" id="f_deg" value="90" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
-    if (fitDef.params.includes('deg135')) html += `<div><label class="block text-xs text-slate-400 mb-1">Градус (°)</label><input type="number" id="f_deg" value="135" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
+    if (fitDef.params.includes('deg')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Градус (°)</label><input type="number" id="f_deg" value="90" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
+    if (fitDef.params.includes('deg135')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Градус (°)</label><input type="number" id="f_deg" value="135" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
 
     if (fitDef.params.includes('w') && fitDef.params.includes('h')) {
         html += `
             <div>
                 <div class="flex justify-between items-center mb-1">
-                    <label class="block text-xs text-slate-400">Ширина (мм)</label>
-                    <button type="button" onclick="swapDims('f_w', 'f_h')" class="text-[11px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 transition">⇄ Поменять A ↔ B</button>
+                    <label class="block text-xs font-semibold text-zinc-400">Ширина (А) мм</label>
+                    <button type="button" onclick="swapDims('f_w', 'f_h')" class="text-[11px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 transition tap-spring">⇄ Поменять A ↔ B</button>
                 </div>
-                <input type="number" id="f_w" value="400" oninput="updateFrameLabels()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_w', POPULAR_RECT)}
+                <input type="number" id="f_w" value="400" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_w', POPULAR_RECT)}
             </div>
             <div>
-                <label class="block text-xs text-slate-400 mb-1">Высота (мм)</label>
-                <input type="number" id="f_h" value="300" oninput="updateFrameLabels()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_h', POPULAR_RECT)}
+                <label class="block text-xs font-semibold text-zinc-400 mb-1">Высота (В) мм</label>
+                <input type="number" id="f_h" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_h', POPULAR_RECT)}
             </div>
         `;
     } else {
-        if (fitDef.params.includes('w')) html += `<div><label class="block text-xs text-slate-400 mb-1">Ширина (мм)</label><input type="number" id="f_w" value="400" oninput="updateFrameLabels()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_w', POPULAR_RECT)}</div>`;
-        if (fitDef.params.includes('h')) html += `<div><label class="block text-xs text-slate-400 mb-1">Высота (мм)</label><input type="number" id="f_h" value="300" oninput="updateFrameLabels()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_h', POPULAR_RECT)}</div>`;
+        if (fitDef.params.includes('w')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Ширина (А) мм</label><input type="number" id="f_w" value="400" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_w', POPULAR_RECT)}</div>`;
+        if (fitDef.params.includes('h')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Высота (В) мм</label><input type="number" id="f_h" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_h', POPULAR_RECT)}</div>`;
     }
 
     if (fitDef.params.includes('w1') && fitDef.params.includes('h1')) {
         const isSmoothTrans = fitDef.id === 's_trans' || session.activeShape === 'smooth';
         html += `
-            <div class="bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/80 space-y-2">
+            <div class="bg-[#181b26] p-3 rounded-2xl border border-white/5 space-y-2">
                 <div class="flex justify-between items-center">
-                    <span class="text-[11px] font-bold text-slate-300">${isSmoothTrans ? 'Прямоугольное сечение (Вход):' : 'Рамка 1 (Вход):'}</span>
-                    <button type="button" onclick="swapDims('f_w1', 'f_h1')" class="text-[10px] text-blue-400 hover:text-blue-300 font-bold transition">⇄ Поменять A1 ↔ B1</button>
+                    <span class="text-[11px] font-bold text-zinc-300">${isSmoothTrans ? 'Прямоугольное сечение (Вход):' : 'Рамка 1 (Вход):'}</span>
+                    <button type="button" onclick="swapDims('f_w1', 'f_h1')" class="text-[10px] text-blue-400 hover:text-blue-300 font-bold transition tap-spring">⇄ Поменять A1 ↔ B1</button>
                 </div>
-                <div><label class="block text-[10px] text-slate-400 mb-0.5">Ширина 1 (мм)</label><input type="number" id="f_w1" value="400" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 mono text-white text-xs">${renderChipScroller('f_w1', POPULAR_RECT)}</div>
-                <div><label class="block text-[10px] text-slate-400 mb-0.5">Высота 1 (мм)</label><input type="number" id="f_h1" value="300" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 mono text-white text-xs">${renderChipScroller('f_h1', POPULAR_RECT)}</div>
+                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Ширина 1 (мм)</label><input type="number" id="f_w1" value="400" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_w1', POPULAR_RECT)}</div>
+                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Высота 1 (мм)</label><input type="number" id="f_h1" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_h1', POPULAR_RECT)}</div>
             </div>
         `;
     }
 
     if (fitDef.params.includes('w2') && fitDef.params.includes('h2')) {
         html += `
-            <div class="bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/80 space-y-2">
+            <div class="bg-[#181b26] p-3 rounded-2xl border border-white/5 space-y-2">
                 <div class="flex justify-between items-center">
-                    <span class="text-[11px] font-bold text-slate-300">Рамка 2 (Выход):</span>
-                    <button type="button" onclick="swapDims('f_w2', 'f_h2')" class="text-[10px] text-blue-400 hover:text-blue-300 font-bold transition">⇄ A2 ↔ B2</button>
+                    <span class="text-[11px] font-bold text-zinc-300">Рамка 2 (Выход):</span>
+                    <button type="button" onclick="swapDims('f_w2', 'f_h2')" class="text-[10px] text-blue-400 hover:text-blue-300 font-bold transition tap-spring">⇄ A2 ↔ B2</button>
                 </div>
-                <div><label class="block text-[10px] text-slate-400 mb-0.5">Ширина 2 (мм)</label><input type="number" id="f_w2" value="300" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 mono text-white text-xs">${renderChipScroller('f_w2', POPULAR_RECT)}</div>
-                <div><label class="block text-[10px] text-slate-400 mb-0.5">Высота 2 (мм)</label><input type="number" id="f_h2" value="250" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 mono text-white text-xs">${renderChipScroller('f_h2', POPULAR_RECT)}</div>
+                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Ширина 2 (мм)</label><input type="number" id="f_w2" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_w2', POPULAR_RECT)}</div>
+                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Высота 2 (мм)</label><input type="number" id="f_h2" value="250" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_h2', POPULAR_RECT)}</div>
             </div>
         `;
     }
 
     if (fitDef.params.includes('d')) {
         const isSmoothTrans = fitDef.id === 's_trans' || session.activeShape === 'smooth';
-        html += `<div><label class="block text-xs text-slate-400 mb-1">${isSmoothTrans ? 'Диаметр Ø (Выход) мм' : 'Диаметр Ø (мм)'}</label><input type="number" id="f_d" value="200" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d', POPULAR_DIAM)}</div>`;
+        html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">${isSmoothTrans ? 'Диаметр Ø (Выход) мм' : 'Диаметр Ø (мм)'}</label><input type="number" id="f_d" value="200" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d', POPULAR_DIAM)}</div>`;
     }
-    if (fitDef.params.includes('d1')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр 1 Ø (мм)</label><input type="number" id="f_d1" value="250" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d1', POPULAR_DIAM)}</div>`;
-    if (fitDef.params.includes('d2')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр 2 Ø (мм)</label><input type="number" id="f_d2" value="200" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d2', POPULAR_DIAM)}</div>`;
-    if (fitDef.params.includes('d_main')) html += `<div><label class="block text-xs text-slate-400 mb-1">Диаметр основного воздуховода Ø (мм)</label><input type="number" id="f_d_main" value="315" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_d_main', POPULAR_DIAM)}</div>`;
+    if (fitDef.params.includes('d1')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Диаметр 1 Ø (мм)</label><input type="number" id="f_d1" value="250" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d1', POPULAR_DIAM)}</div>`;
+    if (fitDef.params.includes('d2')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Диаметр 2 Ø (мм)</label><input type="number" id="f_d2" value="200" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d2', POPULAR_DIAM)}</div>`;
+    if (fitDef.params.includes('d_main')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Диаметр основного Ø (мм)</label><input type="number" id="f_d_main" value="315" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d_main', POPULAR_DIAM)}</div>`;
 
-    if (fitDef.params.includes('len')) html += `<div><label class="block text-xs text-slate-400 mb-1">Длина L (мм)</label><input type="number" id="f_len" value="300" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
-    if (fitDef.params.includes('len_silencer')) html += `<div><label class="block text-xs text-slate-400 mb-1">Длина L (мм)</label><input type="number" id="f_len" value="1000" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white">${renderChipScroller('f_len', POPULAR_LEN_SILENCER)}</div>`;
-    if (fitDef.params.includes('hood_seat')) html += `<div><label class="block text-xs text-slate-400 mb-1">Длина посадочного места (мм)</label><input type="number" id="f_hood_seat" value="100" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
-    if (fitDef.params.includes('offset')) html += `<div><label class="block text-xs text-slate-400 mb-1">Смещение (мм)</label><input type="number" id="f_offset" value="100" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
-    if (fitDef.params.includes('inlets_cnt')) html += `<div><label class="block text-xs text-slate-400 mb-1">Количество врезок (шт)</label><input type="number" id="f_inlets_cnt" value="2" min="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white"></div>`;
-
-    if (fitDef.params.includes('tee_rect')) {
-        html += `
-            <div class="space-y-3 bg-slate-900 p-3.5 rounded-xl border border-slate-800">
-                <label class="flex items-center gap-2 cursor-pointer text-xs"><input type="checkbox" id="f_tee_same" onchange="toggleSameCheck('tee_rect', this.checked)" class="rounded text-blue-600"> <span class="font-bold text-slate-200">Все 3 рамки одинакового размера</span></label>
-                <div><label class="block text-[11px] text-slate-400">Сечение 1 (А1×В1)</label><input type="text" id="f_ts1" value="400x300" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_ts2"><label class="block text-[11px] text-slate-400">Сечение 2 (А2×В2)</label><input type="text" id="f_ts2" value="300x300" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_ts3"><label class="block text-[11px] text-slate-400">Сечение 3 (А3×В3)</label><input type="text" id="f_ts3" value="400x300" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div class="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
-                    <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">Рамки шинорейки:</div>
-                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="f_t_frame1" checked class="rounded text-blue-600"> <span id="label_t_fr1" class="font-mono text-slate-200">Рамка 1: 400×300 мм</span></label>
-                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="f_t_frame2" checked class="rounded text-blue-600"> <span id="label_t_fr2" class="font-mono text-slate-200">Рамка 2: 300×300 мм</span></label>
-                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="f_t_frame3" checked class="rounded text-blue-600"> <span id="label_t_fr3" class="font-mono text-slate-200">Рамка 3: 400×300 мм</span></label>
-                </div>
-            </div>
-        `;
-    }
-
-    if (fitDef.params.includes('cross_rect')) {
-        html += `
-            <div class="space-y-3 bg-slate-900 p-3.5 rounded-xl border border-slate-800">
-                <label class="flex items-center gap-2 cursor-pointer text-xs"><input type="checkbox" id="f_cross_same" onchange="toggleSameCheck('cross_rect', this.checked)" class="rounded text-blue-600"> <span class="font-bold text-slate-200">Все 4 рамки одинакового размера</span></label>
-                <div><label class="block text-[11px] text-slate-400">Сечение 1 (А1×В1)</label><input type="text" id="f_cs1" value="400x300" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cs2"><label class="block text-[11px] text-slate-400">Сечение 2 (А2×В2)</label><input type="text" id="f_cs2" value="400x300" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cs3"><label class="block text-[11px] text-slate-400">Сечение 3 (А3×В3)</label><input type="text" id="f_cs3" value="400x300" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cs4"><label class="block text-[11px] text-slate-400">Сечение 4 (А4×В4)</label><input type="text" id="f_cs4" value="400x300" oninput="updateFrameLabels()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div class="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
-                    <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">Рамки шинорейки:</div>
-                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="f_c_frame1" checked class="rounded text-blue-600"> <span id="label_c_fr1" class="font-mono text-slate-200">Рамка 1: 400×300 мм</span></label>
-                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="f_c_frame2" checked class="rounded text-blue-600"> <span id="label_c_fr2" class="font-mono text-slate-200">Рамка 2: 400×300 мм</span></label>
-                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="f_c_frame3" checked class="rounded text-blue-600"> <span id="label_c_fr3" class="font-mono text-slate-200">Рамка 3: 400×300 мм</span></label>
-                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="f_c_frame4" checked class="rounded text-blue-600"> <span id="label_c_fr4" class="font-mono text-slate-200">Рамка 4: 400×300 мм</span></label>
-                </div>
-            </div>
-        `;
-    }
-
-    if (fitDef.params.includes('tee_round')) {
-        html += `
-            <div class="space-y-2 bg-slate-900 p-3 rounded-xl border border-slate-800">
-                <label class="flex items-center gap-2 cursor-pointer text-xs"><input type="checkbox" id="f_tee_r_same" onchange="toggleSameCheck('tee_round', this.checked)" class="rounded text-blue-600"> <span>Все диаметры одинаковые</span></label>
-                <div><label class="block text-[11px] text-slate-400">Ø1 (мм)</label><input type="number" id="f_tr1" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_tr2"><label class="block text-[11px] text-slate-400">Ø2 (мм)</label><input type="number" id="f_tr2" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_tr3"><label class="block text-[11px] text-slate-400">Ø3 (мм)</label><input type="number" id="f_tr3" value="250" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-            </div>
-        `;
-    }
-
-    if (fitDef.params.includes('cross_round')) {
-        html += `
-            <div class="space-y-2 bg-slate-900 p-3 rounded-xl border border-slate-800">
-                <label class="flex items-center gap-2 cursor-pointer text-xs"><input type="checkbox" id="f_cross_r_same" onchange="toggleSameCheck('cross_round', this.checked)" class="rounded text-blue-600"> <span>Все 4 диаметра одинаковые</span></label>
-                <div><label class="block text-[11px] text-slate-400">Ø1 (мм)</label><input type="number" id="f_cr1" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cr2"><label class="block text-[11px] text-slate-400">Ø2 (мм)</label><input type="number" id="f_cr2" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cr3"><label class="block text-[11px] text-slate-400">Ø3 (мм)</label><input type="number" id="f_cr3" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-                <div id="wrap_cr4"><label class="block text-[11px] text-slate-400">Ø4 (мм)</label><input type="number" id="f_cr4" value="200" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs mono text-white"></div>
-            </div>
-        `;
-    }
+    if (fitDef.params.includes('len')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Длина L (мм)</label><input type="number" id="f_len" value="300" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
+    if (fitDef.params.includes('len_silencer')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Длина L (мм)</label><input type="number" id="f_len" value="1000" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_len', POPULAR_LEN_SILENCER)}</div>`;
+    if (fitDef.params.includes('hood_seat')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Посадочное место (мм)</label><input type="number" id="f_hood_seat" value="100" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
+    if (fitDef.params.includes('offset')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Смещение (мм)</label><input type="number" id="f_offset" value="100" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
+    if (fitDef.params.includes('inlets_cnt')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Количество врезок (шт)</label><input type="number" id="f_inlets_cnt" value="2" min="1" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
 
     if (fitDef.params.includes('flange1') || fitDef.params.includes('flange2')) {
         const isTwo = fitDef.params.includes('flange2');
         html += `
-            <div class="pt-2 border-t border-slate-800">
-                <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2">Рамки шинорейки:</div>
+            <div class="pt-2 border-t border-white/5">
+                <div class="text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-2">Рамки шинорейки:</div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <label class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-slate-700">
-                        <input type="checkbox" id="f_flange1" checked onchange="updateFrameLabels()" class="rounded text-blue-600">
-                        <span id="label_flange1" class="font-semibold text-slate-200">Рамка 1</span>
+                    <label class="bg-[#181b26] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition tap-spring">
+                        <input type="checkbox" id="f_flange1" checked onchange="updateFrameLabels()" class="rounded text-white accent-white">
+                        <span id="label_flange1" class="font-bold text-zinc-200">Рамка 1</span>
                     </label>
                     ${isTwo ? `
-                        <label class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-slate-700">
-                            <input type="checkbox" id="f_flange2" checked onchange="updateFrameLabels()" class="rounded text-blue-600">
-                            <span id="label_flange2" class="font-semibold text-slate-200">Рамка 2</span>
+                        <label class="bg-[#181b26] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition tap-spring">
+                            <input type="checkbox" id="f_flange2" checked onchange="updateFrameLabels()" class="rounded text-white accent-white">
+                            <span id="label_flange2" class="font-bold text-zinc-200">Рамка 2</span>
                         </label>
                     ` : ''}
                 </div>
@@ -420,17 +387,17 @@ function renderDynamicInputs() {
         `;
     }
 
-    // Кастомные пользовательские параметры изделия
-    const standardParamCodes = new Set(['deg', 'deg135', 'hood_type', 'w', 'h', 'w1', 'h1', 'w2', 'h2', 'd', 'd1', 'd2', 'd_main', 'len', 'len_silencer', 'hood_seat', 'offset', 'inlets_cnt', 'tee_rect', 'cross_rect', 'tee_round', 'cross_round', 'flange1', 'flange2']);
+    // Кастомные параметры конструктора изделий
+    const standardParamCodes = new Set(['deg', 'deg135', 'hood_type', 'w', 'h', 'w1', 'h1', 'w2', 'h2', 'd', 'd1', 'd2', 'd_main', 'len', 'len_silencer', 'hood_seat', 'offset', 'inlets_cnt', 'flange1', 'flange2']);
     const customParamsList = (fitDef.params || []).filter(p => !standardParamCodes.has(p));
     if (customParamsList.length > 0) {
-        html += `<div class="pt-2 border-t border-slate-800 space-y-2.5"><div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">Дополнительные параметры:</div>`;
+        html += `<div class="pt-2 border-t border-white/5 space-y-2.5"><div class="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">Дополнительные параметры:</div>`;
         customParamsList.forEach(code => {
             const pDef = ALL_PARAM_DEFS.find(x => x.code === code) || { label: code, code };
             html += `
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">${pDef.label}</label>
-                    <input type="text" id="f_${code}" placeholder="Введите ${pDef.label}..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 mono text-white text-xs">
+                    <label class="block text-xs font-semibold text-zinc-400 mb-1">${pDef.label}</label>
+                    <input type="text" id="f_${code}" placeholder="Введите ${pDef.label}..." class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs">
                 </div>
             `;
         });
@@ -469,24 +436,6 @@ function updateFrameLabels() {
             l2.textContent = `Рамка 2: ${w}×${h} мм`;
         }
     }
-
-    const ts1 = document.getElementById('f_ts1')?.value || '400x300';
-    const sameT = document.getElementById('f_tee_same')?.checked;
-    const ts2 = sameT ? ts1 : (document.getElementById('f_ts2')?.value || ts1);
-    const ts3 = sameT ? ts1 : (document.getElementById('f_ts3')?.value || ts1);
-    if (document.getElementById('label_t_fr1')) document.getElementById('label_t_fr1').textContent = `Рамка 1: ${ts1} мм`;
-    if (document.getElementById('label_t_fr2')) document.getElementById('label_t_fr2').textContent = `Рамка 2: ${ts2} мм`;
-    if (document.getElementById('label_t_fr3')) document.getElementById('label_t_fr3').textContent = `Рамка 3: ${ts3} мм`;
-
-    const cs1 = document.getElementById('f_cs1')?.value || '400x300';
-    const sameC = document.getElementById('f_cross_same')?.checked;
-    const cs2 = sameC ? cs1 : (document.getElementById('f_cs2')?.value || cs1);
-    const cs3 = sameC ? cs1 : (document.getElementById('f_cs3')?.value || cs1);
-    const cs4 = sameC ? cs1 : (document.getElementById('f_cs4')?.value || cs1);
-    if (document.getElementById('label_c_fr1')) document.getElementById('label_c_fr1').textContent = `Рамка 1: ${cs1} мм`;
-    if (document.getElementById('label_c_fr2')) document.getElementById('label_c_fr2').textContent = `Рамка 2: ${cs2} мм`;
-    if (document.getElementById('label_c_fr3')) document.getElementById('label_c_fr3').textContent = `Рамка 3: ${cs3} мм`;
-    if (document.getElementById('label_c_fr4')) document.getElementById('label_c_fr4').textContent = `Рамка 4: ${cs4} мм`;
 }
 
 function renderChipScroller(targetId, arr) {
@@ -497,48 +446,256 @@ function renderChipScroller(targetId, arr) {
     `;
 }
 
-function toggleSameCheck(type, isChecked) {
-    if (type === 'tee_rect') {
-        document.getElementById('wrap_ts2').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_ts3').style.display = isChecked ? 'none' : 'block';
-    } else if (type === 'cross_rect') {
-        document.getElementById('wrap_cs2').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_cs3').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_cs4').style.display = isChecked ? 'none' : 'block';
-    } else if (type === 'tee_round') {
-        document.getElementById('wrap_tr2').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_tr3').style.display = isChecked ? 'none' : 'block';
-    } else if (type === 'cross_round') {
-        document.getElementById('wrap_cr2').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_cr3').style.display = isChecked ? 'none' : 'block';
-        document.getElementById('wrap_cr4').style.display = isChecked ? 'none' : 'block';
+// ==========================================
+// УМНЫЙ БАЛАНСИРОВЩИК ДОЛЕЙ МАСТЕРОВ (SMART BALANCER SLIDER)
+// ==========================================
+const WORKER_COLORS = [
+    '#10b981', // emerald
+    '#38bdf8', // sky
+    '#f59e0b', // amber
+    '#a855f7', // violet
+    '#f43f5e', // rose
+    '#14b8a6', // teal
+    '#eab308', // yellow
+    '#6366f1'  // indigo
+];
+
+function onWorkerSelectionChanged(presetShares = null) {
+    const checked = Array.from(document.querySelectorAll('input[name="assignWorker"]:checked')).map(cb => cb.value);
+    const sharesBox = document.getElementById('workerSharesBox');
+    const bar = document.getElementById('workerSharesBreakdownBar');
+
+    if (checked.length === 0) {
+        session.workerSharesState = {};
+        if (sharesBox) sharesBox.classList.add('hidden');
+        if (bar) bar.innerHTML = '';
+        return;
     }
-    updateFrameLabels();
+
+    if (checked.length === 1) {
+        session.workerSharesState = { [checked[0]]: 100 };
+        if (sharesBox) sharesBox.classList.add('hidden');
+        renderWorkerSharesBreakdownBar();
+        updateWorkerSharesTengeAmounts();
+        return;
+    }
+
+    if (sharesBox) sharesBox.classList.remove('hidden');
+
+    if (presetShares && typeof presetShares === 'object') {
+        session.workerSharesState = { ...presetShares };
+    } else {
+        // Проверяем сохраненное состояние или инициализируем
+        const curKeys = Object.keys(session.workerSharesState || {});
+        const isMatch = checked.every(w => curKeys.includes(w)) && curKeys.length === checked.length;
+
+        if (!isMatch) {
+            session.workerSharesState = calculateDefaultWorkerShares(checked);
+        }
+    }
+
+    renderWorkerSharesSlidersList();
+    renderWorkerSharesBreakdownBar();
+    updateWorkerSharesTengeAmounts();
+}
+
+function calculateDefaultWorkerShares(checked) {
+    const shares = {};
+    if (!checked || checked.length === 0) return shares;
+    if (checked.length === 1) {
+        shares[checked[0]] = 100;
+        return shares;
+    }
+
+    const devWorker = checked.find(w => isChingisOrDev(w));
+    if (devWorker) {
+        shares[devWorker] = 50;
+        const others = checked.filter(w => w !== devWorker);
+        const each = Math.floor(50 / others.length);
+        const rem = 50 - each * others.length;
+        others.forEach((w, i) => {
+            shares[w] = (i === 0) ? (each + rem) : each;
+        });
+    } else {
+        const each = Math.floor(100 / checked.length);
+        const rem = 100 - each * checked.length;
+        checked.forEach((w, i) => {
+            shares[w] = (i === 0) ? (each + rem) : each;
+        });
+    }
+    return shares;
+}
+
+function applyPresetShares(type) {
+    triggerHaptic('medium');
+    const checked = Array.from(document.querySelectorAll('input[name="assignWorker"]:checked')).map(cb => cb.value);
+    if (checked.length <= 1) return;
+
+    if (type === 'equal') {
+        const each = Math.floor(100 / checked.length);
+        const rem = 100 - each * checked.length;
+        const shares = {};
+        checked.forEach((w, i) => {
+            shares[w] = (i === 0) ? (each + rem) : each;
+        });
+        session.workerSharesState = shares;
+    } else if (type === 'chingis_half') {
+        session.workerSharesState = calculateDefaultWorkerShares(checked);
+    }
+
+    renderWorkerSharesSlidersList();
+    renderWorkerSharesBreakdownBar();
+    updateWorkerSharesTengeAmounts();
+}
+
+function renderWorkerSharesSlidersList() {
+    const list = document.getElementById('workerSharesSlidersList');
+    if (!list) return;
+
+    const checked = Array.from(document.querySelectorAll('input[name="assignWorker"]:checked')).map(cb => cb.value);
+    list.innerHTML = checked.map((w, idx) => {
+        const pct = session.workerSharesState[w] !== undefined ? session.workerSharesState[w] : Math.round(100 / checked.length);
+        const color = WORKER_COLORS[idx % WORKER_COLORS.length];
+        return `
+            <div class="bg-[#12141c] border border-white/5 rounded-2xl p-3 space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
+                        <span class="font-extrabold text-white">${w}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="shareAmt_${w}" class="mono font-bold text-emerald-400">0 ₸</span>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="shareNum_${w}" min="0" max="100" value="${pct}" inputmode="numeric" oninput="onWorkerSliderChanged('${w}', Number(this.value))" class="w-14 bg-[#181b26] border border-white/10 rounded-lg px-2 py-1 text-center font-mono font-black text-white text-xs">
+                            <span class="text-zinc-400 font-bold">%</span>
+                        </div>
+                    </div>
+                </div>
+                <input type="range" min="0" max="100" value="${pct}" oninput="onWorkerSliderChanged('${w}', Number(this.value))" class="w-full accent-white h-1.5 bg-black/40 rounded-lg cursor-pointer">
+            </div>
+        `;
+    }).join('');
+}
+
+function onWorkerSliderChanged(activeWorker, newVal) {
+    newVal = Math.max(0, Math.min(100, Math.round(newVal)));
+    const checked = Array.from(document.querySelectorAll('input[name="assignWorker"]:checked')).map(cb => cb.value);
+    const peers = checked.filter(w => w !== activeWorker);
+
+    session.workerSharesState[activeWorker] = newVal;
+
+    if (peers.length > 0) {
+        const remaining = 100 - newVal;
+        const each = Math.floor(remaining / peers.length);
+        const rem = remaining - each * peers.length;
+
+        peers.forEach((pw, i) => {
+            session.workerSharesState[pw] = (i === 0) ? (each + rem) : each;
+            const slider = document.querySelector(`input[type="range"][oninput*="${pw}"]`);
+            const numInp = document.getElementById(`shareNum_${pw}`);
+            if (slider) slider.value = session.workerSharesState[pw];
+            if (numInp) numInp.value = session.workerSharesState[pw];
+        });
+    }
+
+    const myNum = document.getElementById(`shareNum_${activeWorker}`);
+    if (myNum) myNum.value = newVal;
+
+    renderWorkerSharesBreakdownBar();
+    updateWorkerSharesTengeAmounts();
+}
+
+function renderWorkerSharesBreakdownBar() {
+    const bar = document.getElementById('workerSharesBreakdownBar');
+    if (!bar) return;
+
+    const checked = Array.from(document.querySelectorAll('input[name="assignWorker"]:checked')).map(cb => cb.value);
+    bar.innerHTML = checked.map((w, idx) => {
+        const pct = session.workerSharesState[w] || 0;
+        const color = WORKER_COLORS[idx % WORKER_COLORS.length];
+        return `
+            <div style="width: ${pct}%; background-color: ${color}" class="h-full transition-all duration-200 flex items-center justify-center text-[9px] font-mono font-black text-black overflow-hidden" title="${w}: ${pct}%">
+                ${pct >= 15 ? `${pct}%` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function updateWorkerSharesTengeAmounts() {
+    const checked = Array.from(document.querySelectorAll('input[name="assignWorker"]:checked')).map(cb => cb.value);
+    if (checked.length === 0) return;
+
+    const qty = Number(document.getElementById('inQty')?.value) || 1;
+    const price = Number(document.getElementById('inPrice')?.value) || 1000;
+    const cat = session.activeCategory;
+    const sh = session.activeShape;
+
+    let totalCost = 0;
+    if (cat === 'duct') {
+        const p = appState.projects.find(x => x.id === session.insideProjectId);
+        const seams = getProjectSeams(p);
+        let unfold = 0;
+        if (sh === 'rect') {
+            const w = Number(document.getElementById('f_w')?.value || 400);
+            const h = Number(document.getElementById('f_h')?.value || 300);
+            unfold = 2 * (w + h) + seams.lock_pittsburgh + seams.lock_single;
+        } else {
+            const d = Number(document.getElementById('f_d')?.value || 200);
+            unfold = Math.round(Math.PI * d + seams.round_seam);
+        }
+        const l = Number(document.getElementById('f_l')?.value || 1250);
+        const area = (unfold * l * qty) / 1e6;
+        totalCost = Math.round(area * price);
+    } else {
+        totalCost = Math.round(qty * price);
+    }
+
+    checked.forEach(w => {
+        const pct = session.workerSharesState[w] !== undefined ? session.workerSharesState[w] : Math.round(100 / checked.length);
+        const amt = Math.round(totalCost * (pct / 100));
+        const el = document.getElementById(`shareAmt_${w}`);
+        if (el) el.textContent = `${amt.toLocaleString()} ₸`;
+    });
+}
+
+function getWorkerSharesFromForm(workers) {
+    if (!workers || workers.length === 0) return {};
+    if (workers.length === 1) return { [workers[0]]: 100 };
+    const shares = {};
+    workers.forEach(w => {
+        shares[w] = session.workerSharesState[w] !== undefined 
+            ? Number(session.workerSharesState[w]) 
+            : Math.round(100 / workers.length);
+    });
+    return shares;
 }
 
 // ==========================================
-// СОХРАНЕНИЕ ИЗДЕЛИЯ В SUPABASE С АВТОСУММИРОВАНИЕМ
+// СОХРАНЕНИЕ ИЗДЕЛИЯ С ПОДПРОЕКТОМ (PHASE_ID)
 // ==========================================
 async function saveProjectItem(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const projId = session.insideProjectId;
     if (!projId) return;
 
-    const editId = document.getElementById('editItemId').value;
-    const metal = document.getElementById('inMetal').value;
-    const thickness = Number(document.getElementById('inThickness').value);
-    const qty = Number(document.getElementById('inQty').value) || 1;
-    const price = Number(document.getElementById('inPrice').value) || 1000;
+    const editId = document.getElementById('editItemId')?.value;
+    const metal = document.getElementById('inMetal')?.value || 'Оцинкованная сталь';
+    const thickness = Number(document.getElementById('inThickness')?.value) || 0.5;
+    const qty = Number(document.getElementById('inQty')?.value) || 1;
+    const price = Number(document.getElementById('inPrice')?.value) || 1000;
     const workers = Array.from(document.querySelectorAll('input[name="assignWorker"]:checked')).map(cb => cb.value);
 
     let title = '';
     let itemKey = '';
     let dims = {
-        item_status: 'queue'
+        item_status: 'queue',
+        phase_id: (session.activePhaseId && session.activePhaseId !== 'all') ? session.activePhaseId : 'main'
     };
+
     if (editId) {
         const oldItem = appState.activeProjectItems.find(i => i.id === Number(editId));
         if (oldItem && oldItem.item_status) dims.item_status = oldItem.item_status;
+        if (oldItem && oldItem.phase_id) dims.phase_id = oldItem.phase_id;
     }
 
     const frames = [];
@@ -554,13 +711,13 @@ async function saveProjectItem(e) {
             if (dims.flange1) frames.push(`${dims.w}×${dims.h}`);
             if (dims.flange2) frames.push(`${dims.w}×${dims.h}`);
             dims.frames = frames;
-            itemKey = `duct_rect_${dims.w}_${dims.h}_${dims.l}_${dims.flange1}_${dims.flange2}_${metal}_${thickness}`;
+            itemKey = `duct_rect_${dims.w}_${dims.h}_${dims.l}_${dims.flange1}_${dims.flange2}_${metal}_${thickness}_${dims.phase_id}`;
         } else {
             dims.d = Number(document.getElementById('f_d')?.value || 200);
-            itemKey = `duct_round_${dims.d}_${dims.l}_${metal}_${thickness}`;
+            itemKey = `duct_round_${dims.d}_${dims.l}_${metal}_${thickness}_${dims.phase_id}`;
         }
     } else {
-        const fitDef = (appState.fittings[session.activeShape] || []).find(f => f.id === document.getElementById('fittingTypeSelect').value);
+        const fitDef = (appState.fittings[session.activeShape] || []).find(f => f.id === document.getElementById('fittingTypeSelect')?.value);
         title = fitDef ? fitDef.name : 'Изделие';
         dims.fittingId = fitDef ? fitDef.id : 'custom';
 
@@ -583,51 +740,18 @@ async function saveProjectItem(e) {
         if (document.getElementById('f_flange1')) dims.flange1 = document.getElementById('f_flange1').checked;
         if (document.getElementById('f_flange2')) dims.flange2 = document.getElementById('f_flange2').checked;
 
-        if (document.getElementById('f_t_frame1')) {
-            const sameT = document.getElementById('f_tee_same')?.checked;
-            const ts1 = document.getElementById('f_ts1')?.value || '400x300';
-            const ts2 = sameT ? ts1 : (document.getElementById('f_ts2')?.value || ts1);
-            const ts3 = sameT ? ts1 : (document.getElementById('f_ts3')?.value || ts1);
-            if (document.getElementById('f_t_frame1').checked) frames.push(ts1.replace('x', '×'));
-            if (document.getElementById('f_t_frame2').checked) frames.push(ts2.replace('x', '×'));
-            if (document.getElementById('f_t_frame3').checked) frames.push(ts3.replace('x', '×'));
-            dims.descDetail = sameT ? `Все 3 рамки: ${ts1}` : `${ts1} / ${ts2} / ${ts3}`;
-        } else if (document.getElementById('f_c_frame1')) {
-            const sameC = document.getElementById('f_cross_same')?.checked;
-            const cs1 = document.getElementById('f_cs1')?.value || '400x300';
-            const cs2 = sameC ? cs1 : (document.getElementById('f_cs2')?.value || cs1);
-            const cs3 = sameC ? cs1 : (document.getElementById('f_cs3')?.value || cs1);
-            const cs4 = sameC ? cs1 : (document.getElementById('f_cs4')?.value || cs1);
-            if (document.getElementById('f_c_frame1').checked) frames.push(cs1.replace('x', '×'));
-            if (document.getElementById('f_c_frame2').checked) frames.push(cs2.replace('x', '×'));
-            if (document.getElementById('f_c_frame3').checked) frames.push(cs3.replace('x', '×'));
-            if (document.getElementById('f_c_frame4').checked) frames.push(cs4.replace('x', '×'));
-            dims.descDetail = sameC ? `Все 4 рамки: ${cs1}` : `${cs1} / ${cs2} / ${cs3} / ${cs4}`;
-        } else {
-            if (dims.w1 && dims.h1 && dims.w2 && dims.h2) {
-                if (dims.flange1) frames.push(`${dims.w1}×${dims.h1}`);
-                if (dims.flange2) frames.push(`${dims.w2}×${dims.h2}`);
-            } else if (dims.w1 && dims.h1) {
-                if (dims.flange1) frames.push(`${dims.w1}×${dims.h1}`);
-                if (dims.flange2 && dims.w2 && dims.h2) frames.push(`${dims.w2}×${dims.h2}`);
-            } else if (dims.w && dims.h) {
-                if (dims.flange1) frames.push(`${dims.w}×${dims.h}`);
-                if (dims.flange2) frames.push(`${dims.w}×${dims.h}`);
-            }
+        if (dims.w1 && dims.h1 && dims.w2 && dims.h2) {
+            if (dims.flange1) frames.push(`${dims.w1}×${dims.h1}`);
+            if (dims.flange2) frames.push(`${dims.w2}×${dims.h2}`);
+        } else if (dims.w1 && dims.h1) {
+            if (dims.flange1) frames.push(`${dims.w1}×${dims.h1}`);
+            if (dims.flange2 && dims.w2 && dims.h2) frames.push(`${dims.w2}×${dims.h2}`);
+        } else if (dims.w && dims.h) {
+            if (dims.flange1) frames.push(`${dims.w}×${dims.h}`);
+            if (dims.flange2) frames.push(`${dims.w}×${dims.h}`);
         }
 
-        if (document.getElementById('f_tee_r_same')?.checked) {
-            dims.descDetail = `Все Ø${document.getElementById('f_tr1').value}`;
-        } else if (document.getElementById('f_tr1')) {
-            dims.descDetail = `Ø${document.getElementById('f_tr1').value} / Ø${document.getElementById('f_tr2').value} / Ø${document.getElementById('f_tr3').value}`;
-        }
-        if (document.getElementById('f_cross_r_same')?.checked) {
-            dims.descDetail = `Все Ø${document.getElementById('f_cr1').value}`;
-        } else if (document.getElementById('f_cr1')) {
-            dims.descDetail = `Ø${document.getElementById('f_cr1').value} / Ø${document.getElementById('f_cr2').value} / Ø${document.getElementById('f_cr3').value} / Ø${document.getElementById('f_cr4').value}`;
-        }
-
-        // Сбор значений всех дополнительных/пользовательских параметров изделия
+        // Пользовательские параметры
         if (fitDef && Array.isArray(fitDef.params)) {
             fitDef.params.forEach(pCode => {
                 const inputEl = document.getElementById(`f_${pCode}`);
@@ -639,7 +763,7 @@ async function saveProjectItem(e) {
         }
 
         dims.frames = frames;
-        itemKey = `fit_${title}_${dims.w || 0}_${dims.h || 0}_${dims.w1 || 0}_${dims.h1 || 0}_${dims.w2 || 0}_${dims.h2 || 0}_${dims.d || 0}_${dims.d1 || 0}_${dims.d2 || 0}_${dims.d_main || 0}_${dims.l || 0}_${dims.deg || 0}_${dims.offset || 0}_${dims.hood_seat || 0}_${dims.inlets_cnt || 0}_${dims.flange1}_${dims.flange2}_${dims.descDetail || ''}_${frames.join('_')}_${metal}_${thickness}`;
+        itemKey = `fit_${title}_${dims.w || 0}_${dims.h || 0}_${dims.w1 || 0}_${dims.h1 || 0}_${dims.w2 || 0}_${dims.h2 || 0}_${dims.d || 0}_${dims.d1 || 0}_${dims.l || 0}_${dims.deg || 0}_${dims.flange1}_${dims.flange2}_${frames.join('_')}_${metal}_${thickness}_${dims.phase_id}`;
     }
 
     const workerShares = getWorkerSharesFromForm(workers);
@@ -698,28 +822,71 @@ async function saveProjectItem(e) {
 }
 
 function resetItemForm() {
-    document.getElementById('editItemId').value = '';
-    document.getElementById('formHeaderTitle').textContent = 'Добавить в проект';
-    document.getElementById('cancelEditBtn').classList.add('hidden');
-    document.getElementById('submitItemBtn').textContent = 'Добавить';
+    const editInput = document.getElementById('editItemId');
+    if (editInput) editInput.value = '';
+    const headerTitle = document.getElementById('formHeaderTitle');
+    if (headerTitle) headerTitle.textContent = 'Добавить в проект';
+    const cancelBtn = document.getElementById('cancelEditBtn');
+    if (cancelBtn) cancelBtn.classList.add('hidden');
+    const submitBtn = document.getElementById('submitItemBtn');
+    if (submitBtn) submitBtn.textContent = '＋ Сохранить в проект';
+
     const tSel = document.getElementById('inThickness');
-    if (tSel && appState.thicknesses.includes(0.5)) {
-        tSel.value = '0.5';
-    }
+    if (tSel && appState.thicknesses.includes(0.5)) tSel.value = '0.5';
+
     renderDynamicInputs();
+    renderWorkersCheckboxes();
     onWorkerSelectionChanged();
     goToWizardStep(1);
 }
 
 // ==========================================
-// СПЕЦИФИКАЦИЯ ИЗДЕЛИЙ
+// РЕЖИМ ВЫДЕЛЕНИЯ И СПЕЦИФИКАЦИЯ
 // ==========================================
-function renderSpecification() {
-    const filterM = document.getElementById('specFilterMetal').value;
-    const filterT = document.getElementById('specFilterThick').value;
+function toggleSpecSelectionMode() {
+    session.specSelectionMode = !session.specSelectionMode;
+    if (!session.specSelectionMode) {
+        session.selectedSpecIds = [];
+    }
+    triggerHaptic('light');
+
+    const btn = document.getElementById('btnToggleSelectionMode');
+    const lbl = document.getElementById('lblToggleSelectionMode');
+    if (btn) {
+        btn.className = session.specSelectionMode
+            ? 'bg-white text-black font-extrabold text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition tap-spring shadow-sm'
+            : 'bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition tap-spring';
+    }
+    if (lbl) {
+        lbl.textContent = session.specSelectionMode ? 'Готово' : 'Выбрать';
+    }
+
+    renderSpecification();
+}
+
+function toggleSelectAllSpecItems() {
+    triggerHaptic('light');
+    let items = getFilteredSpecItems();
+    if (session.selectedSpecIds.length === items.length) {
+        session.selectedSpecIds = [];
+    } else {
+        session.selectedSpecIds = items.map(i => i.id);
+    }
+    renderSpecification();
+}
+
+function getFilteredSpecItems() {
+    const filterM = document.getElementById('specFilterMetal')?.value || 'all';
+    const filterT = document.getElementById('specFilterThick')?.value || 'all';
     const search = (document.getElementById('specSearchInput')?.value || '').trim().toLowerCase();
 
-    let items = appState.activeProjectItems.filter(it => {
+    return appState.activeProjectItems.filter(it => {
+        // Фильтр по подочереди/дозаказу
+        if (session.activePhaseId && session.activePhaseId !== 'all') {
+            const itemPhase = it.phase_id || it.dimensions?.phase_id || 'main';
+            if (itemPhase !== session.activePhaseId) return false;
+        }
+
         if (filterM !== 'all' && it.metal !== filterM) return false;
         if (filterT !== 'all' && Number(it.thickness) !== Number(filterT)) return false;
         if (search) {
@@ -729,54 +896,44 @@ function renderSpecification() {
         }
         return true;
     });
+}
 
-    const totalQty = appState.activeProjectItems.reduce((s, i) => s + i.qty, 0);
-    const doneQty = appState.activeProjectItems.filter(i => i.item_status === 'done').reduce((s, i) => s + i.qty, 0);
-    const pct = totalQty > 0 ? Math.round((doneQty / totalQty) * 100) : 0;
-    const pBar = document.getElementById('specProgressBar');
-    if (pBar) {
-        if (totalQty > 0) {
-            pBar.classList.remove('hidden');
-            document.getElementById('specProgressLabel').textContent = `Готово: ${doneQty} из ${totalQty} шт (${pct}%)`;
-            document.getElementById('specProgressFill').style.width = `${pct}%`;
-        } else {
-            pBar.classList.add('hidden');
-        }
-    }
-
+function renderSpecification() {
+    const items = getFilteredSpecItems();
     const container = document.getElementById('specificationAccordionList');
+    if (!container) return;
     container.innerHTML = '';
 
     const selCount = session.selectedSpecIds.length;
-    const totalItemsCount = appState.activeProjectItems.length;
-
-    // Панель массовых действий
     const batchToolbar = document.getElementById('specBatchToolbar');
     const batchCount = document.getElementById('batchSelectedCount');
+    const bulkCount = document.getElementById('bulkCount');
     const lblSelectAll = document.getElementById('lblSelectAllSpec');
 
-    if (batchToolbar) batchToolbar.classList.toggle('hidden', selCount === 0);
+    if (batchToolbar) batchToolbar.classList.toggle('hidden', !session.specSelectionMode);
     if (batchCount) batchCount.textContent = selCount;
+    if (bulkCount) bulkCount.textContent = selCount;
     if (lblSelectAll) {
-        lblSelectAll.textContent = (totalItemsCount > 0 && selCount === totalItemsCount) ? 'Снять выделение' : 'Выделить все';
+        lblSelectAll.textContent = (items.length > 0 && selCount === items.length) ? 'Снять все' : 'Выбрать все';
     }
 
-    const bulkBtn = document.getElementById('bulkDeleteBtn');
-    const bulkCount = document.getElementById('bulkCount');
-    if (bulkCount) bulkCount.textContent = selCount;
-    if (bulkBtn) bulkBtn.classList.toggle('hidden', selCount === 0);
-
     if (items.length === 0) {
-        container.innerHTML = `<div class="bg-slate-950 border border-slate-800 rounded-xl p-8 text-center text-xs text-slate-500">По выбранным фильтрам позиции не найдены</div>`;
+        container.innerHTML = `
+            <div class="bg-[#12141c] border border-white/5 rounded-3xl p-8 text-center text-xs text-zinc-500 space-y-2">
+                <span class="text-2xl block">📦</span>
+                <p>В этой очереди или по выбранным фильтрам нет позиций</p>
+                <button type="button" onclick="openItemAddSheet()" class="mt-2 bg-white text-black font-extrabold px-4 py-2 rounded-xl tap-spring">+ Добавить изделие</button>
+            </div>
+        `;
         return;
     }
 
     const categories = [
         { id: 'sec_duct_rect', title: 'Воздуховоды прямоугольные', list: items.filter(i => i.category === 'duct' && i.shape === 'rect') },
         { id: 'sec_duct_round', title: 'Воздуховоды круглые', list: items.filter(i => i.category === 'duct' && i.shape === 'round') },
-        { id: 'sec_fit_rect', title: 'Изделия прямоугольные', list: items.filter(i => i.category === 'fitting' && i.shape === 'rect') },
-        { id: 'sec_fit_round', title: 'Изделия круглые', list: items.filter(i => i.category === 'fitting' && i.shape === 'round') },
-        { id: 'sec_fit_smooth', title: 'Изделия плавные', list: items.filter(i => i.category === 'fitting' && i.shape === 'smooth') }
+        { id: 'sec_fit_rect', title: 'Фасонина прямоугольная', list: items.filter(i => i.category === 'fitting' && i.shape === 'rect') },
+        { id: 'sec_fit_round', title: 'Фасонина круглая', list: items.filter(i => i.category === 'fitting' && i.shape === 'round') },
+        { id: 'sec_fit_smooth', title: 'Фасонина плавная', list: items.filter(i => i.category === 'fitting' && i.shape === 'smooth') }
     ];
 
     categories.forEach(sec => {
@@ -784,24 +941,23 @@ function renderSpecification() {
         const isExpanded = session.accordionState[sec.id] !== false;
 
         const block = document.createElement('div');
-        block.className = 'bg-slate-950 border border-slate-800 rounded-xl overflow-hidden';
+        block.className = 'bg-[#12141c] border border-white/5 rounded-3xl overflow-hidden shadow-sm';
         block.innerHTML = `
-            <button onclick="toggleSectionAccordion('${sec.id}')" class="w-full p-3.5 bg-slate-900/60 border-b border-slate-800/80 flex justify-between items-center text-left hover:bg-slate-900 transition">
+            <button onclick="toggleSectionAccordion('${sec.id}')" class="w-full p-4 bg-[#181b26]/50 border-b border-white/5 flex justify-between items-center text-left hover:bg-[#181b26] transition tap-spring">
                 <div class="flex items-center gap-2">
-                    <span class="text-blue-400 font-bold text-xs">${isExpanded ? '▼' : '▶'}</span>
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-200">${sec.title}</span>
-                    <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full mono">${sec.list.length}</span>
+                    <span class="text-white font-bold text-xs">${isExpanded ? '▼' : '▶'}</span>
+                    <span class="text-xs font-black uppercase tracking-wider text-white">${sec.title}</span>
+                    <span class="text-[10px] bg-white/10 text-zinc-300 px-2 py-0.5 rounded-full mono font-bold">${sec.list.length}</span>
                 </div>
-                <span class="text-xs text-slate-400 mono">Сумма: ${sec.list.reduce((s, i) => s + i.qty, 0)} шт</span>
+                <span class="text-xs text-zinc-400 mono">Итого: <strong class="text-white">${sec.list.reduce((s, i) => s + i.qty, 0)} шт</strong></span>
             </button>
-            <div id="${sec.id}_body" class="${isExpanded ? '' : 'hidden'} p-3 space-y-2">
+            <div id="${sec.id}_body" class="${isExpanded ? '' : 'hidden'} p-3 space-y-2.5">
                 ${sec.list.map(it => renderSpecItemRow(it)).join('')}
             </div>
         `;
         container.appendChild(block);
     });
 
-    // Привязываем свайп-жесты для сенсорных экранов
     attachSpecSwipeHandlers();
 }
 
@@ -824,36 +980,19 @@ function renderSpecItemRow(it) {
         if (it.hood_type) descParts.push(it.hood_type);
         if (it.deg) descParts.push(`${it.deg}°`);
         if (it.descDetail) descParts.push(it.descDetail);
-        if (it.w1 && it.w2) {
-            descParts.push(`${it.w1}×${it.h1} → ${it.w2}×${it.h2}`);
-        } else if (it.w1 && it.h1 && it.d) {
-            descParts.push(`${it.w1}×${it.h1} → Ø${it.d}`);
-        } else if (it.w && it.h && it.d && (it.shape === 'smooth' || it.fittingId === 's_trans')) {
-            descParts.push(`${it.w}×${it.h} → Ø${it.d}`);
-        } else if (it.w1 && it.h1) {
-            descParts.push(`${it.w1}×${it.h1}`);
-        } else if (it.w && it.h) {
-            descParts.push(`${it.w}×${it.h}`);
-        }
+        if (it.w1 && it.w2) descParts.push(`${it.w1}×${it.h1} → ${it.w2}×${it.h2}`);
+        else if (it.w1 && it.h1 && it.d) descParts.push(`${it.w1}×${it.h1} → Ø${it.d}`);
+        else if (it.w && it.h && it.d && (it.shape === 'smooth' || it.fittingId === 's_trans')) descParts.push(`${it.w}×${it.h} → Ø${it.d}`);
+        else if (it.w1 && it.h1) descParts.push(`${it.w1}×${it.h1}`);
+        else if (it.w && it.h) descParts.push(`${it.w}×${it.h}`);
 
-        if (it.d1 && it.d2) {
-            descParts.push(`Ø${it.d1} → Ø${it.d2}`);
-        } else if (it.d && !it.w1 && !(it.w && (it.shape === 'smooth' || it.fittingId === 's_trans'))) {
-            descParts.push(`Ø${it.d}`);
-        }
+        if (it.d1 && it.d2) descParts.push(`Ø${it.d1} → Ø${it.d2}`);
+        else if (it.d && !it.w1 && !(it.w && (it.shape === 'smooth' || it.fittingId === 's_trans'))) descParts.push(`Ø${it.d}`);
         if (it.d_main) descParts.push(`Осн: Ø${it.d_main}`);
         if (it.l) descParts.push(`L=${it.l}`);
         if (it.hood_seat) descParts.push(`Посадка: ${it.hood_seat} мм`);
         if (it.offset) descParts.push(`Смещение: ${it.offset} мм`);
         if (it.inlets_cnt) descParts.push(`Врезок: ${it.inlets_cnt} шт`);
-
-        // Отображение кастомных параметров если они заданы
-        const standardParamCodes = new Set(['deg', 'deg135', 'hood_type', 'w', 'h', 'w1', 'h1', 'w2', 'h2', 'd', 'd1', 'd2', 'd_main', 'len', 'len_silencer', 'hood_seat', 'offset', 'inlets_cnt', 'tee_rect', 'cross_rect', 'tee_round', 'cross_round', 'flange1', 'flange2']);
-        ALL_PARAM_DEFS.forEach(pDef => {
-            if (!standardParamCodes.has(pDef.code) && it[pDef.code] !== undefined && it[pDef.code] !== '') {
-                descParts.push(`${pDef.label}: ${it[pDef.code]}`);
-            }
-        });
     }
 
     const frames = getItemFrames(it);
@@ -869,11 +1008,19 @@ function renderSpecItemRow(it) {
         : '';
 
     const st = it.item_status || 'queue';
-    const stConfig = {
-        queue: { text: '⏳ Не готово', cls: 'bg-white/5 text-zinc-400 border-white/10 hover:border-emerald-500' },
-        done: { text: '✓ Готово', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20 hover:border-amber-500' }
-    };
-    const curSt = stConfig[st] || stConfig.queue;
+    const isDone = (st === 'done');
+    const stBadge = isDone 
+        ? `<button type="button" onclick="triggerHaptic('light'); toggleItemStatus(${it.id}, event)" class="border border-emerald-500/20 bg-emerald-500/15 text-emerald-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold tap-spring">✓ Готово</button>`
+        : `<button type="button" onclick="triggerHaptic('light'); toggleItemStatus(${it.id}, event)" class="border border-white/10 bg-white/5 text-zinc-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold tap-spring hover:border-emerald-500">⏳ В очереди</button>`;
+
+    // Если включен режим выделения, показываем красивый кружок чекбокса
+    const selectCheckHtml = session.specSelectionMode ? `
+        <div onclick="toggleSpecItemSelect(${it.id})" class="cursor-pointer flex-shrink-0 mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition tap-spring ${
+            isSelected ? 'border-white bg-white text-black' : 'border-white/30 bg-transparent'
+        }">
+            ${isSelected ? '<span class="text-xs font-black">✓</span>' : ''}
+        </div>
+    ` : '';
 
     return `
         <div class="spec-swipe-card relative overflow-hidden rounded-2xl group select-none" data-item-id="${it.id}">
@@ -883,20 +1030,21 @@ function renderSpecItemRow(it) {
                 <span>Готово</span>
             </div>
 
-            <!-- Фоновый индикатор свайпа влево (Действия: Редактировать / Удалить) -->
-            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-36 bg-[#181b26] border border-white/10 rounded-2xl flex items-center justify-end px-3 gap-2 opacity-0 transition-opacity z-0">
-                <button type="button" onclick="triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold tap-spring">✎</button>
-                <button type="button" onclick="triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold tap-spring">✕</button>
+            <!-- Фоновый индикатор свайпа влево (Действия: Дубликат, Редактировать, Удалить) -->
+            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-44 bg-[#181b26] border border-white/10 rounded-2xl flex items-center justify-end px-3 gap-1.5 opacity-0 transition-opacity z-0">
+                <button type="button" onclick="triggerHaptic('light'); duplicateWithModal(${it.id})" title="Дублировать" class="px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold tap-spring">⧉</button>
+                <button type="button" onclick="triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold tap-spring">✎</button>
+                <button type="button" onclick="triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="px-2.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold tap-spring">✕</button>
             </div>
 
             <!-- Основная карточка позиции -->
-            <div class="swipe-inner relative z-10 bg-[#12141c] border ${isSelected ? 'border-white/30 bg-[#181b26]' : 'border-white/5 hover:border-white/10'} rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition">
-                <div class="flex items-start gap-3 w-full sm:w-auto min-w-0">
-                    <input type="checkbox" onchange="toggleSpecItemSelect(${it.id}, this.checked)" ${isSelected ? 'checked' : ''} class="mt-1 rounded text-white accent-white">
+            <div class="swipe-inner relative z-10 bg-[#12141c] border ${isSelected ? 'border-white/40 bg-[#181b26]' : 'border-white/5 hover:border-white/15'} rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition">
+                <div class="flex items-start gap-3 w-full sm:w-auto min-w-0" onclick="${session.specSelectionMode ? `toggleSpecItemSelect(${it.id})` : ''}">
+                    ${selectCheckHtml}
                     <div class="min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="font-extrabold text-xs sm:text-sm text-white">${it.title}</span>
-                            <button type="button" onclick="triggerHaptic('light'); toggleItemStatus(${it.id})" title="Нажмите, чтобы переключить этап производства" class="border px-2.5 py-0.5 rounded-full text-[10px] font-bold transition tap-spring ${curSt.cls}">${curSt.text}</button>
+                            ${stBadge}
                         </div>
                         <div class="text-xs text-zinc-300 mono mt-0.5">${descParts.join(' | ')}</div>
                         ${framesHtml}
@@ -907,7 +1055,7 @@ function renderSpecItemRow(it) {
                 <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                     <div class="text-sm font-black mono text-white">${it.qty} шт</div>
                     <div class="flex gap-1.5">
-                        <button onclick="triggerHaptic('light'); duplicateWithModal(${it.id})" title="Дублировать с изменением" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-white/5 transition tap-spring">⧉</button>
+                        <button onclick="triggerHaptic('light'); duplicateWithModal(${it.id})" title="Дублировать" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-white/5 transition tap-spring">⧉</button>
                         <button onclick="triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition tap-spring">✎</button>
                         <button onclick="triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="bg-white/5 hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition tap-spring">✕</button>
                     </div>
@@ -917,22 +1065,19 @@ function renderSpecItemRow(it) {
     `;
 }
 
-// ==========================================
-// СВАЙП-ЖЕСТЫ ДЛЯ ПОЗИЦИЙ СПЕЦИФИКАЦИИ (TOUCH SWIPES)
-// ==========================================
+// Свайп-жесты для позиций спецификации
 function attachSpecSwipeHandlers() {
     const cards = document.querySelectorAll('.spec-swipe-card');
     cards.forEach(card => {
         if (card.dataset.hasSwipeListener) return;
         card.dataset.hasSwipeListener = 'true';
 
-        let startX = 0;
-        let startY = 0;
-        let currentX = 0;
-        let isSwiping = false;
-        let isDecided = false;
+        let startX = 0, startY = 0, currentX = 0;
+        let isSwiping = false, isDecided = false;
         const row = card.querySelector('.swipe-inner');
         const itemId = Number(card.dataset.itemId);
+        const hintDone = card.querySelector('.swipe-hint-done');
+        const hintActions = card.querySelector('.swipe-hint-actions');
 
         card.addEventListener('touchstart', (e) => {
             if (e.touches.length !== 1) return;
@@ -952,131 +1097,116 @@ function attachSpecSwipeHandlers() {
             const dy = y - startY;
 
             if (!isDecided) {
-                if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+                if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
                     isDecided = true;
-                    if (Math.abs(dy) > Math.abs(dx)) {
-                        isSwiping = false;
-                        return;
-                    } else {
-                        isSwiping = true;
-                    }
-                } else {
+                    isSwiping = false;
                     return;
+                }
+                if (Math.abs(dx) > 10) {
+                    isDecided = true;
+                    isSwiping = true;
                 }
             }
 
             if (!isSwiping || !row) return;
 
-            if (e.cancelable) e.preventDefault();
+            currentX = dx;
+            const damp = 0.55;
+            const tx = dx * damp;
+            row.style.transform = `translateX(${tx}px)`;
 
-            let clampedDx = dx;
-            if (clampedDx > 110) clampedDx = 110 + (clampedDx - 110) * 0.2;
-            if (clampedDx < -140) clampedDx = -140 + (clampedDx + 140) * 0.2;
+            if (dx > 25) {
+                if (hintDone) hintDone.style.opacity = Math.min(1, (dx - 25) / 40);
+                if (hintActions) hintActions.style.opacity = 0;
+            } else if (dx < -25) {
+                if (hintActions) hintActions.style.opacity = Math.min(1, (-dx - 25) / 40);
+                if (hintDone) hintDone.style.opacity = 0;
+            } else {
+                if (hintDone) hintDone.style.opacity = 0;
+                if (hintActions) hintActions.style.opacity = 0;
+            }
+        }, { passive: true });
 
-            currentX = clampedDx;
-            row.style.transform = `translateX(${clampedDx}px)`;
-
-            const leftHint = card.querySelector('.swipe-hint-done');
-            const rightHint = card.querySelector('.swipe-hint-actions');
-            if (leftHint) leftHint.style.opacity = clampedDx > 15 ? Math.min(1, clampedDx / 60) : 0;
-            if (rightHint) rightHint.style.opacity = clampedDx < -15 ? Math.min(1, Math.abs(clampedDx) / 80) : 0;
-        }, { passive: false });
-
-        const endSwipe = () => {
+        card.addEventListener('touchend', () => {
             if (!isSwiping || !row) return;
-            isSwiping = false;
-            row.style.transition = 'transform 0.3s var(--ios-spring)';
+            row.style.transition = 'transform 0.25s var(--ios-spring)';
 
-            const leftHint = card.querySelector('.swipe-hint-done');
-            const rightHint = card.querySelector('.swipe-hint-actions');
-
-            if (currentX > 75) {
-                triggerHaptic('success');
-                row.style.transform = 'translateX(0px)';
-                if (leftHint) leftHint.style.opacity = 0;
+            if (currentX > 80) {
+                // Свайп вправо: переключить статус Готово / Не готово
                 toggleItemStatus(itemId);
             } else if (currentX < -80) {
-                triggerHaptic('light');
-                row.style.transform = 'translateX(-120px)';
-                if (rightHint) rightHint.style.opacity = 1;
+                // Свайп влево: приоткрыть действия
+                row.style.transform = 'translateX(-130px)';
+                setTimeout(() => {
+                    if (row) row.style.transform = 'translateX(0px)';
+                }, 3000);
             } else {
                 row.style.transform = 'translateX(0px)';
-                if (leftHint) leftHint.style.opacity = 0;
-                if (rightHint) rightHint.style.opacity = 0;
             }
-        };
 
-        card.addEventListener('touchend', endSwipe, { passive: true });
-        card.addEventListener('touchcancel', endSwipe, { passive: true });
+            if (hintDone) hintDone.style.opacity = 0;
+            if (hintActions) hintActions.style.opacity = 0;
+            isSwiping = false;
+        }, { passive: true });
     });
 }
 
-async function toggleItemStatus(id) {
+function toggleSpecItemSelect(id) {
+    triggerHaptic('light');
+    if (session.selectedSpecIds.includes(id)) {
+        session.selectedSpecIds = session.selectedSpecIds.filter(x => x !== id);
+    } else {
+        session.selectedSpecIds.push(id);
+    }
+    renderSpecification();
+}
+
+async function toggleItemStatus(id, e) {
+    if (e) e.stopPropagation();
+    triggerHaptic('medium');
     const it = appState.activeProjectItems.find(x => x.id === id);
     if (!it) return;
+
     const cur = it.item_status || 'queue';
     const next = (cur === 'done') ? 'queue' : 'done';
+
     it.item_status = next;
     if (!it.dimensions) it.dimensions = {};
     it.dimensions.item_status = next;
-    triggerHaptic(next === 'done' ? 'success' : 'light');
+
     await supabaseClient.from('items').update({ dimensions: it.dimensions }).eq('id', id);
 
-    const globalIt = appState.allItems.find(x => x.id === id);
-    if (globalIt) {
-        globalIt.item_status = next;
-        if (!globalIt.dimensions) globalIt.dimensions = {};
-        globalIt.dimensions.item_status = next;
-    }
-
+    showToast(next === 'done' ? 'Позиция: ✓ Готово' : 'Позиция: ⏳ В очереди', 'info');
+    renderProjectInside();
     updateHeaderUI();
-    renderSpecification();
-    showToast(`Статус: ${next === 'done' ? '✓ Готово' : '⏳ Не готово'}`, next === 'done' ? 'success' : 'info');
-}
-
-function toggleSelectAllSpecItems() {
-    if (!appState.activeProjectItems || appState.activeProjectItems.length === 0) return;
-    if (session.selectedSpecIds.length === appState.activeProjectItems.length) {
-        session.selectedSpecIds = [];
-    } else {
-        session.selectedSpecIds = appState.activeProjectItems.map(it => it.id);
-    }
-    renderSpecification();
 }
 
 async function batchSetStatus(newStatus) {
-    if (!session.selectedSpecIds || session.selectedSpecIds.length === 0) {
-        alert('Выберите хотя бы одно изделие');
-        return;
-    }
-    const count = session.selectedSpecIds.length;
-    for (const id of session.selectedSpecIds) {
+    if (!session.selectedSpecIds || session.selectedSpecIds.length === 0) return;
+    triggerHaptic('medium');
+    const ids = [...session.selectedSpecIds];
+
+    for (const id of ids) {
         const it = appState.activeProjectItems.find(x => x.id === id);
-        if (it) {
-            it.item_status = newStatus;
-            if (!it.dimensions) it.dimensions = {};
-            it.dimensions.item_status = newStatus;
-            await supabaseClient.from('items').update({ dimensions: it.dimensions }).eq('id', id);
-        }
-        const globalIt = appState.allItems.find(x => x.id === id);
-        if (globalIt) {
-            globalIt.item_status = newStatus;
-            if (!globalIt.dimensions) globalIt.dimensions = {};
-            globalIt.dimensions.item_status = newStatus;
-        }
+        if (!it) continue;
+        it.item_status = newStatus;
+        if (!it.dimensions) it.dimensions = {};
+        it.dimensions.item_status = newStatus;
+        await supabaseClient.from('items').update({ dimensions: it.dimensions }).eq('id', id);
     }
+
+    showToast(`Статус обновлен для ${ids.length} позиций`, 'success');
+    renderProjectInside();
     updateHeaderUI();
-    renderSpecification();
-    showToast(`Статус ${newStatus === 'done' ? '✓ Готово' : '⏳ Не готово'} установлен для ${count} поз.`, 'success');
 }
 
 // ==========================================
-// ГРУППОВОЕ РЕДАКТИРОВАНИЕ ПОЗИЦИЙ
+// ГРУППОВОЕ ИЗМЕНЕНИЕ ИЗДЕЛИЙ (LIMITED BULK EDIT)
 // ==========================================
 let bulkSharesState = {};
 
-function toggleBulkField(checkId, targetWrapperId) {
-    const checked = document.getElementById(checkId)?.checked;
+function toggleBulkField(checkboxId, targetWrapperId) {
+    const checked = document.getElementById(checkboxId)?.checked;
     const wrapper = document.getElementById(targetWrapperId);
     if (wrapper) {
         wrapper.classList.toggle('opacity-40', !checked);
@@ -1086,7 +1216,7 @@ function toggleBulkField(checkId, targetWrapperId) {
 
 function openBulkEditModal() {
     if (!session.selectedSpecIds || session.selectedSpecIds.length === 0) {
-        alert('Выберите изделия галочками для группового изменения');
+        showToast('Выберите позиции для группового изменения', 'warning');
         return;
     }
 
@@ -1095,29 +1225,32 @@ function openBulkEditModal() {
 
     document.getElementById('bulkEditItemsCount').textContent = session.selectedSpecIds.length;
 
-    ['bulkCheckMetal', 'bulkCheckThick', 'bulkCheckPrice', 'bulkCheckWorkers'].forEach(id => {
+    ['bulkCheckMetal', 'bulkCheckThick', 'bulkCheckWorkers'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.checked = false;
     });
     toggleBulkField('bulkCheckMetal', 'bulkWrapMetal');
     toggleBulkField('bulkCheckThick', 'bulkWrapThick');
-    toggleBulkField('bulkCheckPrice', 'bulkWrapPrice');
     toggleBulkField('bulkCheckWorkers', 'bulkWrapWorkers');
 
     const selMetal = document.getElementById('bulkSelectMetal');
-    selMetal.innerHTML = appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (selMetal) selMetal.innerHTML = appState.metals.map(m => `<option value="${m}">${m}</option>`).join('');
 
     const selThick = document.getElementById('bulkSelectThick');
-    selThick.innerHTML = appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
-    if (appState.thicknesses.includes(0.5)) selThick.value = '0.5';
+    if (selThick) {
+        selThick.innerHTML = appState.thicknesses.map(t => `<option value="${t}">${t} мм</option>`).join('');
+        if (appState.thicknesses.includes(0.5)) selThick.value = '0.5';
+    }
 
     const wBox = document.getElementById('bulkWorkersCheckboxes');
-    wBox.innerHTML = appState.users.map(u => `
-        <label class="bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer hover:border-slate-700 transition text-xs">
-            <input type="checkbox" name="bulkAssignWorker" onchange="onBulkWorkersSelectionChanged()" value="${u.name}" class="rounded text-blue-600">
-            <span class="text-slate-300 font-medium truncate">${u.name}</span>
-        </label>
-    `).join('');
+    if (wBox) {
+        wBox.innerHTML = appState.users.map(u => `
+            <label class="bg-[#12141c] border border-white/5 hover:border-white/20 px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer transition text-xs tap-spring">
+                <input type="checkbox" name="bulkAssignWorker" onchange="onBulkWorkersSelectionChanged()" value="${u.name}" class="rounded text-white accent-white">
+                <span class="text-zinc-300 font-bold truncate">${u.name}</span>
+            </label>
+        `).join('');
+    }
 
     bulkSharesState = {};
     const sharesBox = document.getElementById('bulkSharesBox');
@@ -1127,6 +1260,7 @@ function openBulkEditModal() {
 }
 
 function closeBulkEditModal() {
+    triggerHaptic('light');
     const modal = document.getElementById('bulkEditModal');
     if (modal) modal.classList.add('hidden');
 }
@@ -1155,11 +1289,11 @@ function renderBulkSharesList() {
     list.innerHTML = checked.map(w => {
         const pct = bulkSharesState[w] !== undefined ? bulkSharesState[w] : Math.round(100 / checked.length);
         return `
-            <div class="flex items-center justify-between gap-2 bg-slate-900 border border-slate-800 p-2 rounded-lg text-xs">
+            <div class="flex items-center justify-between gap-2 bg-[#12141c] border border-white/5 p-2 rounded-xl text-xs">
                 <span class="font-bold text-white">${w}</span>
                 <div class="flex items-center gap-1">
-                    <input type="number" min="0" max="100" value="${pct}" oninput="bulkSharesState['${w}'] = Number(this.value)" class="w-12 bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-center mono font-bold text-amber-300">
-                    <span class="text-slate-400 font-bold">%</span>
+                    <input type="number" min="0" max="100" value="${pct}" inputmode="numeric" oninput="bulkSharesState['${w}'] = Number(this.value)" class="w-12 bg-[#181b26] border border-white/10 rounded-lg px-1.5 py-0.5 text-center mono font-bold text-amber-300">
+                    <span class="text-zinc-400 font-bold">%</span>
                 </div>
             </div>
         `;
@@ -1169,17 +1303,15 @@ function renderBulkSharesList() {
 async function applyBulkEdit() {
     const changeMetal = document.getElementById('bulkCheckMetal')?.checked;
     const changeThick = document.getElementById('bulkCheckThick')?.checked;
-    const changePrice = document.getElementById('bulkCheckPrice')?.checked;
     const changeWorkers = document.getElementById('bulkCheckWorkers')?.checked;
 
-    if (!changeMetal && !changeThick && !changePrice && !changeWorkers) {
-        alert('Пожалуйста, отметьте хотя бы один параметр для изменения');
+    if (!changeMetal && !changeThick && !changeWorkers) {
+        showToast('Отметьте хотя бы один параметр для изменения', 'warning');
         return;
     }
 
     const valMetal = document.getElementById('bulkSelectMetal')?.value;
     const valThick = Number(document.getElementById('bulkSelectThick')?.value);
-    const valPrice = Number(document.getElementById('bulkInputPrice')?.value);
     const checkedWorkers = Array.from(document.querySelectorAll('input[name="bulkAssignWorker"]:checked')).map(cb => cb.value);
 
     const count = session.selectedSpecIds.length;
@@ -1197,10 +1329,6 @@ async function applyBulkEdit() {
             it.thickness = valThick;
             it.dimensions.thickness = valThick;
         }
-        if (changePrice) {
-            it.price = valPrice;
-            it.dimensions.price = valPrice;
-        }
         if (changeWorkers) {
             it.workers = checkedWorkers;
             it.dimensions.workers = checkedWorkers;
@@ -1214,7 +1342,6 @@ async function applyBulkEdit() {
         await supabaseClient.from('items').update({
             metal: it.metal,
             thickness: it.thickness,
-            price: it.price,
             workers: it.workers,
             dimensions: it.dimensions
         }).eq('id', id);
@@ -1223,7 +1350,6 @@ async function applyBulkEdit() {
         if (globalIt) {
             if (changeMetal) globalIt.metal = valMetal;
             if (changeThick) globalIt.thickness = valThick;
-            if (changePrice) globalIt.price = valPrice;
             if (changeWorkers) {
                 globalIt.workers = checkedWorkers;
                 globalIt.worker_shares = it.worker_shares;
@@ -1238,28 +1364,24 @@ async function applyBulkEdit() {
     showToast(`Успешно обновлено ${count} позиций!`, 'success');
 }
 
-function toggleSpecItemSelect(id, checked) {
-    if (checked) {
-        if (!session.selectedSpecIds.includes(id)) session.selectedSpecIds.push(id);
-    } else {
-        session.selectedSpecIds = session.selectedSpecIds.filter(x => x !== id);
-    }
-    renderSpecification();
-}
-
 async function deleteSelectedItems() {
     if (!confirm(`Удалить выбранные позиции (${session.selectedSpecIds.length} шт)?`)) return;
+    triggerHaptic('warning');
     await supabaseClient.from('items').delete().in('id', session.selectedSpecIds);
     session.selectedSpecIds = [];
     await loadProjectDetails(session.insideProjectId);
     renderProjectInside();
+    showToast('Выбранные позиции удалены', 'info');
 }
 
 async function deleteSingleItem(id) {
+    if (!confirm('Удалить эту позицию из проекта?')) return;
+    triggerHaptic('warning');
     await supabaseClient.from('items').delete().eq('id', id);
     session.selectedSpecIds = session.selectedSpecIds.filter(x => x !== id);
     await loadProjectDetails(session.insideProjectId);
     renderProjectInside();
+    showToast('Позиция удалена', 'info');
 }
 
 function duplicateWithModal(id) {
@@ -1269,7 +1391,7 @@ function duplicateWithModal(id) {
     openItemAddSheet();
     editProjectItem(id);
     document.getElementById('editItemId').value = '';
-    document.getElementById('formHeaderTitle').textContent = `Дубликат: ${it.title} (измените нужные параметры)`;
+    document.getElementById('formHeaderTitle').textContent = `Дубликат: ${it.title}`;
     document.getElementById('cancelEditBtn').classList.remove('hidden');
     document.getElementById('submitItemBtn').textContent = '+ Создать дубликат';
     goToWizardStep(2);

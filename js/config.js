@@ -125,17 +125,21 @@ let session = {
     projectFilter: 'active',
     clickedProjectId: null,
     insideProjectId: null,
+    activePhaseId: null, // Подпроекты / Дозаказы
     activeCategory: 'duct',
     activeShape: 'rect',
+    specSelectionMode: false, // Режим выделения деталей
     selectedSpecIds: [],
     activeNestingKey: null,
+    activeNestingScraps: [], // Обрезки листа 2D
     accordionState: {},
     nestingCustomModes: {},
     workerSplitMode: 'equal',
     workerProfSelectedUser: null,
     workerProfActiveTab: 'by-project',
     workerSharesState: {},
-    workerAccordions: {}
+    workerAccordions: {},
+    archiveSandboxData: null // Безопасный просмотр архива (песочница)
 };
 
 // ==========================================
@@ -252,7 +256,7 @@ async function saveProjectSeamsModal() {
     updateProjectSeamsUI(p);
     showToast(`Фальцы проекта сохранены: ${big}+${small} мм!`, 'success');
     renderProjectInside();
-    if (!document.getElementById('view-nesting').classList.contains('hidden')) {
+    if (typeof currentScreenId !== 'undefined' && currentScreenId === SCREENS.NESTING) {
         renderProjectNesting();
     }
 }
@@ -262,7 +266,7 @@ function updateProjectSeamsUI(p) {
     const data = getProjectFlangeData(p);
     const label = document.getElementById('activeProjSeamsLabel');
     if (label) label.textContent = `${data.seams.lock_pittsburgh}+${data.seams.lock_single} мм`;
-    const packInp = document.getElementById('projPackQty');
+    const packInp = document.getElementById('settPackQty');
     if (packInp) packInp.value = data.pack_qty;
 }
 
@@ -321,10 +325,19 @@ window.addEventListener('keydown', (e) => {
 // ==========================================
 // ЗАГРУЗКА И СИНХРОНИЗАЦИЯ С SUPABASE
 // ==========================================
+async function manualReconnectDatabase() {
+    triggerHaptic('medium');
+    const ind = document.getElementById('cloudIndicator');
+    const authSt = document.getElementById('cloudStatusAuth');
+    if (ind) { ind.textContent = '🔄 Подключение...'; ind.className = 'text-[10px] text-amber-400 font-medium cursor-pointer'; }
+    if (authSt) authSt.textContent = '🔄 Подключение к базе...';
+    await loadInitialData();
+}
+
 async function loadInitialData() {
     const ind = document.getElementById('cloudIndicator');
     const authSt = document.getElementById('cloudStatusAuth');
-    if (ind) { ind.textContent = '● Загрузка из базы...'; ind.className = 'text-[10px] text-amber-400'; }
+    if (ind) { ind.textContent = '● Загрузка...'; ind.className = 'text-[10px] text-amber-400 font-medium cursor-pointer'; }
 
     try {
         // 1. Загрузка справочников
@@ -357,7 +370,7 @@ async function loadInitialData() {
             if (setts.standalone_flange) appState.standaloneFlange = setts.standalone_flange;
         }
 
-        // 2. Загрузка пользователей (если пусто — создаем админа с кодом 7777)
+        // 2. Загрузка пользователей
         let { data: uList } = await supabaseClient.from('users').select('*').order('id', { ascending: true });
         if (!uList || uList.length === 0) {
             const { data: defAdmin } = await supabaseClient.from('users').insert({
@@ -377,18 +390,23 @@ async function loadInitialData() {
         ]);
 
         appState.projects = pRes.data || [];
-        appState.allItems = (itRes.data || []).map(i => ({ ...i, ...(i.dimensions || {}) }));
+        appState.allItems = (itRes.data || []).map(i => ({
+            ...i,
+            ...(i.dimensions || {}),
+            phase_id: i.dimensions?.phase_id || 'main',
+            item_status: i.dimensions?.item_status || 'queue'
+        }));
         appState.allPayments = payRes.data || [];
 
-        if (ind) { ind.textContent = '● Онлайн (Supabase)'; ind.className = 'text-[10px] text-emerald-400'; }
-        if (authSt) authSt.textContent = 'Онлайн-база: подключено ✓';
+        if (ind) { ind.textContent = '🟢 Онлайн (Supabase)'; ind.className = 'text-[10px] text-emerald-400 font-medium cursor-pointer'; }
+        if (authSt) authSt.textContent = '🟢 Supabase: Онлайн (Синхронизировано)';
 
         checkAuthState();
         refreshCurrentScreen();
     } catch (err) {
         console.error('Supabase load error:', err);
-        if (ind) { ind.textContent = '● Ошибка связи с базой'; ind.className = 'text-[10px] text-rose-400'; }
-        if (authSt) authSt.textContent = 'Ошибка подключения к базе';
+        if (ind) { ind.textContent = '🔴 Офлайн (Нажмите для повтора)'; ind.className = 'text-[10px] text-rose-400 font-medium cursor-pointer'; }
+        if (authSt) authSt.textContent = '🔴 Ошибка связи с базой (Нажмите для повтора)';
     }
 }
 
@@ -413,7 +431,9 @@ async function loadProjectDetails(projectId) {
 
         appState.activeProjectItems = (itRes.data || []).map(i => ({
             ...i,
-            ...(i.dimensions || {})
+            ...(i.dimensions || {}),
+            phase_id: i.dimensions?.phase_id || 'main',
+            item_status: i.dimensions?.item_status || 'queue'
         }));
         appState.activeProjectPayments = payRes.data || [];
 

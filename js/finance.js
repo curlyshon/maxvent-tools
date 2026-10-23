@@ -289,81 +289,15 @@ function renderGlobalFinanceReport() {
     `;
 }
 
-async function openGlobalFinanceModal() {
-    document.getElementById('profileDropdown').classList.add('hidden');
-    const modal = document.getElementById('globalFinanceModal');
-    if (modal) modal.classList.remove('hidden');
-    renderGlobalFinanceReport();
+function openGlobalFinanceModal() {
+    if (typeof navigateTo === 'function') {
+        navigateTo(SCREENS.ADMIN);
+    }
 }
 
 function closeGlobalFinanceModal() {
-    document.getElementById('globalFinanceModal').classList.add('hidden');
-}
-
-// --- АВТОНОМНЫЙ КАЛЬКУЛЯТОР ШИНКИ ---
-function openStandaloneFlange() {
-    document.getElementById('standaloneFlangeModal').classList.remove('hidden');
-    renderStandaloneFlange();
-}
-function closeStandaloneFlange() {
-    document.getElementById('standaloneFlangeModal').classList.add('hidden');
-}
-
-async function addStandaloneFlangeRow() {
-    const w = Number(document.getElementById('stW').value);
-    const h = Number(document.getElementById('stH').value);
-    const sides = Number(document.getElementById('stSides').value);
-    const qty = Number(document.getElementById('stQty').value);
-    if (!w || !h || !sides || !qty) return;
-
-    const totalSides = sides * qty;
-    const existing = appState.standaloneFlange.rows.find(r => r.w === w && r.h === h);
-    if (existing) existing.totalSides += totalSides;
-    else appState.standaloneFlange.rows.push({ w, h, totalSides });
-
-    await saveGlobalSettings();
-    renderStandaloneFlange();
-}
-
-async function clearStandaloneFlange() {
-    appState.standaloneFlange.rows = [];
-    appState.standaloneFlange.scraps = [];
-    await saveGlobalSettings();
-    renderStandaloneFlange();
-}
-
-function renderStandaloneFlange() {
-    const packQtyInp = Number(document.getElementById('stPackQty')?.value);
-    const packQty = packQtyInp > 0 ? packQtyInp : (appState.standaloneFlange.pack_qty || 10);
-    appState.standaloneFlange.pack_qty = packQty;
-
-    const scrapBox = document.getElementById('stScrapChips');
-    if (scrapBox) {
-        scrapBox.innerHTML = (appState.standaloneFlange.scraps || []).map((s, i) => {
-            const sLen = typeof s === 'number' ? s : s.len;
-            const sCnt = typeof s === 'number' ? packQty : (s.count || packQty);
-            return `
-                <span class="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg text-slate-200 mono flex items-center gap-1.5 text-xs">
-                    ✂ ${sLen} мм <strong class="text-amber-400">(${sCnt} шт)</strong>
-                    <button onclick="removeFlangeScrap('standalone', ${i})" class="text-slate-500 hover:text-rose-400 font-bold ml-1">×</button>
-                </span>
-            `;
-        }).join('');
+    if (typeof goBack === 'function') {
+        goBack();
     }
-
-    const packLen = Number(document.getElementById('stPackLen').value) || 3000;
-    const kerf = Number(document.getElementById('stKerf').value) || 2;
-    const roundMode = document.getElementById('stRound').value;
-
-    const framesObj = {};
-    appState.standaloneFlange.rows.forEach(r => {
-        const k = `${r.w}×${r.h}`;
-        framesObj[k] = (framesObj[k] || 0) + r.totalSides;
-    });
-
-    document.getElementById('stFlangeOutput').innerHTML = buildFlangeCalculationUI(
-        framesObj, packLen, kerf, roundMode, appState.standaloneFlange.scraps || [], packQty
-    );
 }
 
-// --- ПАНЕЛЬ РАЗРАБОТЧИКА И РАБОТНИКИ ---

@@ -1,0 +1,1605 @@
+{
+  "projects": [
+    {
+      "id": 8,
+      "title": "Гостиница",
+      "description": "",
+      "group_name": "Далел, Жандос",
+      "status_text": "Готов к отгрузке",
+      "archive_state": "active",
+      "flange_scraps": {
+        "seams": {
+          "round_seam": 22,
+          "lock_single": 9,
+          "lock_pittsburgh": 32
+        },
+        "scraps": [],
+        "pack_qty": 10
+      },
+      "created_at": "2026-10-22T07:00:53.002692+00:00",
+      "updated_at": "2026-10-22T14:20:03.515+00:00"
+    },
+    {
+      "id": 9,
+      "title": "Jfjdj",
+      "description": "",
+      "group_name": "Далел, Жандос",
+      "status_text": "В работе",
+      "archive_state": "active",
+      "flange_scraps": {
+        "seams": {
+          "round_seam": 22,
+          "lock_single": 9,
+          "lock_pittsburgh": 32
+        },
+        "scraps": [],
+        "pack_qty": 10
+      },
+      "created_at": "2026-10-23T05:48:40.332694+00:00",
+      "updated_at": "2026-10-23T05:48:40.332694+00:00"
+    },
+    {
+      "id": 6,
+      "title": "asdas",
+      "description": "asda",
+      "group_name": "Далел, Жандос",
+      "status_text": "В работе",
+      "archive_state": "active",
+      "flange_scraps": {
+        "seams": {
+          "round_seam": 22,
+          "lock_single": 9,
+          "lock_pittsburgh": 32
+        },
+        "scraps": [],
+        "pack_qty": 10
+      },
+      "created_at": "2026-10-20T17:19:41.088379+00:00",
+      "updated_at": "2026-10-20T17:19:54.374+00:00"
+    },
+    {
+      "id": 3,
+      "title": "Самал зонт",
+      "description": "Шымкент",
+      "group_name": "Далел, Жандос",
+      "status_text": "Готов к отгрузке",
+      "archive_state": "active",
+      "flange_scraps": {
+        "seams": {
+          "round_seam": 22,
+          "lock_single": 9,
+          "lock_pittsburgh": 32
+        },
+        "scraps": [],
+        "pack_qty": 10
+      },
+      "created_at": "2026-10-18T12:05:44.641947+00:00",
+      "updated_at": "2026-10-21T14:50:24.618+00:00"
+    }
+  ],
+  "items": [
+    {
+      "id": 41,
+      "project_id": 3,
+      "item_key": "fit_Отвод_350_175_0_0_0_0_0_0_0_0_0_90_0_0_0_true_true__350×175_350×175_Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Отвод",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 2,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 175,
+        "w": 350,
+        "deg": 90,
+        "frames": [
+          "350×175",
+          "350×175"
+        ],
+        "flange1": true,
+        "flange2": true,
+        "fittingId": "r_bend",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-18T12:11:15.72227+00:00"
+    },
+    {
+      "id": 42,
+      "project_id": 3,
+      "item_key": "fit_Переход_0_0_350_350_0_0_315_0_0_0_300_0_0_0_0_false_undefined___Оц._0.5",
+      "category": "fitting",
+      "shape": "smooth",
+      "title": "Переход",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "d": 315,
+        "l": 300,
+        "h1": 350,
+        "w1": 350,
+        "frames": [],
+        "flange1": false,
+        "fittingId": "s_trans",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-18T12:11:50.228211+00:00"
+    },
+    {
+      "id": 43,
+      "project_id": 3,
+      "item_key": "fit_Тройник_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0_undefined_undefined_400x300 / 300x300 / 400x300_400×300_300×300_400×300_Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Тройник",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "frames": [
+          "400×300",
+          "300×300",
+          "400×300"
+        ],
+        "fittingId": "r_tee",
+        "descDetail": "400x300 / 300x300 / 400x300",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-18T15:51:41.511194+00:00"
+    },
+    {
+      "id": 35,
+      "project_id": 3,
+      "item_key": "fit_Зонт вытяжной_1300_400_0_0_0_0_0_0_0_0_300_0_0_400_0_undefined_undefined___Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Зонт вытяжной",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 2,
+      "price": 10000,
+      "workers": [
+        "Чингис",
+        "Султан",
+        "Беркут",
+        "Бибо"
+      ],
+      "dimensions": {
+        "h": 400,
+        "l": 300,
+        "w": 1300,
+        "frames": [],
+        "fittingId": "r_hood_ex",
+        "hood_seat": 400,
+        "hood_type": "Пристенный",
+        "item_status": "done",
+        "worker_shares": {
+          "Бибо": 17,
+          "Беркут": 17,
+          "Султан": 17,
+          "Чингис": 49
+        }
+      },
+      "created_at": "2026-10-18T12:08:23.389973+00:00"
+    },
+    {
+      "id": 36,
+      "project_id": 3,
+      "item_key": "fit_Зонт вытяжной_970_400_0_0_0_0_0_0_0_0_300_0_0_400_0_undefined_undefined___Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Зонт вытяжной",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 10000,
+      "workers": [
+        "Чингис",
+        "Султан",
+        "Беркут",
+        "Бибо"
+      ],
+      "dimensions": {
+        "h": 400,
+        "l": 300,
+        "w": 970,
+        "frames": [],
+        "fittingId": "r_hood_ex",
+        "hood_seat": 400,
+        "hood_type": "Пристенный",
+        "item_status": "done",
+        "worker_shares": {
+          "Бибо": 17,
+          "Беркут": 17,
+          "Султан": 17,
+          "Чингис": 49
+        }
+      },
+      "created_at": "2026-10-18T12:08:49.609407+00:00"
+    },
+    {
+      "id": 37,
+      "project_id": 3,
+      "item_key": "fit_Зонт вытяжной_1100_400_0_0_0_0_0_0_0_0_300_0_0_300_0_undefined_undefined___Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Зонт вытяжной",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 2,
+      "price": 10000,
+      "workers": [
+        "Чингис",
+        "Султан",
+        "Беркут",
+        "Бибо"
+      ],
+      "dimensions": {
+        "h": 400,
+        "l": 300,
+        "w": 1100,
+        "frames": [],
+        "fittingId": "r_hood_ex",
+        "hood_seat": 300,
+        "hood_type": "Пристенный",
+        "item_status": "done",
+        "worker_shares": {
+          "Бибо": 17,
+          "Беркут": 17,
+          "Султан": 17,
+          "Чингис": 49
+        }
+      },
+      "created_at": "2026-10-18T12:10:04.522569+00:00"
+    },
+    {
+      "id": 40,
+      "project_id": 3,
+      "item_key": "fit_Отвод_350_350_0_0_0_0_0_0_0_0_0_90_0_0_0_true_true__350×350_350×350_Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Отвод",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 350,
+        "w": 350,
+        "deg": 90,
+        "frames": [
+          "350×350",
+          "350×350"
+        ],
+        "flange1": true,
+        "flange2": true,
+        "fittingId": "r_bend",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-18T12:11:03.311579+00:00"
+    },
+    {
+      "id": 45,
+      "project_id": 3,
+      "item_key": "fit_Отвод_350_350_0_0_0_0_0_0_0_0_0_90_0_0_0_true_false__350×350_Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Отвод",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 350,
+        "w": 350,
+        "deg": 90,
+        "frames": [
+          "350×350"
+        ],
+        "flange1": true,
+        "flange2": false,
+        "fittingId": "r_bend",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-20T15:24:04.098987+00:00"
+    },
+    {
+      "id": 33,
+      "project_id": 3,
+      "item_key": "duct_rect_300_300_1250_true_true_Оц._0.5",
+      "category": "duct",
+      "shape": "rect",
+      "title": "Воздуховод прямой",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 6,
+      "price": 1000,
+      "workers": [
+        "Чингис",
+        "Султан",
+        "Беркут",
+        "Бибо"
+      ],
+      "dimensions": {
+        "h": 300,
+        "l": 1250,
+        "w": 300,
+        "frames": [
+          "300×300",
+          "300×300"
+        ],
+        "flange1": true,
+        "flange2": true,
+        "thickness": 0.5,
+        "item_status": "done",
+        "worker_shares": {
+          "Бибо": 17,
+          "Беркут": 17,
+          "Султан": 17,
+          "Чингис": 49
+        }
+      },
+      "created_at": "2026-10-18T12:06:48.761646+00:00"
+    },
+    {
+      "id": 39,
+      "project_id": 3,
+      "item_key": "duct_rect_350_175_1250_true_true_Оц._0.5",
+      "category": "duct",
+      "shape": "rect",
+      "title": "Воздуховод прямой",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис",
+        "Султан",
+        "Беркут",
+        "Бибо"
+      ],
+      "dimensions": {
+        "h": 175,
+        "l": 1250,
+        "w": 350,
+        "frames": [
+          "350×175",
+          "350×175"
+        ],
+        "flange1": true,
+        "flange2": true,
+        "thickness": 0.5,
+        "item_status": "done",
+        "worker_shares": {
+          "Бибо": 17,
+          "Беркут": 17,
+          "Султан": 17,
+          "Чингис": 49
+        }
+      },
+      "created_at": "2026-10-18T12:10:48.595092+00:00"
+    },
+    {
+      "id": 34,
+      "project_id": 3,
+      "item_key": "fit_Колпак_300_300_0_0_0_0_0_0_0_0_0_0_0_0_0_true_undefined__300×300_Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Колпак",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 3,
+      "price": 2000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 300,
+        "w": 300,
+        "frames": [
+          "300×300"
+        ],
+        "flange1": true,
+        "fittingId": "r_cowl",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-18T12:07:15.270223+00:00"
+    },
+    {
+      "id": 49,
+      "project_id": 6,
+      "item_key": "duct_rect_285_285_1250_true_true_Оц._0.5",
+      "category": "duct",
+      "shape": "rect",
+      "title": "Воздуховод прямой",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 10,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 285,
+        "l": 1250,
+        "w": 285,
+        "frames": [
+          "285×285",
+          "285×285"
+        ],
+        "flange1": true,
+        "flange2": true,
+        "workers": [
+          "Чингис"
+        ],
+        "item_status": "queue",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-20T17:19:52.506267+00:00"
+    },
+    {
+      "id": 50,
+      "project_id": 6,
+      "item_key": "duct_rect_250_250_1250_true_true_Оц._0.5",
+      "category": "duct",
+      "shape": "rect",
+      "title": "Воздуховод прямой",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 10,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 250,
+        "l": 1250,
+        "w": 250,
+        "frames": [
+          "250×250",
+          "250×250"
+        ],
+        "flange1": true,
+        "flange2": true,
+        "workers": [
+          "Чингис"
+        ],
+        "item_status": "queue",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-20T17:19:54.716218+00:00"
+    },
+    {
+      "id": 38,
+      "project_id": 3,
+      "item_key": "duct_rect_350_350_1250_true_true_Оц._0.5",
+      "category": "duct",
+      "shape": "rect",
+      "title": "Воздуховод прямой",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 2,
+      "price": 1000,
+      "workers": [
+        "Чингис",
+        "Султан",
+        "Беркут",
+        "Бибо"
+      ],
+      "dimensions": {
+        "h": 350,
+        "l": 1250,
+        "w": 350,
+        "frames": [
+          "350×350",
+          "350×350"
+        ],
+        "flange1": true,
+        "flange2": true,
+        "thickness": 0.5,
+        "item_status": "done",
+        "worker_shares": {
+          "Бибо": 17,
+          "Беркут": 17,
+          "Султан": 17,
+          "Чингис": 49
+        }
+      },
+      "created_at": "2026-10-18T12:10:27.30084+00:00"
+    },
+    {
+      "id": 48,
+      "project_id": 6,
+      "item_key": "duct_rect_300_300_1250_true_true_Оц._0.5",
+      "category": "duct",
+      "shape": "rect",
+      "title": "Воздуховод прямой",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 10,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 300,
+        "l": 1250,
+        "w": 300,
+        "frames": [
+          "300×300",
+          "300×300"
+        ],
+        "flange1": true,
+        "flange2": true,
+        "workers": [
+          "Чингис"
+        ],
+        "item_status": "queue",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-20T17:19:50.135371+00:00"
+    },
+    {
+      "id": 63,
+      "project_id": 8,
+      "item_key": "fit_Шумоглушитель_300_150_0_0_0_0_0_0_0_0_500_0_0_0_0_true_on__300×150_300×150_Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Шумоглушитель",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 10000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 150,
+        "l": 500,
+        "w": 300,
+        "frames": [
+          "300×150",
+          "300×150"
+        ],
+        "flange1": true,
+        "flange2": "on",
+        "fittingId": "r_silencer",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:07:38.610015+00:00"
+    },
+    {
+      "id": 60,
+      "project_id": 8,
+      "item_key": "fit_Переход_0_0_300_150_0_0_250_0_0_0_200_0_0_0_0_on_undefined__300×150_Оц._0.5",
+      "category": "fitting",
+      "shape": "smooth",
+      "title": "Переход",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1500,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "d": 250,
+        "l": 200,
+        "h1": 150,
+        "w1": 300,
+        "len": 200,
+        "frames": [
+          "300×150"
+        ],
+        "flange1": "on",
+        "fittingId": "s_trans",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:05:56.777442+00:00"
+    },
+    {
+      "id": 64,
+      "project_id": 8,
+      "item_key": "fit_Заглушка_150_150_0_0_0_0_0_0_0_0_0_0_0_0_0_on_undefined___Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Заглушка",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 500,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 150,
+        "w": 150,
+        "frames": [],
+        "flange1": "on",
+        "fittingId": "r_cap",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:08:14.580338+00:00"
+    },
+    {
+      "id": 62,
+      "project_id": 8,
+      "item_key": "fit_Врезка_300_100_0_0_0_0_0_0_0_0_80_0_0_0_0_undefined_undefined___Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Врезка",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 4,
+      "price": 500,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 100,
+        "l": 80,
+        "w": 300,
+        "len": 80,
+        "frames": [],
+        "fittingId": "r_inlet",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:07:00.410946+00:00"
+    },
+    {
+      "id": 61,
+      "project_id": 8,
+      "item_key": "fit_Отвод_300_150_0_0_0_0_0_0_0_0_0_90_0_0_0_true_on__300×150_300×150_Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Отвод",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 150,
+        "w": 300,
+        "deg": 90,
+        "frames": [
+          "300×150",
+          "300×150"
+        ],
+        "flange1": true,
+        "flange2": "on",
+        "fittingId": "r_bend",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:06:23.171631+00:00"
+    },
+    {
+      "id": 59,
+      "project_id": 8,
+      "item_key": "fit_Переход_0_0_200_150_150_150_0_0_0_0_200_0_0_0_0_true_on__200×150_150×150_Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Переход",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "l": 200,
+        "h1": 150,
+        "h2": 150,
+        "w1": 200,
+        "w2": 150,
+        "len": 200,
+        "frames": [
+          "200×150",
+          "150×150"
+        ],
+        "flange1": true,
+        "flange2": "on",
+        "fittingId": "r_trans",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:05:24.469457+00:00"
+    },
+    {
+      "id": 58,
+      "project_id": 8,
+      "item_key": "fit_Переход_0_0_250_150_200_150_0_0_0_0_200_0_0_0_0_true_on__250×150_200×150_Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Переход",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "l": 200,
+        "h1": 150,
+        "h2": 150,
+        "w1": 250,
+        "w2": 200,
+        "len": 200,
+        "frames": [
+          "250×150",
+          "200×150"
+        ],
+        "flange1": true,
+        "flange2": "on",
+        "fittingId": "r_trans",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:04:55.49094+00:00"
+    },
+    {
+      "id": 56,
+      "project_id": 8,
+      "item_key": "fit_Переход_0_0_300_150_250_150_0_0_0_0_200_0_0_0_0_true_on__300×150_250×150_Оц._0.5",
+      "category": "fitting",
+      "shape": "rect",
+      "title": "Переход",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "l": 200,
+        "h1": 150,
+        "h2": 150,
+        "w1": 300,
+        "w2": 250,
+        "len": 200,
+        "frames": [
+          "300×150",
+          "250×150"
+        ],
+        "flange1": true,
+        "flange2": "on",
+        "fittingId": "r_trans",
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:03:56.434529+00:00"
+    },
+    {
+      "id": 55,
+      "project_id": 8,
+      "item_key": "duct_rect_150_150_1250_true_false_Оц._0.5",
+      "category": "duct",
+      "shape": "rect",
+      "title": "Воздуховод прямой",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 150,
+        "l": 1250,
+        "w": 150,
+        "frames": [
+          "150×150"
+        ],
+        "flange1": true,
+        "flange2": false,
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:03:03.178519+00:00"
+    },
+    {
+      "id": 54,
+      "project_id": 8,
+      "item_key": "duct_rect_200_150_1250_true_true_Оц._0.5",
+      "category": "duct",
+      "shape": "rect",
+      "title": "Воздуховод прямой",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 150,
+        "l": 1250,
+        "w": 200,
+        "frames": [
+          "200×150",
+          "200×150"
+        ],
+        "flange1": true,
+        "flange2": true,
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:02:47.666157+00:00"
+    },
+    {
+      "id": 53,
+      "project_id": 8,
+      "item_key": "duct_rect_250_150_1250_true_true_Оц._0.5",
+      "category": "duct",
+      "shape": "rect",
+      "title": "Воздуховод прямой",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 1,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 150,
+        "l": 1250,
+        "w": 250,
+        "frames": [
+          "250×150",
+          "250×150"
+        ],
+        "flange1": true,
+        "flange2": true,
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:02:26.719757+00:00"
+    },
+    {
+      "id": 52,
+      "project_id": 8,
+      "item_key": "duct_rect_300_150_1250_true_true_Оц._0.5",
+      "category": "duct",
+      "shape": "rect",
+      "title": "Воздуховод прямой",
+      "metal": "Оц.",
+      "thickness": 0.5,
+      "qty": 2,
+      "price": 1000,
+      "workers": [
+        "Чингис"
+      ],
+      "dimensions": {
+        "h": 150,
+        "l": 1250,
+        "w": 300,
+        "frames": [
+          "300×150",
+          "300×150"
+        ],
+        "flange1": true,
+        "flange2": true,
+        "item_status": "done",
+        "worker_shares": {
+          "Чингис": 100
+        }
+      },
+      "created_at": "2026-10-22T07:01:56.593131+00:00"
+    }
+  ],
+  "payments": [],
+  "users": [
+    {
+      "id": 1,
+      "name": "Чингис",
+      "access_code": "0406",
+      "role": "developer",
+      "created_at": "2026-10-17T09:38:00.071153+00:00"
+    },
+    {
+      "id": 2,
+      "name": "Султан",
+      "access_code": "2201",
+      "role": "worker",
+      "created_at": "2026-10-17T09:53:32.014946+00:00"
+    },
+    {
+      "id": 3,
+      "name": "Беркут",
+      "access_code": "2009",
+      "role": "worker",
+      "created_at": "2026-10-17T09:54:03.385636+00:00"
+    },
+    {
+      "id": 4,
+      "name": "Бибо",
+      "access_code": "2010",
+      "role": "worker",
+      "created_at": "2026-10-17T09:54:15.070475+00:00"
+    },
+    {
+      "id": 8,
+      "name": "Аян",
+      "access_code": "8080",
+      "role": "worker",
+      "created_at": "2026-10-19T05:37:33.074573+00:00"
+    },
+    {
+      "id": 9,
+      "name": "Бекжан",
+      "access_code": "9090",
+      "role": "worker",
+      "created_at": "2026-10-19T05:37:40.923492+00:00"
+    }
+  ],
+  "nestings": [
+    {
+      "id": 4,
+      "project_id": 3,
+      "metal_key": "Оц. 0.5 мм",
+      "sheets": [
+        {
+          "parts": [
+            {
+              "cutL": 1441,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "350×350",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            }
+          ],
+          "cutDone": true
+        },
+        {
+          "parts": [
+            {
+              "cutL": 1441,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "350×350",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            }
+          ],
+          "cutDone": true
+        },
+        {
+          "parts": [
+            {
+              "cutL": 1241,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "300×300",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            },
+            {
+              "cutL": 1241,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "300×300",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            }
+          ],
+          "cutDone": true
+        },
+        {
+          "parts": [
+            {
+              "cutL": 1241,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "300×300",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            },
+            {
+              "cutL": 1241,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "300×300",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            }
+          ],
+          "cutDone": true
+        },
+        {
+          "parts": [
+            {
+              "cutL": 1241,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "300×300",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            },
+            {
+              "cutL": 1241,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "300×300",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            }
+          ],
+          "cutDone": true
+        },
+        {
+          "parts": [
+            {
+              "cutL": 1091,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "350×175",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            }
+          ],
+          "cutDone": true
+        }
+      ],
+      "updated_at": "2026-10-18T12:18:07.176+00:00"
+    },
+    {
+      "id": 5,
+      "project_id": 8,
+      "metal_key": "Оц. 0.5 мм",
+      "sheets": [
+        {
+          "parts": [
+            {
+              "cutL": 941,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "300×150",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            },
+            {
+              "cutL": 941,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "300×150",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            }
+          ],
+          "cutDone": true
+        },
+        {
+          "parts": [
+            {
+              "cutL": 841,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "250×150",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            },
+            {
+              "cutL": 741,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "200×150",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            },
+            {
+              "cutL": 641,
+              "cutW": 1250,
+              "type": "whole",
+              "label": "150×150",
+              "title": "Воздуховод прямой",
+              "subLabel": "Цельный"
+            }
+          ],
+          "cutDone": false
+        }
+      ],
+      "updated_at": "2026-10-22T07:10:03.13+00:00"
+    }
+  ],
+  "app_settings": [
+    {
+      "id": "global_config",
+      "metals": [
+        "Оц.",
+        "Нерж.",
+        "Краш."
+      ],
+      "thicknesses": [
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        1
+      ],
+      "groups": [
+        "Далел, Жандос",
+        "Адилхан, Дастан",
+        "Аян, Бекжан"
+      ],
+      "fittings": {
+        "rect": [
+          {
+            "id": "r_trans",
+            "name": "Переход",
+            "price": 1000,
+            "params": [
+              "w1",
+              "h1",
+              "w2",
+              "h2",
+              "len",
+              "flange2"
+            ]
+          },
+          {
+            "id": "r_bend",
+            "name": "Отвод",
+            "price": 1000,
+            "params": [
+              "deg",
+              "w",
+              "h",
+              "flange2"
+            ]
+          },
+          {
+            "id": "r_cap",
+            "name": "Заглушка",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "flange1"
+            ]
+          },
+          {
+            "id": "r_inlet",
+            "name": "Врезка",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "len"
+            ]
+          },
+          {
+            "id": "r_pipe",
+            "name": "Патрубок",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "len"
+            ]
+          },
+          {
+            "id": "r_tee",
+            "name": "Тройник",
+            "price": 1000,
+            "params": [
+              "tee_rect"
+            ]
+          },
+          {
+            "id": "r_offset",
+            "name": "Утка",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "offset",
+              "flange2"
+            ]
+          },
+          {
+            "id": "r_cross",
+            "name": "Крестовина",
+            "price": 1000,
+            "params": [
+              "cross_rect"
+            ]
+          },
+          {
+            "id": "r_goose",
+            "name": "Гусак",
+            "price": 1000,
+            "params": [
+              "deg135",
+              "w",
+              "h",
+              "flange1"
+            ]
+          },
+          {
+            "id": "r_silencer",
+            "name": "Шумоглушитель",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "len_silencer",
+              "flange2"
+            ]
+          },
+          {
+            "id": "r_cowl",
+            "name": "Колпак",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "flange1"
+            ]
+          },
+          {
+            "id": "r_filter",
+            "name": "Фильтр-бокс",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "len",
+              "flange2"
+            ]
+          },
+          {
+            "id": "r_damper",
+            "name": "Дроссельный клапан",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "len",
+              "flange2"
+            ]
+          },
+          {
+            "id": "r_hood_ex",
+            "name": "Зонт вытяжной",
+            "price": 1000,
+            "params": [
+              "hood_type",
+              "w",
+              "h",
+              "len",
+              "hood_seat"
+            ]
+          },
+          {
+            "id": "r_hood_bbq",
+            "name": "Зонт мангальный",
+            "price": 1000,
+            "params": [
+              "w1",
+              "h1",
+              "w2",
+              "h2",
+              "len",
+              "flange2"
+            ]
+          },
+          {
+            "id": "r_grease",
+            "name": "Жироуловитель",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "len"
+            ]
+          },
+          {
+            "id": "r_grille",
+            "name": "Наружная решетка",
+            "price": 1000,
+            "params": [
+              "w",
+              "h"
+            ]
+          }
+        ],
+        "round": [
+          {
+            "id": "c_trans",
+            "name": "Переход",
+            "price": 1000,
+            "params": [
+              "d1",
+              "d2",
+              "len"
+            ]
+          },
+          {
+            "id": "c_bend",
+            "name": "Отвод",
+            "price": 1000,
+            "params": [
+              "deg",
+              "d"
+            ]
+          },
+          {
+            "id": "c_cap",
+            "name": "Заглушка",
+            "price": 1000,
+            "params": [
+              "d"
+            ]
+          },
+          {
+            "id": "c_inlet",
+            "name": "Врезка",
+            "price": 1000,
+            "params": [
+              "d",
+              "d_main",
+              "len"
+            ]
+          },
+          {
+            "id": "c_nipple",
+            "name": "Ниппель",
+            "price": 1000,
+            "params": [
+              "d",
+              "len"
+            ]
+          },
+          {
+            "id": "c_tee",
+            "name": "Тройник",
+            "price": 1000,
+            "params": [
+              "tee_round"
+            ]
+          },
+          {
+            "id": "c_offset",
+            "name": "Утка",
+            "price": 1000,
+            "params": [
+              "d",
+              "offset"
+            ]
+          },
+          {
+            "id": "c_cross",
+            "name": "Крестовина",
+            "price": 1000,
+            "params": [
+              "cross_round"
+            ]
+          },
+          {
+            "id": "c_goose",
+            "name": "Гусак",
+            "price": 1000,
+            "params": [
+              "deg135",
+              "d"
+            ]
+          },
+          {
+            "id": "c_silencer",
+            "name": "Шумоглушитель",
+            "price": 1000,
+            "params": [
+              "d",
+              "len_silencer"
+            ]
+          },
+          {
+            "id": "c_cowl",
+            "name": "Колпак",
+            "price": 1000,
+            "params": [
+              "d"
+            ]
+          },
+          {
+            "id": "c_deflector",
+            "name": "Дефлектор",
+            "price": 1000,
+            "params": [
+              "d"
+            ]
+          },
+          {
+            "id": "c_filter",
+            "name": "Фильтр-бокс",
+            "price": 1000,
+            "params": [
+              "d",
+              "len"
+            ]
+          },
+          {
+            "id": "c_damper",
+            "name": "Дроссельный клапан",
+            "price": 1000,
+            "params": [
+              "d",
+              "len"
+            ]
+          },
+          {
+            "id": "c_hood",
+            "name": "Зонт вытяжной",
+            "price": 1000,
+            "params": [
+              "d1",
+              "d2",
+              "len"
+            ]
+          }
+        ],
+        "smooth": [
+          {
+            "id": "s_trans",
+            "name": "Переход",
+            "price": 1000,
+            "params": [
+              "w1",
+              "h1",
+              "d",
+              "len",
+              "flange1"
+            ]
+          },
+          {
+            "id": "s_inlet_r2c",
+            "name": "Врезка прямоуг. на круглый",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "d_main",
+              "len"
+            ]
+          },
+          {
+            "id": "s_inlet_c2r",
+            "name": "Врезка круглый на прямоуг.",
+            "price": 1000,
+            "params": [
+              "d",
+              "len"
+            ]
+          },
+          {
+            "id": "s_tee",
+            "name": "Тройник",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "d_main",
+              "flange1"
+            ]
+          },
+          {
+            "id": "s_silencer",
+            "name": "Шумоглушитель",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "d",
+              "len_silencer",
+              "flange1"
+            ]
+          },
+          {
+            "id": "s_hood",
+            "name": "Зонт вытяжной",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "d",
+              "len"
+            ]
+          },
+          {
+            "id": "s_ksd",
+            "name": "КСД",
+            "price": 1000,
+            "params": [
+              "w",
+              "h",
+              "len",
+              "d",
+              "inlets_cnt"
+            ]
+          }
+        ]
+      },
+      "standalone_flange": {
+        "rows": [],
+        "scraps": [],
+        "pack_qty": 10
+      }
+    }
+  ]
+}

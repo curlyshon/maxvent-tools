@@ -1,10 +1,11 @@
 // ==========================================
 // MODULE: projects.js
-// Главное меню объектов, создание/редактирование проектов, фальцы и карточки
+// Главное меню объектов, создание/редактирование проектов,
+// очереди/дозаказы (subprojects), статусы, свайпы и карточки
 // ==========================================
 
 // ==========================================
-// ГЛАВНОЕ МЕНЮ И ПРОЕКТЫ
+// НАВИГАЦИЯ И ФИЛЬТРЫ ПРОЕКТОВ
 // ==========================================
 function goToMainMenu() {
     session.clickedProjectId = null;
@@ -24,19 +25,59 @@ function goToProjectsScreen() {
 function setProjectFilter(f) {
     session.projectFilter = f;
     session.clickedProjectId = null;
-    document.getElementById('btnProjActive').className = f === 'active' 
-        ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-black transition' 
-        : 'px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition';
-    document.getElementById('btnProjArchived').className = f === 'archived' 
-        ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-black transition' 
-        : 'px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition';
+    const btnActive = document.getElementById('btnProjActive');
+    const btnArchived = document.getElementById('btnProjArchived');
+    if (btnActive) {
+        btnActive.className = f === 'active' 
+            ? 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-black transition tap-spring shadow-sm' 
+            : 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition tap-spring';
+    }
+    if (btnArchived) {
+        btnArchived.className = f === 'archived' 
+            ? 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-black transition tap-spring shadow-sm' 
+            : 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition tap-spring';
+    }
     renderMainMenuProjects();
 }
 
-function toggleProjectsSection() {
-    document.getElementById('projectsMainGrid').classList.toggle('hidden');
+// 3 Статуса проектов и их свойства
+const PROJECT_STATUSES = {
+    not_started: { label: '⚪ Не начат', text: 'Не начат', cls: 'bg-zinc-500/15 border-zinc-500/30 text-zinc-400' },
+    in_progress: { label: '🟠 В работе', text: 'В работе', cls: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
+    done: { label: '🟢 Готово', text: 'Готово', cls: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' }
+};
+
+function getProjectStatusKey(statusText) {
+    if (!statusText) return 'in_progress';
+    const s = statusText.toLowerCase();
+    if (s.includes('готов') || s.includes('сдан') || s.includes('отгружен')) return 'done';
+    if (s.includes('не начат') || s.includes('ожидает') || s.includes('пауза')) return 'not_started';
+    return 'in_progress';
 }
 
+async function cycleProjectStatus(id, e) {
+    if (e) e.stopPropagation();
+    triggerHaptic('medium');
+    const p = appState.projects.find(x => x.id === id);
+    if (!p) return;
+
+    const curKey = getProjectStatusKey(p.status_text);
+    let nextText = 'В работе';
+    if (curKey === 'not_started') nextText = 'В работе';
+    else if (curKey === 'in_progress') nextText = 'Готово';
+    else nextText = 'Не начат';
+
+    p.status_text = nextText;
+    await supabaseClient.from('projects').update({ status_text: nextText, updated_at: new Date().toISOString() }).eq('id', id);
+
+    showToast(`Статус "${p.title}": ${nextText}`, 'info');
+    renderMainMenuProjects();
+    updateHeaderUI();
+}
+
+// ==========================================
+// РЕНДЕР КАРТОЧЕК ПРОЕКТОВ СО СВАЙПАМИ
+// ==========================================
 function renderMainMenuProjects() {
     const search = (document.getElementById('projectSearchInput')?.value || '').trim().toLowerCase();
     let list = appState.projects.filter(p => (p.archive_state || 'active') === session.projectFilter);
@@ -51,15 +92,23 @@ function renderMainMenuProjects() {
         });
     }
 
-    document.getElementById('projectsBadgeCount').textContent = list.length;
+    const badge = document.getElementById('projectsBadgeCount');
+    if (badge) badge.textContent = list.length;
 
     const container = document.getElementById('projectsButtonsContainer');
     const preview = document.getElementById('projectPreviewCard');
+    if (!container) return;
     container.innerHTML = '';
 
     if (list.length === 0) {
-        container.innerHTML = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-xs text-slate-500 text-center">Проекты не найдены</div>`;
-        preview.classList.add('hidden');
+        container.innerHTML = `
+            <div class="bg-[#12141c] border border-white/5 rounded-3xl p-8 text-xs text-zinc-500 text-center space-y-2">
+                <span class="text-2xl block">📁</span>
+                <p>${session.projectFilter === 'archived' ? 'В архиве нет проектов' : 'Активных проектов не найдено'}</p>
+                ${session.projectFilter === 'active' ? `<button onclick="openProjectModal()" class="mt-2 text-xs bg-white text-black font-extrabold px-4 py-2 rounded-xl tap-spring">+ Создать проект</button>` : ''}
+            </div>
+        `;
+        if (preview) preview.classList.add('hidden');
         return;
     }
 
@@ -84,26 +133,74 @@ function renderMainMenuProjects() {
             }
         });
 
-        // Цвета статуса
-        let stColor = 'bg-white/10 border-white/15 text-zinc-300';
-        if (p.status_text === 'Воздуховоды отрезаны' || p.status_text === 'Готов к отгрузке') {
-            stColor = 'bg-emerald-500/15 border-emerald-500/20 text-emerald-400';
-        } else if (p.status_text === 'Ожидает металл') {
-            stColor = 'bg-amber-500/15 border-amber-500/20 text-amber-300';
-        } else if (p.status_text === 'Сдан') {
-            stColor = 'bg-white/5 border-white/10 text-zinc-500';
-        }
+        const statusKey = getProjectStatusKey(p.status_text);
+        const stDef = PROJECT_STATUSES[statusKey] || PROJECT_STATUSES.in_progress;
+        const phases = (p.flange_scraps?.phases || []);
+        const phasesCount = phases.length > 0 ? (phases.length + 1) : 1;
 
-        const card = document.createElement('div');
-        card.className = `w-full text-left p-4 sm:p-5 rounded-3xl border transition-all duration-200 shadow-sm space-y-3 cursor-pointer ${
-            isSelected 
-                ? 'bg-[#181b26] border-white/30 shadow-lg' 
-                : 'bg-[#12141c] border-white/5 hover:border-white/20 hover:bg-[#151822]'
-        }`;
+        const cardWrap = document.createElement('div');
+        cardWrap.className = 'project-swipe-card relative overflow-hidden rounded-3xl select-none group';
+        cardWrap.dataset.projectId = p.id;
 
-        card.onclick = async (e) => {
-            // Если клик по кнопке открыть — не переключаем preview
-            if (e.target.closest('.btn-direct-open')) return;
+        cardWrap.innerHTML = `
+            <!-- Фоновый индикатор свайпа вправо (Смена статуса) -->
+            <div class="swipe-hint-status absolute inset-y-0 left-0 w-36 bg-emerald-600/30 border border-emerald-500/40 rounded-3xl flex items-center px-4 gap-2 text-emerald-300 font-extrabold text-xs opacity-0 transition-opacity pointer-events-none z-0">
+                <span class="text-base">✓</span>
+                <span>Статус</span>
+            </div>
+
+            <!-- Фоновый индикатор свайпа влево (Действия) -->
+            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-44 bg-[#181b26] border border-white/10 rounded-3xl flex items-center justify-end px-3 gap-2 opacity-0 transition-opacity z-0">
+                <button type="button" onclick="triggerHaptic('light'); openProjectModal(${p.id})" title="Редактировать" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold tap-spring">✎</button>
+                <button type="button" onclick="triggerHaptic('medium'); archiveProjectSafe(${p.id})" title="${p.archive_state === 'archived' ? 'Восстановить' : 'В архив'}" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-300 text-xs font-bold tap-spring">${p.archive_state === 'archived' ? '↩' : '📁'}</button>
+                ${p.archive_state === 'archived' && isDev() ? `<button type="button" onclick="triggerHaptic('warning'); deleteProjectPermanent(${p.id})" title="Удалить" class="px-3 py-2 rounded-xl bg-rose-500/20 text-rose-300 text-xs font-bold tap-spring">🗑</button>` : ''}
+            </div>
+
+            <!-- Основное тело карточки -->
+            <div class="swipe-inner relative z-10 w-full text-left p-4 sm:p-5 rounded-3xl border transition-all duration-200 shadow-sm space-y-3 cursor-pointer ${
+                isSelected 
+                    ? 'bg-[#181b26] border-white/30 shadow-lg' 
+                    : 'bg-[#12141c] border-white/5 hover:border-white/20 hover:bg-[#151822]'
+            }">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h3 class="font-extrabold text-sm sm:text-base text-white truncate">${p.title}</h3>
+                            <button type="button" onclick="cycleProjectStatus(${p.id}, event)" title="Нажмите, чтобы переключить статус" class="text-[10px] px-2.5 py-0.5 rounded-full font-bold border transition tap-spring ${stDef.cls}">
+                                ${p.status_text || stDef.label}
+                            </button>
+                            ${phasesCount > 1 ? `<span class="text-[10px] bg-white/10 text-zinc-300 font-bold px-2 py-0.5 rounded-full">⚡ ${phasesCount} очер.</span>` : ''}
+                        </div>
+                        <div class="text-[11px] text-zinc-400 mt-1 flex items-center gap-2">
+                            <span>🔧 ${p.group_name || 'Без бригады'}</span>
+                            ${p.description ? `<span>• <span class="truncate max-w-[150px] inline-block align-bottom text-zinc-500">${p.description}</span></span>` : ''}
+                        </div>
+                    </div>
+                    <button type="button" onclick="openInsideProject(${p.id})" class="btn-direct-open bg-white hover:bg-zinc-200 text-black text-xs font-extrabold px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm tap-spring">
+                        <span>Открыть</span> <span class="text-[10px]">→</span>
+                    </button>
+                </div>
+
+                <!-- ПРОГРЕСС БАР -->
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center text-[11px]">
+                        <span class="text-zinc-400">Готовность:</span>
+                        <span class="mono font-bold ${pct === 100 ? 'text-emerald-400' : 'text-zinc-300'}">${doneQty} / ${totalQty} шт (${pct}%)</span>
+                    </div>
+                    <div class="w-full bg-black/40 h-1.5 rounded-full overflow-hidden border border-white/5">
+                        <div class="h-full bg-white rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] pt-1 text-zinc-400 border-t border-white/5">
+                    <span class="mono text-zinc-300 font-semibold">${ductsArea.toFixed(1)} м² воздуховодов</span>
+                    <span class="mono text-zinc-300 font-semibold">${fittingsCount} шт изделий</span>
+                </div>
+            </div>
+        `;
+
+        cardWrap.onclick = async (e) => {
+            if (e.target.closest('.btn-direct-open') || e.target.closest('button')) return;
             session.clickedProjectId = (session.clickedProjectId === p.id) ? null : p.id;
             if (session.clickedProjectId) {
                 await loadProjectDetails(p.id);
@@ -111,52 +208,109 @@ function renderMainMenuProjects() {
             renderMainMenuProjects();
         };
 
-        card.innerHTML = `
-            <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <h3 class="font-extrabold text-sm sm:text-base text-white truncate">${p.title}</h3>
-                        <span class="text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${stColor}">${p.status_text || 'В работе'}</span>
-                    </div>
-                    <div class="text-[11px] text-zinc-400 mt-1 flex items-center gap-2">
-                        <span>🔧 ${p.group_name || 'Без бригады'}</span>
-                        ${p.description ? `<span>• <span class="truncate max-w-[150px] inline-block align-bottom text-zinc-500">${p.description}</span></span>` : ''}
-                    </div>
-                </div>
-                <button type="button" onclick="openInsideProject(${p.id})" class="btn-direct-open bg-white hover:bg-zinc-200 text-black text-xs font-extrabold px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm active:scale-95">
-                    <span>Открыть</span> <span class="text-[10px]">→</span>
-                </button>
-            </div>
-
-            <!-- ПРОГРЕСС БАР -->
-            <div class="space-y-1">
-                <div class="flex justify-between items-center text-[11px]">
-                    <span class="text-zinc-400">Готовность:</span>
-                    <span class="mono font-bold ${pct === 100 ? 'text-emerald-400' : 'text-zinc-300'}">${doneQty} / ${totalQty} шт (${pct}%)</span>
-                </div>
-                <div class="w-full bg-black/40 h-1.5 rounded-full overflow-hidden border border-white/5">
-                    <div class="h-full bg-white rounded-full transition-all duration-300" style="width: ${pct}%"></div>
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between text-[11px] pt-1 text-zinc-400 border-t border-white/5">
-                <span class="mono text-zinc-300 font-semibold">${ductsArea.toFixed(1)} м² воздуховодов</span>
-                <span class="mono text-zinc-300 font-semibold">${fittingsCount} шт изделий</span>
-            </div>
-        `;
-        container.appendChild(card);
+        container.appendChild(cardWrap);
     });
 
+    attachProjectSwipeHandlers();
+
     if (!session.clickedProjectId) {
-        preview.classList.add('hidden');
+        if (preview) preview.classList.add('hidden');
     } else {
         renderProjectPreviewCard(session.clickedProjectId);
     }
 }
 
+// Свайп-жесты для карточек проектов
+function attachProjectSwipeHandlers() {
+    const cards = document.querySelectorAll('.project-swipe-card');
+    cards.forEach(card => {
+        if (card.dataset.hasSwipeListener) return;
+        card.dataset.hasSwipeListener = 'true';
+
+        let startX = 0, startY = 0, currentX = 0;
+        let isSwiping = false, isDecided = false;
+        const row = card.querySelector('.swipe-inner');
+        const projId = Number(card.dataset.projectId);
+        const hintStatus = card.querySelector('.swipe-hint-status');
+        const hintActions = card.querySelector('.swipe-hint-actions');
+
+        card.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            currentX = 0;
+            isSwiping = false;
+            isDecided = false;
+            if (row) row.style.transition = 'none';
+        }, { passive: true });
+
+        card.addEventListener('touchmove', (e) => {
+            if (e.touches.length !== 1) return;
+            const x = e.touches[0].clientX;
+            const y = e.touches[0].clientY;
+            const dx = x - startX;
+            const dy = y - startY;
+
+            if (!isDecided) {
+                if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+                    isDecided = true;
+                    isSwiping = false;
+                    return;
+                }
+                if (Math.abs(dx) > 10) {
+                    isDecided = true;
+                    isSwiping = true;
+                }
+            }
+
+            if (!isSwiping || !row) return;
+
+            currentX = dx;
+            const damp = 0.5;
+            const tx = dx * damp;
+            row.style.transform = `translateX(${tx}px)`;
+
+            if (dx > 30) {
+                if (hintStatus) hintStatus.style.opacity = Math.min(1, (dx - 30) / 40);
+                if (hintActions) hintActions.style.opacity = 0;
+            } else if (dx < -30) {
+                if (hintActions) hintActions.style.opacity = Math.min(1, (-dx - 30) / 40);
+                if (hintStatus) hintStatus.style.opacity = 0;
+            } else {
+                if (hintStatus) hintStatus.style.opacity = 0;
+                if (hintActions) hintActions.style.opacity = 0;
+            }
+        }, { passive: true });
+
+        card.addEventListener('touchend', () => {
+            if (!isSwiping || !row) return;
+            row.style.transition = 'transform 0.25s var(--ios-spring)';
+
+            if (currentX > 80) {
+                // Свайп вправо: переключить статус проекта
+                cycleProjectStatus(projId);
+            } else if (currentX < -80) {
+                // Свайп влево: приоткрыть быстрые действия
+                row.style.transform = 'translateX(-120px)';
+                setTimeout(() => {
+                    if (row) row.style.transform = 'translateX(0px)';
+                }, 3000);
+            } else {
+                row.style.transform = 'translateX(0px)';
+            }
+
+            if (hintStatus) hintStatus.style.opacity = 0;
+            if (hintActions) hintActions.style.opacity = 0;
+            isSwiping = false;
+        }, { passive: true });
+    });
+}
+
+// Превью карточка
 function renderProjectPreviewCard(projId) {
     const preview = document.getElementById('projectPreviewCard');
     const p = appState.projects.find(x => x.id === projId);
+    if (!preview) return;
     if (!p) { preview.classList.add('hidden'); return; }
     preview.classList.remove('hidden');
 
@@ -181,6 +335,8 @@ function renderProjectPreviewCard(projId) {
     const fSmooth = fittings.filter(i => i.shape === 'smooth');
     if (fSmooth.length) treeHtml += `<div class="font-bold text-cyan-400 mt-2">Изделия плавные</div>` + formatPreviewItems(fSmooth, true);
 
+    const stDef = PROJECT_STATUSES[getProjectStatusKey(p.status_text)] || PROJECT_STATUSES.in_progress;
+
     preview.innerHTML = `
         <div class="flex flex-wrap justify-between items-start gap-2 border-b border-white/10 pb-3">
             <div>
@@ -188,7 +344,7 @@ function renderProjectPreviewCard(projId) {
                 <p class="text-xs text-zinc-400 mt-0.5">${p.description || 'Описание не указано'}</p>
             </div>
             <div class="text-right">
-                <span class="text-xs px-2.5 py-1 rounded-full font-bold ${p.status_text === 'Воздуховоды отрезаны' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-white/10 text-white border border-white/15'}">${p.status_text || 'В работе'}</span>
+                <span class="text-xs px-2.5 py-1 rounded-full font-bold border ${stDef.cls}">${p.status_text || stDef.label}</span>
                 <div class="text-[11px] text-zinc-400 mt-1">${p.group_name || 'Без бригады'}</div>
             </div>
         </div>
@@ -208,16 +364,16 @@ function renderProjectPreviewCard(projId) {
         </div>
 
         <div class="flex flex-wrap gap-2 pt-2 border-t border-white/10">
-            <button onclick="openInsideProject(${p.id})" class="flex-1 bg-white hover:bg-zinc-200 text-black font-extrabold py-3 px-3 rounded-xl text-xs uppercase tracking-wider transition text-center shadow-sm">
+            <button onclick="openInsideProject(${p.id})" class="flex-1 bg-white hover:bg-zinc-200 text-black font-extrabold py-3 px-3 rounded-xl text-xs uppercase tracking-wider transition text-center shadow-sm tap-spring">
                 Открыть проект
             </button>
-            <button onclick="openProjectModal(${p.id})" class="bg-white/5 hover:bg-white/10 text-zinc-200 py-3 px-3.5 rounded-xl text-xs font-semibold border border-white/5">
+            <button onclick="openProjectModal(${p.id})" class="bg-white/5 hover:bg-white/10 text-zinc-200 py-3 px-3.5 rounded-xl text-xs font-semibold border border-white/5 tap-spring">
                 ✎ Изменить
             </button>
-            <button onclick="archiveProjectSafe(${p.id})" class="bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white py-3 px-3.5 rounded-xl text-xs border border-white/5">
+            <button onclick="archiveProjectSafe(${p.id})" class="bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white py-3 px-3.5 rounded-xl text-xs border border-white/5 tap-spring">
                 ${p.archive_state === 'archived' ? 'Восстановить' : 'В архив'}
             </button>
-            ${isDev() && p.archive_state === 'archived' ? `<button onclick="deleteProjectPermanent(${p.id})" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 py-3 px-3.5 rounded-xl text-xs font-semibold">Удалить</button>` : ''}
+            ${isDev() && p.archive_state === 'archived' ? `<button onclick="deleteProjectPermanent(${p.id})" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 py-3 px-3.5 rounded-xl text-xs font-semibold tap-spring">Удалить</button>` : ''}
         </div>
     `;
 }
@@ -253,6 +409,7 @@ function formatPreviewItems(items, isFitting) {
 // СОЗДАНИЕ И РЕДАКТИРОВАНИЕ ПРОЕКТОВ
 // ==========================================
 function openProjectModal(editId = null) {
+    triggerHaptic('light');
     document.getElementById('modalProjId').value = editId || '';
     document.getElementById('projectModalHeader').textContent = editId ? 'Редактировать проект' : 'Создать проект';
 
@@ -285,6 +442,7 @@ function openProjectModal(editId = null) {
 }
 
 function closeProjectModal() {
+    triggerHaptic('light');
     document.getElementById('projectModal').classList.add('hidden');
 }
 
@@ -323,7 +481,8 @@ async function saveProjectModal() {
         const newFlangeData = {
             scraps: [],
             seams: { lock_pittsburgh: big, lock_single: small, round_seam: round },
-            pack_qty: packQty
+            pack_qty: packQty,
+            phases: []
         };
         const { data: newP } = await supabaseClient.from('projects').insert({
             title, description: desc, group_name: group, status_text: statusText, archive_state: 'active', flange_scraps: newFlangeData
@@ -339,6 +498,7 @@ async function saveProjectModal() {
 
     closeProjectModal();
     renderMainMenuProjects();
+    updateHeaderUI();
 }
 
 async function archiveProjectSafe(id) {
@@ -359,19 +519,170 @@ async function archiveProjectSafe(id) {
         showToast(`Проект "${p.title}" восстановлен из архива`, 'success');
     }
 
-    await supabaseClient.from('projects').update({ archive_state: p.archive_state }).eq('id', id);
+    await supabaseClient.from('projects').update({ archive_state: p.archive_state, updated_at: new Date().toISOString() }).eq('id', id);
     renderMainMenuProjects();
+    updateHeaderUI();
 }
 
 async function deleteProjectPermanent(id) {
-    if (!confirm('Удалить проект навсегда из базы? Все расчеты и история будут стерты.')) return;
+    if (!confirm('Удалить проект навсегда из базы? Все позиции и история будут стерты без возможности восстановления.')) return;
     await supabaseClient.from('projects').delete().eq('id', id);
+    await supabaseClient.from('items').delete().eq('project_id', id);
+    await supabaseClient.from('nestings').delete().eq('project_id', id);
+
     appState.projects = appState.projects.filter(x => x.id !== id);
     appState.allItems = appState.allItems.filter(x => x.project_id !== id);
     appState.allPayments = appState.allPayments.filter(x => x.project_id !== id);
     session.clickedProjectId = null;
     showToast('Проект удален из базы', 'error');
     renderMainMenuProjects();
+    updateHeaderUI();
+}
+
+// ==========================================
+// ПОДПРОЕКТЫ / ДОЗАКАЗЫ / ОЧЕРЕДИ (PHASES)
+// ==========================================
+function openSubprojectModal() {
+    triggerHaptic('light');
+    const input = document.getElementById('subprojectTitleInput');
+    if (input) input.value = '';
+    const modal = document.getElementById('subprojectModal');
+    if (modal) modal.classList.remove('hidden');
+    setTimeout(() => input?.focus(), 80);
+}
+
+function closeSubprojectModal() {
+    triggerHaptic('light');
+    const modal = document.getElementById('subprojectModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function saveSubprojectModal() {
+    const input = document.getElementById('subprojectTitleInput');
+    const title = (input?.value || '').trim();
+    if (!title) {
+        showToast('Укажите название дозаказа / очереди', 'warning');
+        return;
+    }
+
+    const p = appState.projects.find(x => x.id === session.insideProjectId);
+    if (!p) return;
+
+    const data = getProjectFlangeData(p);
+    if (!Array.isArray(data.phases)) data.phases = [];
+
+    const newPhase = {
+        id: 'phase_' + Date.now(),
+        name: title,
+        created_at: new Date().toISOString()
+    };
+
+    data.phases.push(newPhase);
+    await saveProjectFlangeData(p, data);
+
+    session.activePhaseId = newPhase.id;
+    closeSubprojectModal();
+    showToast(`Очередь "${title}" добавлена`, 'success');
+    renderProjectPhases();
+    renderProjectInside();
+}
+
+async function deleteSubproject(phaseId) {
+    const p = appState.projects.find(x => x.id === session.insideProjectId);
+    if (!p) return;
+
+    const data = getProjectFlangeData(p);
+    const ph = (data.phases || []).find(x => x.id === phaseId);
+    if (!ph) return;
+
+    const phaseItemsCount = appState.activeProjectItems.filter(i => (i.phase_id || i.dimensions?.phase_id) === phaseId).length;
+    const msg = phaseItemsCount > 0 
+        ? `В очереди "${ph.name}" есть ${phaseItemsCount} позиций. Переместить их в «Основной заказ» и удалить очередь?`
+        : `Удалить очередь "${ph.name}"?`;
+
+    if (!confirm(msg)) return;
+
+    data.phases = data.phases.filter(x => x.id !== phaseId);
+    await saveProjectFlangeData(p, data);
+
+    // Перемещаем позиции удаленной очереди в 'main'
+    for (const it of appState.activeProjectItems) {
+        if ((it.phase_id || it.dimensions?.phase_id) === phaseId) {
+            it.phase_id = 'main';
+            if (!it.dimensions) it.dimensions = {};
+            it.dimensions.phase_id = 'main';
+            await supabaseClient.from('items').update({ dimensions: it.dimensions }).eq('id', it.id);
+        }
+    }
+
+    session.activePhaseId = 'all';
+    showToast(`Очередь "${ph.name}" удалена`, 'info');
+    renderProjectPhases();
+    renderProjectInside();
+}
+
+function renderProjectPhases() {
+    const container = document.getElementById('projectPhasesContainer');
+    if (!container) return;
+
+    const p = appState.projects.find(x => x.id === session.insideProjectId);
+    if (!p) { container.innerHTML = ''; return; }
+
+    const data = getProjectFlangeData(p);
+    const phases = data.phases || [];
+    const activePh = session.activePhaseId || 'all';
+
+    const allItems = appState.activeProjectItems;
+    const totalQty = allItems.reduce((s, i) => s + (Number(i.qty) || 1), 0);
+    const mainQty = allItems.filter(i => (!i.phase_id || i.phase_id === 'main' || i.dimensions?.phase_id === 'main')).reduce((s, i) => s + (Number(i.qty) || 1), 0);
+
+    let html = `
+        <button type="button" onclick="selectPhase('all')" class="px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition tap-spring ${
+            activePh === 'all' 
+                ? 'bg-white text-black shadow-sm' 
+                : 'bg-white/5 text-zinc-400 hover:text-white border border-white/5'
+        }">
+            Все очереди (${totalQty})
+        </button>
+
+        <button type="button" onclick="selectPhase('main')" class="px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition tap-spring ${
+            activePh === 'main' 
+                ? 'bg-white text-black shadow-sm' 
+                : 'bg-white/5 text-zinc-400 hover:text-white border border-white/5'
+        }">
+            Основной заказ (${mainQty})
+        </button>
+    `;
+
+    phases.forEach(ph => {
+        const phQty = allItems.filter(i => (i.phase_id || i.dimensions?.phase_id) === ph.id).reduce((s, i) => s + (Number(i.qty) || 1), 0);
+        const isSel = (activePh === ph.id);
+        html += `
+            <div class="inline-flex items-center rounded-xl overflow-hidden border ${isSel ? 'bg-white text-black border-white shadow-sm' : 'bg-white/5 text-zinc-400 border-white/5'}">
+                <button type="button" onclick="selectPhase('${ph.id}')" class="px-3 py-1.5 font-bold whitespace-nowrap transition tap-spring">
+                    ${ph.name} (${phQty})
+                </button>
+                <button type="button" onclick="deleteSubproject('${ph.id}')" title="Удалить очередь" class="px-2 py-1.5 text-xs font-bold ${isSel ? 'text-black/60 hover:text-rose-600' : 'text-zinc-500 hover:text-rose-400'} transition tap-spring">
+                    ✕
+                </button>
+            </div>
+        `;
+    });
+
+    html += `
+        <button type="button" onclick="openSubprojectModal()" class="px-3 py-1.5 rounded-xl font-bold bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 whitespace-nowrap transition tap-spring flex items-center gap-1">
+            <span>＋ Дозаказ</span>
+        </button>
+    `;
+
+    container.innerHTML = html;
+}
+
+function selectPhase(phaseId) {
+    triggerHaptic('light');
+    session.activePhaseId = phaseId;
+    renderProjectPhases();
+    renderProjectInside();
 }
 
 // ==========================================
@@ -379,6 +690,8 @@ async function deleteProjectPermanent(id) {
 // ==========================================
 async function openInsideProject(id) {
     session.insideProjectId = id;
+    session.activePhaseId = 'all';
+    session.specSelectionMode = false;
     session.selectedSpecIds = [];
 
     const p = appState.projects.find(x => x.id === id);
@@ -386,8 +699,11 @@ async function openInsideProject(id) {
     if (titleHeader) titleHeader.textContent = p ? p.title : 'Проект';
 
     const statusBadge = document.getElementById('activeProjStatusBadge');
-    if (statusBadge) {
-        statusBadge.textContent = p ? (p.status_text || 'В работе') : 'В работе';
+    if (statusBadge && p) {
+        const stDef = PROJECT_STATUSES[getProjectStatusKey(p.status_text)] || PROJECT_STATUSES.in_progress;
+        statusBadge.textContent = p.status_text || stDef.label;
+        statusBadge.className = `text-[10px] px-2 py-0.5 rounded-lg font-bold border transition ${stDef.cls}`;
+        statusBadge.onclick = (e) => cycleProjectStatus(p.id, e);
     }
 
     const cutBadge = document.getElementById('activeProjCutBadge');
@@ -398,36 +714,22 @@ async function openInsideProject(id) {
     populateFormDropdowns();
     selectCategory('duct');
     selectShape('rect');
+    renderProjectPhases();
     renderProjectInside();
 
     if (typeof navigateTo === 'function') {
-        navigateTo(SCREENS.PROJECT_DETAIL);
+        navigateTo(SCREENS.PROJECT_DETAIL, { projectId: id });
     }
 }
 
-function switchInnerTab(tab) {
-    ['items', 'flange', 'nesting', 'finance'].forEach(t => {
-        const view = document.getElementById('view-' + t);
-        const btn = document.getElementById('inTab-' + t);
-        if (view) view.classList.toggle('hidden', t !== tab);
-        if (btn) {
-            btn.className = t === tab 
-                ? "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-black whitespace-nowrap shadow-sm transition" 
-                : "px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white/5 text-zinc-400 hover:text-white whitespace-nowrap transition";
-        }
-    });
-
-    if (tab === 'flange') renderProjectFlange();
-    if (tab === 'nesting') renderProjectNesting();
-    if (tab === 'finance') renderProjectFinance();
-}
-
 function renderProjectInside() {
+    renderProjectPhases();
     renderSummarySection();
     renderSpecification();
 }
 
 function toggleSummaryAccordion() {
+    triggerHaptic('light');
     const body = document.getElementById('summaryBody');
     const arrow = document.getElementById('summaryArrow');
     if (!body) return;
@@ -437,11 +739,16 @@ function toggleSummaryAccordion() {
 }
 
 function renderSummarySection() {
-    const ducts = appState.activeProjectItems.filter(i => i.category === 'duct');
-    const fittings = appState.activeProjectItems.filter(i => i.category === 'fitting');
+    let items = appState.activeProjectItems;
+    if (session.activePhaseId && session.activePhaseId !== 'all') {
+        items = items.filter(i => (i.phase_id || i.dimensions?.phase_id || 'main') === session.activePhaseId);
+    }
 
-    const totalQty = appState.activeProjectItems.reduce((s, i) => s + (Number(i.qty) || 1), 0);
-    const doneQty = appState.activeProjectItems.filter(i => i.item_status === 'done').reduce((s, i) => s + (Number(i.qty) || 1), 0);
+    const ducts = items.filter(i => i.category === 'duct');
+    const fittings = items.filter(i => i.category === 'fitting');
+
+    const totalQty = items.reduce((s, i) => s + (Number(i.qty) || 1), 0);
+    const doneQty = items.filter(i => i.item_status === 'done').reduce((s, i) => s + (Number(i.qty) || 1), 0);
     const pct = totalQty > 0 ? Math.round((doneQty / totalQty) * 100) : 0;
 
     const p = appState.projects.find(x => x.id === session.insideProjectId);
@@ -455,11 +762,6 @@ function renderSummarySection() {
         totalDuctArea += (unfold * Number(it.l || 1250) * (Number(it.qty) || 1)) / 1e6;
     });
 
-    const sumDucts = document.getElementById('sumTotalDucts');
-    if (sumDucts) sumDucts.textContent = ducts.reduce((s, i) => s + i.qty, 0) + ' шт';
-    const sumFittings = document.getElementById('sumTotalFittings');
-    if (sumFittings) sumFittings.textContent = fittings.reduce((s, i) => s + i.qty, 0) + ' шт';
-
     const quickSummary = document.getElementById('activeProjQuickSummary');
     if (quickSummary) {
         quickSummary.textContent = `${totalQty} изд. • ${totalDuctArea.toFixed(1)} м² • Готово: ${pct}%`;
@@ -468,59 +770,54 @@ function renderSummarySection() {
     const dBox = document.getElementById('summaryDuctsBox');
     if (dBox) {
         let dHtml = '<div class="font-bold text-blue-400 uppercase tracking-wider text-[11px] mb-1">1. Воздуховоды</div>';
-
         const dRect = ducts.filter(i => i.shape === 'rect');
         if (dRect.length) {
-            dHtml += '<div class="text-[11px] font-bold text-slate-300 mt-1">Прямоугольные воздуховоды:</div>';
+            dHtml += '<div class="text-[11px] font-bold text-zinc-300 mt-1">Прямоугольные:</div>';
             const grouped = groupSummaryDucts(dRect);
             for (let [m, d] of Object.entries(grouped)) {
-                dHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${d.qty} шт</strong> | Площадь: <strong class="text-blue-300">${d.area.toFixed(2)} м²</strong></div>`;
+                dHtml += `<div class="pl-2 text-zinc-400 mono text-xs">${m} | <strong>${d.qty} шт</strong> | <strong class="text-blue-300">${d.area.toFixed(2)} м²</strong></div>`;
             }
         }
-
         const dRound = ducts.filter(i => i.shape === 'round');
         if (dRound.length) {
-            dHtml += '<div class="text-[11px] font-bold text-slate-300 mt-2">Круглые воздуховоды:</div>';
+            dHtml += '<div class="text-[11px] font-bold text-zinc-300 mt-2">Круглые:</div>';
             const grouped = groupSummaryDucts(dRound);
             for (let [m, d] of Object.entries(grouped)) {
-                dHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${d.qty} шт</strong> | Площадь: <strong class="text-blue-300">${d.area.toFixed(2)} м²</strong></div>`;
+                dHtml += `<div class="pl-2 text-zinc-400 mono text-xs">${m} | <strong>${d.qty} шт</strong> | <strong class="text-blue-300">${d.area.toFixed(2)} м²</strong></div>`;
             }
         }
-        if (!dRect.length && !dRound.length) dHtml += '<div class="text-slate-500">Нет воздуховодов</div>';
+        if (!dRect.length && !dRound.length) dHtml += '<div class="text-zinc-500">Нет воздуховодов</div>';
         dBox.innerHTML = dHtml;
     }
 
     const fBox = document.getElementById('summaryFittingsBox');
     if (fBox) {
-        let fHtml = '<div class="font-bold text-emerald-400 uppercase tracking-wider text-[11px] mb-1">2. Изделия (Фасонина)</div>';
-
+        let fHtml = '<div class="font-bold text-emerald-400 uppercase tracking-wider text-[11px] mb-1">2. Фасонные изделия</div>';
         const fRect = fittings.filter(i => i.shape === 'rect');
         if (fRect.length) {
-            fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-1">Прямоугольные изделия:</div>';
+            fHtml += '<div class="text-[11px] font-bold text-zinc-300 mt-1">Прямоугольные:</div>';
             const grouped = groupSummaryFittings(fRect);
             for (let [m, q] of Object.entries(grouped)) {
-                fHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${q} шт</strong></div>`;
+                fHtml += `<div class="pl-2 text-zinc-400 mono text-xs">${m} | <strong class="text-white">${q} шт</strong></div>`;
             }
         }
-
         const fRound = fittings.filter(i => i.shape === 'round');
         if (fRound.length) {
-            fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-2">Круглые изделия:</div>';
+            fHtml += '<div class="text-[11px] font-bold text-zinc-300 mt-2">Круглые:</div>';
             const grouped = groupSummaryFittings(fRound);
             for (let [m, q] of Object.entries(grouped)) {
-                fHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${q} шт</strong></div>`;
+                fHtml += `<div class="pl-2 text-zinc-400 mono text-xs">${m} | <strong class="text-white">${q} шт</strong></div>`;
             }
         }
-
         const fSmooth = fittings.filter(i => i.shape === 'smooth');
         if (fSmooth.length) {
-            fHtml += '<div class="text-[11px] font-bold text-slate-300 mt-2">Плавные изделия:</div>';
+            fHtml += '<div class="text-[11px] font-bold text-zinc-300 mt-2">Плавные:</div>';
             const grouped = groupSummaryFittings(fSmooth);
             for (let [m, q] of Object.entries(grouped)) {
-                fHtml += `<div class="pl-2 text-slate-400 mono">${m} | Кол-во: <strong class="text-white">${q} шт</strong></div>`;
+                fHtml += `<div class="pl-2 text-zinc-400 mono text-xs">${m} | <strong class="text-white">${q} шт</strong></div>`;
             }
         }
-        if (!fRect.length && !fRound.length && !fSmooth.length) fHtml += '<div class="text-slate-500">Нет фасонных изделий</div>';
+        if (!fRect.length && !fRound.length && !fSmooth.length) fHtml += '<div class="text-zinc-500">Нет фасонных изделий</div>';
         fBox.innerHTML = fHtml;
     }
 }

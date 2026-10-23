@@ -99,7 +99,7 @@
                 border-bottom-right-radius: 0 !important;
                 border-top-left-radius: 32px !important;
                 border-top-right-radius: 32px !important;
-                max-height: 90vh !important;
+                max-height: 92vh !important;
                 box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8) !important;
                 animation: sheetSlideUp 0.34s var(--ios-spring) forwards;
             }
@@ -109,11 +109,13 @@
             to { transform: translateY(0); }
         }
 
-        /* Свайп по позиции в спецификации */
-        .swipe-row {
+        /* Интерактивный жест-свайп по карточке */
+        .swipe-card {
+            position: relative;
             touch-action: pan-y;
             will-change: transform;
-            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease;
         }
 
         #printReportArea { display: none; }
@@ -125,6 +127,17 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-white selection:text-black">
+
+    <!-- БАННЕР БЕЗОПАСНОГО ПРОСМОТРА АРХИВА (ПЕСОЧНИЦА) -->
+    <div id="archiveSandboxBanner" class="hidden sticky top-0 z-50 bg-amber-500 text-black px-4 py-2.5 text-xs font-bold flex items-center justify-between shadow-xl">
+        <div class="flex items-center gap-2">
+            <span class="text-base">⚠️</span>
+            <span id="archiveSandboxTitle">Вы просматриваете архив месяца. База защищена от изменений.</span>
+        </div>
+        <button type="button" onclick="exitArchiveSandbox()" class="bg-black hover:bg-zinc-800 text-white px-3 py-1.5 rounded-xl font-extrabold text-[11px] uppercase tracking-wider tap-spring">
+            ✕ Выйти
+        </button>
+    </div>
 
     <!-- БЛОК ДЛЯ ПЕЧАТИ ЧИСТОГО PDF-ОТЧЕТА -->
     <div id="printReportArea"></div>
@@ -143,25 +156,23 @@
                     ⚡
                 </div>
                 <h1 class="text-2xl font-black tracking-tight text-white uppercase">MAXVENT TOOLS</h1>
-                <p id="authSubtitle" class="text-xs text-zinc-400">Производственный учет цеха</p>
+                <p id="authSubtitle" class="text-xs text-zinc-400">Производственная система цеха</p>
             </div>
 
             <!-- ИНДИКАТОР ПИН-КОДА (ТОЧКИ) -->
             <div class="flex flex-col items-center space-y-3 my-auto py-4">
-                <span class="text-xs font-semibold text-zinc-400">Введите персональный пин-код</span>
-                <div class="flex gap-4">
+                <div class="flex items-center gap-4 py-2">
                     <span id="pinDot-1" class="w-4 h-4 rounded-full border-2 border-white/20 bg-transparent transition-all"></span>
                     <span id="pinDot-2" class="w-4 h-4 rounded-full border-2 border-white/20 bg-transparent transition-all"></span>
                     <span id="pinDot-3" class="w-4 h-4 rounded-full border-2 border-white/20 bg-transparent transition-all"></span>
                     <span id="pinDot-4" class="w-4 h-4 rounded-full border-2 border-white/20 bg-transparent transition-all"></span>
                 </div>
-                <!-- Скрытое поле для ввода с физ. клавиатуры -->
-                <input type="password" id="authCodeInput" autocomplete="off" class="opacity-0 w-1 h-1 pointer-events-none absolute">
-                <div id="authError" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-xl text-center"></div>
+                <div id="authError" class="text-xs text-rose-400 font-bold min-h-[1.25rem] transition-all hidden">Неверный код доступа</div>
+                <input type="password" id="authCodeInput" maxlength="6" class="hidden">
             </div>
 
-            <!-- ЦИФРОВАЯ КЛАВИАТУРА -->
-            <div class="grid grid-cols-3 gap-3 max-w-[280px] mx-auto w-full my-auto pb-4">
+            <!-- ЦИФРОВАЯ СЕНСОРНАЯ КЛАВИАТУРА ДЛЯ СМАРТФОНА -->
+            <div class="grid grid-cols-3 gap-3 w-full pb-4 select-none">
                 <button type="button" onclick="pressAuthPin(1)" class="h-16 rounded-3xl bg-[#141622] border border-white/5 text-2xl font-bold text-white tap-spring flex items-center justify-center">1</button>
                 <button type="button" onclick="pressAuthPin(2)" class="h-16 rounded-3xl bg-[#141622] border border-white/5 text-2xl font-bold text-white tap-spring flex items-center justify-center">2</button>
                 <button type="button" onclick="pressAuthPin(3)" class="h-16 rounded-3xl bg-[#141622] border border-white/5 text-2xl font-bold text-white tap-spring flex items-center justify-center">3</button>
@@ -176,10 +187,10 @@
                 <button type="button" onclick="backspaceAuthPin()" class="h-16 rounded-3xl bg-transparent text-xl font-bold text-zinc-400 tap-spring flex items-center justify-center">⌫</button>
             </div>
 
-            <!-- ИНДИКАТОР SUPABASE -->
-            <div class="flex items-center justify-center gap-2 pt-2 border-t border-white/5 text-[11px] text-zinc-400">
+            <!-- ИНДИКАТОР SUPABASE С КНОПКОЙ ПЕРЕПОДКЛЮЧЕНИЯ -->
+            <div onclick="manualReconnectDatabase()" class="flex items-center justify-center gap-2 pt-2 border-t border-white/5 text-[11px] text-zinc-400 cursor-pointer tap-spring">
                 <span id="cloudDotIndicator" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span id="cloudStatusAuth">Supabase: Онлайн (Синхронизировано)</span>
+                <span id="cloudStatusAuth">🟢 Supabase: Онлайн (Синхронизировано)</span>
             </div>
         </div>
     </div>
@@ -188,17 +199,17 @@
     <!-- ЭКРАН 2: ГЛАВНОЕ МЕНЮ (SCREEN-MENU) -->
     <!-- ========================================== -->
     <div id="screen-menu" class="app-screen hidden min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-xl mx-auto w-full no-print">
-        <!-- ВЕРХНЯЯ СТРОКА: ПРОФИЛЬ МАСТЕРА И ВЫХОД -->
+        <!-- ВЕРХНЯЯ СТРОКА: ПРОФИЛЬ МАСТЕРА И СТАТУС БАЗЫ -->
         <div class="flex items-center justify-between border-b border-white/10 pb-4 pt-2">
-            <button type="button" onclick="navigateTo(SCREENS.WORKER)" class="flex items-center gap-3 bg-[#12141c] hover:bg-[#181b26] border border-white/10 px-3.5 py-2 rounded-2xl tap-spring shadow-sm text-left">
-                <div class="w-9 h-9 rounded-xl bg-white text-black font-black flex items-center justify-center text-sm shadow" id="menuUserAvatar">Ч</div>
+            <button type="button" onclick="openProfileModal()" class="flex items-center gap-3 bg-[#12141c] hover:bg-[#181b26] border border-white/10 px-3.5 py-2 rounded-2xl tap-spring shadow-sm text-left">
+                <div class="w-9 h-9 rounded-xl bg-white text-black font-black flex items-center justify-center text-base shadow" id="menuUserAvatar">👤</div>
                 <div>
-                    <div class="text-xs font-extrabold text-white leading-tight" id="menuUserName">Чингис</div>
-                    <div class="text-[10px] text-amber-400 font-semibold" id="menuUserRole">Разработчик</div>
+                    <div class="text-xs font-extrabold text-white leading-tight" id="menuUserName">Мастер</div>
+                    <div class="text-[10px] text-amber-400 font-semibold" id="menuUserRole">Работник цеха</div>
                 </div>
             </button>
             <div class="flex items-center gap-2">
-                <span id="cloudIndicator" class="text-[10px] text-emerald-400 font-medium hidden sm:inline-block">● Онлайн (Supabase)</span>
+                <span id="cloudIndicator" onclick="manualReconnectDatabase()" class="text-[10px] text-emerald-400 font-medium cursor-pointer hidden sm:inline-block tap-spring">● Онлайн (Supabase)</span>
                 <button id="pwaInstallBtn" type="button" onclick="triggerPwaInstall()" class="hidden bg-emerald-500 hover:bg-emerald-400 text-black text-[11px] font-bold px-3 py-1.5 rounded-xl shadow tap-spring">
                     📲 Установить
                 </button>
@@ -231,13 +242,13 @@
                 <span class="text-zinc-500 font-bold text-xl group-hover:text-white transition pr-2">→</span>
             </button>
 
-            <!-- 2. КАЛЬКУЛЯТОР ШИНКИ -->
+            <!-- 2. КАЛЬКУЛЯТОР ШИНКИ 1D -->
             <button type="button" onclick="navigateTo(SCREENS.FLANGE, { fromProject: false })" class="w-full bg-[#12141c] hover:bg-[#181b26] border border-white/10 hover:border-white/20 rounded-3xl p-5 text-left flex items-center justify-between group tap-spring shadow-xl">
                 <div class="flex items-center gap-4">
                     <div class="w-14 h-14 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center text-2xl group-hover:scale-105 transition">📐</div>
                     <div>
                         <h3 class="text-base sm:text-lg font-black text-white">Калькулятор шинки</h3>
-                        <p class="text-xs text-zinc-400 mt-0.5">1D раскрой пачек с учетом обрезков</p>
+                        <p class="text-xs text-zinc-400 mt-0.5">Раскрой пачек 1D, учет цеховых обрезков</p>
                     </div>
                 </div>
                 <span class="text-zinc-500 font-bold text-xl group-hover:text-white transition pr-2">→</span>
@@ -246,28 +257,28 @@
             <!-- 3. МОЯ ВЫРАБОТКА -->
             <button type="button" onclick="navigateTo(SCREENS.WORKER)" class="w-full bg-[#12141c] hover:bg-[#181b26] border border-emerald-500/20 hover:border-emerald-500/40 rounded-3xl p-5 text-left flex items-center justify-between group tap-spring shadow-xl">
                 <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-2xl text-emerald-400 group-hover:scale-105 transition">💰</div>
+                    <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl group-hover:scale-105 transition">💰</div>
                     <div>
                         <div class="flex items-center gap-2">
                             <h3 class="text-base sm:text-lg font-black text-white">Моя выработка</h3>
-                            <span id="menuEarnedAmount" class="text-xs bg-emerald-500/20 text-emerald-400 font-mono font-bold px-2 py-0.5 rounded-full">0 ₸</span>
+                            <span id="menuEarnedAmount" class="text-[11px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono font-bold px-2 py-0.5 rounded-full">0 ₸</span>
                         </div>
-                        <p class="text-xs text-zinc-400 mt-0.5">Начисления за смену, готовые изделия</p>
+                        <p class="text-xs text-zinc-400 mt-0.5">Текущий заработок по активным объектам</p>
                     </div>
                 </div>
                 <span class="text-zinc-500 font-bold text-xl group-hover:text-white transition pr-2">→</span>
             </button>
 
-            <!-- 4. АДМИН-МЕНЮ (ДЛЯ РАЗРАБОТЧИКА) -->
+            <!-- 4. АДМИН-МЕНЮ (ТОЛЬКО ДЛЯ РУКОВОДИТЕЛЯ) -->
             <button type="button" id="menuAdminBtn" onclick="navigateTo(SCREENS.ADMIN)" class="w-full bg-[#12141c] hover:bg-[#181b26] border border-amber-500/25 hover:border-amber-500/40 rounded-3xl p-5 text-left flex items-center justify-between group tap-spring shadow-xl">
                 <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-2xl text-amber-300 group-hover:scale-105 transition">⚙️</div>
+                    <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-300 flex items-center justify-center text-2xl group-hover:scale-105 transition">⚙️</div>
                     <div>
                         <div class="flex items-center gap-2">
                             <h3 class="text-base sm:text-lg font-black text-white">Админ-меню</h3>
-                            <span class="text-[9px] bg-amber-500/25 text-amber-300 px-2 py-0.5 rounded-md font-bold uppercase">DEV</span>
+                            <span class="text-[10px] bg-amber-500/20 text-amber-300 font-mono font-bold px-2 py-0.5 rounded-full">DEV</span>
                         </div>
-                        <p class="text-xs text-zinc-400 mt-0.5">Мастера, конструктор изделий, финансы</p>
+                        <p class="text-xs text-zinc-400 mt-0.5">Конструктор изделий, справочники, финансы</p>
                     </div>
                 </div>
                 <span class="text-zinc-500 font-bold text-xl group-hover:text-white transition pr-2">→</span>
@@ -307,7 +318,7 @@
                 </div>
             </div>
 
-            <!-- ПОИСК И ФИЛЬТРЫ -->
+            <!-- ПОИСК И ПЕРЕКЛЮЧАТЕЛЬ [ АКТИВНЫЕ | АРХИВ ] -->
             <div class="flex flex-col sm:flex-row items-center gap-2">
                 <input type="text" id="projectSearchInput" oninput="renderMainMenuProjects()" placeholder="🔍 Поиск объекта или бригады..." class="w-full bg-[#12141c] border border-white/10 rounded-2xl px-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-white/30">
                 <div class="flex bg-[#12141c] p-1 rounded-2xl border border-white/10 text-xs w-full sm:w-auto shrink-0">
@@ -339,71 +350,48 @@
                 <span>←</span> <span>Назад</span>
             </button>
             <h2 id="flangeScreenTitle" class="text-sm sm:text-base font-black uppercase tracking-wider text-white">Калькулятор шинки (1D)</h2>
-            <div class="flex gap-2">
-                <button type="button" id="flangePrintBtn" onclick="printFlangeOrder(flangeSource)" class="text-xs bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 px-3 py-1.5 rounded-xl font-bold tap-spring">
-                    📄 PDF
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="openFlangeSettingsModal()" title="Настройки пачки и пропила" class="text-xs bg-white/5 hover:bg-white/10 border border-white/10 text-amber-300 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 tap-spring">
+                    <span>⚙️ Настройки</span>
                 </button>
             </div>
         </div>
 
         <!-- 1. АВТОНОМНЫЙ РАСКРОЙ ШИНКИ (ИЗ МЕНЮ) -->
-        <div id="flangeStandaloneSection" class="flex-1 overflow-y-auto space-y-4 py-4">
-            <!-- ПАРАМЕТРЫ ПАЧКИ -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#12141c] p-4 rounded-3xl border border-white/10 text-xs">
-                <div>
-                    <label class="block text-zinc-400 mb-1">Длина пачки (мм)</label>
-                    <input type="number" id="stPackLen" value="3000" onchange="renderStandaloneFlange()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+        <div id="flangeStandaloneSection" class="flex-1 overflow-y-auto space-y-4 py-4 text-xs">
+            <!-- 1. БЛОК ОБРЕЗКОВ -->
+            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/10 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="font-bold text-amber-300">✂️ Обрезки пачек в цехе:</div>
+                    <button type="button" onclick="openFlangeAddScrapModal('standalone')" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold px-3 py-1.5 rounded-xl tap-spring">
+                        ＋ Добавить обрезок
+                    </button>
                 </div>
-                <div>
-                    <label class="block text-zinc-400 mb-1">Шинок в пачке (шт)</label>
-                    <input type="number" id="stPackQty" value="10" min="1" onchange="renderStandaloneFlange()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold text-amber-300">
-                </div>
-                <div>
-                    <label class="block text-zinc-400 mb-1">Ширина реза (мм)</label>
-                    <input type="number" id="stKerf" value="2" onchange="renderStandaloneFlange()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
-                </div>
-                <div>
-                    <label class="block text-zinc-400 mb-1">Округление</label>
-                    <select id="stRound" onchange="renderStandaloneFlange()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white">
-                        <option value="down">Вниз (хвостики на дорез)</option>
-                        <option value="up">Вверх (целая пачка в запас)</option>
-                    </select>
-                </div>
+                <div id="stScrapChips" class="flex flex-wrap gap-2"></div>
             </div>
 
-            <!-- ОБРЕЗКИ -->
-            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/10 space-y-2.5 text-xs">
-                <div class="font-bold text-zinc-300">Обрезки пачек в цехе:</div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <input type="number" id="stScrapInput" placeholder="Длина обрезка (мм)" class="bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
-                    <input type="number" id="stScrapCountInput" placeholder="Шинок в обрезке (шт)" class="bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
-                    <button type="button" onclick="addFlangeScrap('standalone')" class="bg-white/10 hover:bg-white/20 text-white font-bold px-3 py-2 rounded-xl transition border border-white/10 tap-spring">+ Обрезок</button>
-                </div>
-                <div id="stScrapChips" class="flex flex-wrap gap-1.5 pt-1"></div>
-            </div>
-
-            <!-- ВВОД РАМОК -->
-            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/10 space-y-3 text-xs">
+            <!-- ВВОД РАМОК ВРУЧНУЮ -->
+            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/10 space-y-3">
                 <div class="font-bold text-white">Добавить рамки воздуховодов:</div>
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 items-end">
                     <div>
                         <label class="block text-zinc-400 mb-1">Ширина (A) мм</label>
-                        <input type="number" id="stW" value="500" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+                        <input type="number" id="stW" value="500" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
                     </div>
                     <div>
                         <label class="block text-zinc-400 mb-1">Высота (B) мм</label>
-                        <input type="number" id="stH" value="400" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+                        <input type="number" id="stH" value="400" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
                     </div>
                     <div>
                         <button type="button" onclick="swapDims('stW', 'stH')" title="Поменять местами W и H" class="w-full bg-[#181b26] hover:bg-white/10 border border-white/10 text-white font-bold py-2 rounded-xl transition text-center tap-spring">⇄ Смена A↔B</button>
                     </div>
                     <div>
                         <label class="block text-zinc-400 mb-1">Рамок на деталь</label>
-                        <input type="number" id="stSides" value="2" min="1" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
+                        <input type="number" id="stSides" value="2" min="1" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
                     </div>
                     <div>
                         <label class="block text-zinc-400 mb-1">Количество деталей</label>
-                        <input type="number" id="stQty" value="10" min="1" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
+                        <input type="number" id="stQty" value="10" min="1" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2 pt-1">
@@ -417,48 +405,25 @@
         </div>
 
         <!-- 2. РАСКРОЙ ШИНКИ ДЛЯ ПРОЕКТА (ИЗ ПРОЕКТА) -->
-        <div id="flangeProjectSection" class="hidden flex-1 overflow-y-auto space-y-4 py-4">
-            <!-- ПАРАМЕТРЫ ПАЧКИ ПРОЕКТА -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#12141c] p-4 rounded-3xl border border-white/10 text-xs">
-                <div>
-                    <label class="block text-zinc-400 mb-1">Длина пачки (мм)</label>
-                    <input type="number" id="projPackLen" value="3000" onchange="renderProjectFlange()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+        <div id="flangeProjectSection" class="hidden flex-1 overflow-y-auto space-y-4 py-4 text-xs">
+            <!-- 1. БЛОК ОБРЕЗКОВ ДЛЯ ПРОЕКТА -->
+            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/10 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="font-bold text-amber-300">✂️ Обрезки пачек в цехе:</div>
+                    <button type="button" onclick="openFlangeAddScrapModal('project')" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold px-3 py-1.5 rounded-xl tap-spring">
+                        ＋ Добавить обрезок
+                    </button>
                 </div>
-                <div>
-                    <label class="block text-zinc-400 mb-1">Шинок в пачке (шт)</label>
-                    <input type="number" id="projPackQty" value="10" min="1" onchange="renderProjectFlange()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold text-amber-300">
-                </div>
-                <div>
-                    <label class="block text-zinc-400 mb-1">Ширина реза (мм)</label>
-                    <input type="number" id="projKerf" value="2" onchange="renderProjectFlange()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
-                </div>
-                <div>
-                    <label class="block text-zinc-400 mb-1">Округление пачек</label>
-                    <select id="projFlangeRound" onchange="renderProjectFlange()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white">
-                        <option value="down">Вниз (хвостики на дорез)</option>
-                        <option value="up">Вверх (целая пачка в запас)</option>
-                    </select>
-                </div>
+                <div id="projScrapChips" class="flex flex-wrap gap-2"></div>
             </div>
 
-            <!-- ОБРЕЗКИ ПРОЕКТА -->
-            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/10 space-y-2.5 text-xs">
-                <div class="font-bold text-zinc-300">Обрезки пачек в цехе:</div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <input type="number" id="projScrapLenInput" placeholder="Длина обрезка (мм)" class="bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
-                    <input type="number" id="projScrapCountInput" placeholder="Шинок в обрезке (шт)" class="bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
-                    <button type="button" onclick="addFlangeScrap('project')" class="bg-white/10 hover:bg-white/20 text-white font-bold px-3 py-2 rounded-xl transition border border-white/10 tap-spring">+ Обрезок</button>
-                </div>
-                <div id="projScrapChips" class="flex flex-wrap gap-1.5 pt-1"></div>
-            </div>
-
-            <!-- ВЫВОД РЕЗУЛЬТАТОВ РАСКРОЯ (ПРОЕКТ) -->
+            <!-- ВЫВОД РЕЗУЛЬТАТОВ РАСКРОЯ ПРОЕКТА -->
             <div id="projFlangeOutput" class="space-y-4"></div>
         </div>
 
         <div class="pt-2 sticky bottom-4">
             <button type="button" id="flangeCopyBtn" onclick="exportFlangeText(flangeSource)" class="w-full bg-white hover:bg-zinc-200 text-black font-black py-4 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-2xl tap-spring">
-                <span>📄</span> <span>Скопировать наряд на резку</span>
+                <span>📋</span> <span>Скопировать наряд текстом</span>
             </button>
         </div>
     </div>
@@ -473,7 +438,7 @@
                 <button type="button" onclick="navigateTo(SCREENS.PROJECTS)" class="bg-[#141722] hover:bg-[#1c202e] border border-white/10 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 tap-spring">
                     <span>←</span> <span>Проекты</span>
                 </button>
-                <h2 id="activeProjTitleHeader" class="font-extrabold text-sm sm:text-base text-white truncate max-w-[180px] sm:max-w-xs">Проект</h2>
+                <h2 id="activeProjTitleHeader" class="font-extrabold text-sm sm:text-base text-white break-words max-w-[200px] sm:max-w-md">Проект</h2>
                 <span id="activeProjStatusBadge" class="text-[10px] bg-amber-500/15 border border-amber-500/20 text-amber-300 px-2 py-0.5 rounded-lg font-bold">В работе</span>
                 <span id="activeProjCutBadge" class="hidden text-[10px] bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-lg font-semibold">Воздуховоды отрезаны</span>
             </div>
@@ -492,6 +457,11 @@
         </div>
 
         <div class="p-4 sm:p-6 space-y-4 flex-1">
+            <!-- ПОДПРОЕКТЫ / ДОЗАКАЗЫ ОБЪЕКТА -->
+            <div id="projectPhasesContainer" class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+                <!-- Генерируется динамически: [ Основной заказ ] [ Дозаказ №1 ] [ ＋ Дозаказ ] -->
+            </div>
+
             <!-- КРАТКАЯ ИНФОРМАТИВНАЯ СВОДКА ПО ОБЪЕКТУ -->
             <div class="bg-[#12141c] border border-white/5 rounded-3xl p-4 sm:p-5 shadow-sm space-y-3">
                 <div class="flex items-center justify-between flex-wrap gap-2">
@@ -517,8 +487,8 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div class="flex items-center gap-2 flex-wrap">
                     <h3 class="text-xs sm:text-sm font-black uppercase tracking-wider text-white">Спецификация</h3>
-                    <button type="button" onclick="toggleSelectAllSpecItems()" id="btnSelectAllSpec" class="bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition tap-spring">
-                        <span>☑</span> <span id="lblSelectAllSpec">Выделить все</span>
+                    <button type="button" onclick="toggleSpecSelectionMode()" id="btnToggleSelectionMode" class="bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition tap-spring">
+                        <span>☑</span> <span id="lblToggleSelectionMode">Выбрать</span>
                     </button>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto text-xs">
@@ -534,18 +504,19 @@
                 </div>
             </div>
 
-            <!-- ПАНЕЛЬ МАССОВЫХ ДЕЙСТВИЙ -->
+            <!-- ПАНЕЛЬ МАССОВЫХ ДЕЙСТВИЙ (РЕЖИМ ВЫДЕЛЕНИЯ) -->
             <div id="specBatchToolbar" class="hidden bg-[#181b26] border border-white/20 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-2 shadow-2xl">
                 <div class="flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
-                    <span class="text-xs font-bold text-white">Выбрано: <strong id="batchSelectedCount" class="mono text-white">0</strong> поз.</span>
+                    <button type="button" onclick="toggleSelectAllSpecItems()" class="text-xs font-bold text-white underline" id="lblSelectAllSpec">Выбрать все</button>
+                    <span class="text-zinc-500">•</span>
+                    <span class="text-xs text-zinc-300">Выбрано: <strong id="batchSelectedCount" class="mono text-white">0</strong> поз.</span>
                 </div>
                 <div class="flex flex-wrap items-center gap-1.5 text-xs">
                     <button type="button" onclick="batchSetStatus('done')" title="Пометить как Готово" class="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 tap-spring">
                         <span>✓</span> <span>Готово</span>
                     </button>
-                    <button type="button" onclick="batchSetStatus('queue')" title="Пометить как Не готово" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 tap-spring">
-                        <span>⏳</span> <span>Не готово</span>
+                    <button type="button" onclick="batchSetStatus('queue')" title="Пометить как В очередь" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 tap-spring">
+                        <span>⏳</span> <span>В очередь</span>
                     </button>
                     <button type="button" onclick="openBulkEditModal()" title="Массово изменить параметры" class="bg-white hover:bg-zinc-200 text-black font-extrabold px-3 py-1.5 rounded-xl transition flex items-center gap-1 tap-spring">
                         <span>⚙</span> <span>Группой...</span>
@@ -553,31 +524,17 @@
                     <button type="button" id="bulkDeleteBtn" onclick="deleteSelectedItems()" title="Удалить выбранные" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 border border-rose-500/30 tap-spring">
                         <span>🗑</span> <span>Удалить (<span id="bulkCount">0</span>)</span>
                     </button>
-                    <button type="button" onclick="clearSpecSelection()" class="text-zinc-400 hover:text-white px-2 py-1 text-xs">✕</button>
+                    <button type="button" onclick="toggleSpecSelectionMode()" class="text-zinc-400 hover:text-white px-2 py-1 text-xs font-bold">✕ Закрыть</button>
                 </div>
             </div>
 
-            <!-- ИНДИКАТОР ПРОГРЕССА В ЦЕХЕ -->
-            <div id="specProgressBar" class="w-full bg-[#12141c] rounded-2xl p-3 border border-white/5 text-xs hidden">
-                <div class="flex justify-between items-center mb-1.5 text-[11px]">
-                    <span class="text-zinc-400">Готовность заказа в цехе:</span>
-                    <span id="specProgressLabel" class="font-bold mono text-emerald-400">0 / 0 поз. (0%)</span>
-                </div>
-                <div class="w-full bg-black/40 h-2 rounded-full overflow-hidden border border-white/5">
-                    <div id="specProgressFill" class="bg-emerald-400 h-full w-0 transition-all duration-300"></div>
-                </div>
-            </div>
-
-            <!-- АККОРДЕОН СПИСКА ИЗДЕЛИЙ -->
+            <!-- СПИСОК ИЗДЕЛИЙ СО СВАЙПАМИ -->
             <div id="specificationAccordionList" class="space-y-3"></div>
         </div>
 
-        <!-- ========================================== -->
         <!-- ФИКСИРОВАННЫЙ НИЖНИЙ DOCK ДЕЙСТВИЙ -->
-        <!-- [ Шинка ]  |  [ ＋ Добавить ]  |  [ Раскрой ] -->
-        <!-- ========================================== -->
         <nav class="fixed bottom-0 inset-x-0 z-40 bg-[#0c0e14]/95 backdrop-blur-2xl border-t border-white/10 px-8 py-2.5 flex items-center justify-between sm:max-w-md sm:mx-auto sm:bottom-4 sm:rounded-full sm:border shadow-2xl safe-bottom">
-            <!-- КНОПКА ШИНКИ ПО ЭТОМУ ПРОЕКТУ -->
+            <!-- КНОПКА ШИНКИ -->
             <button type="button" onclick="navigateTo(SCREENS.FLANGE, { fromProject: true })" class="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition tap-spring">
                 <span class="text-xl">📐</span>
                 <span class="text-[10px] font-bold">Шинка</span>
@@ -588,7 +545,7 @@
                 ＋
             </button>
 
-            <!-- КНОПКА РАСКРОЯ 2D ПО ЭТОМУ ПРОЕКТУ -->
+            <!-- КНОПКА РАСКРОЯ 2D -->
             <button type="button" onclick="navigateTo(SCREENS.NESTING, { fromProject: true })" class="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition tap-spring">
                 <span class="text-xl">✂️</span>
                 <span class="text-[10px] font-bold">Раскрой</span>
@@ -608,10 +565,10 @@
                 <div class="w-10 h-10 rounded-2xl bg-white/10 text-white flex items-center justify-center text-lg font-bold" id="workerProfAvatar">👤</div>
                 <div>
                     <div class="flex items-center gap-2">
-                        <h3 class="text-base font-black text-white" id="workerProfName">Личный кабинет мастера</h3>
+                        <h3 class="text-base font-black text-white" id="workerProfName">Выработка мастера</h3>
                         <span id="workerProfRoleBadge" class="text-[10px] bg-white/10 text-zinc-300 border border-white/15 px-2 py-0.5 rounded-full font-bold">Мастер</span>
                     </div>
-                    <p class="text-xs text-zinc-400">Учет выработки, начислений и выполненных изделий</p>
+                    <p class="text-xs text-zinc-400">Накопленный баланс по активным проектам</p>
                 </div>
             </div>
             
@@ -627,6 +584,19 @@
         </div>
 
         <div class="flex-1 overflow-y-auto space-y-4 py-4">
+            <!-- ФИЛЬТР: ПО АКТИВНЫМ ОБЪЕКТАМ (ПО УМОЛЧАНИЮ) -->
+            <div class="flex items-center justify-between border-b border-white/10 gap-2 pb-2">
+                <div class="flex gap-2">
+                    <button type="button" onclick="setWorkerProjectsFilter('active')" id="wpFilterActiveBtn" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-white text-black transition tap-spring">
+                        🟢 Активные объекты
+                    </button>
+                    <button type="button" onclick="setWorkerProjectsFilter('archived')" id="wpFilterArchivedBtn" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white transition tap-spring">
+                        📁 В архиве
+                    </button>
+                </div>
+                <select id="wpProjStateFilter" onchange="renderWorkerProfileContent()" class="hidden"></select>
+            </div>
+
             <!-- KPI СТАТИСТИКА -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div class="bg-[#12141c] border border-white/5 p-4 rounded-3xl">
@@ -651,49 +621,9 @@
                 </div>
             </div>
 
-            <!-- НАВИГАЦИЯ ПО ВКЛАДКАМ -->
-            <div class="flex items-center justify-between border-b border-white/10 gap-2 overflow-x-auto pb-1">
-                <div class="flex gap-2">
-                    <button type="button" onclick="switchWorkerProfTab('by-project')" id="wpTab-by-project" class="px-3.5 py-2 text-xs font-bold rounded-xl bg-white text-black whitespace-nowrap transition shadow-sm tap-spring">
-                        📁 Сводка по объектам
-                    </button>
-                    <button type="button" onclick="switchWorkerProfTab('all-items')" id="wpTab-all-items" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white whitespace-nowrap transition tap-spring">
-                        📋 Все позиции мастера
-                    </button>
-                </div>
-                <div class="flex items-center gap-2">
-                    <select id="wpProjStateFilter" onchange="renderWorkerProfileContent()" class="bg-[#181b26] border border-white/10 text-zinc-300 text-xs px-3 py-1.5 rounded-xl">
-                        <option value="active">Только активные объекты</option>
-                        <option value="all">Все объекты (включая архив)</option>
-                        <option value="archived">Только архивные</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- ТАБ 1: СВОДКА ПО ОБЪЕКТАМ -->
-            <div id="wpView-by-project" class="space-y-3">
-                <div id="wpProjectsList" class="space-y-3"></div>
-            </div>
-
-            <!-- ТАБ 2: ВСЕ ПОЗИЦИИ -->
-            <div id="wpView-all-items" class="hidden space-y-3">
-                <div class="flex flex-wrap items-center justify-between gap-2 bg-[#181b26] p-3.5 rounded-2xl border border-white/5">
-                    <input type="text" id="wpSearchInput" oninput="renderWorkerAllItems()" placeholder="🔍 Поиск позиции (500, отвод, объект...)" class="bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-white/30 w-full sm:w-64">
-                    <div class="flex items-center gap-2 flex-wrap text-xs">
-                        <select id="wpStatusFilter" onchange="renderWorkerAllItems()" class="bg-[#12141c] border border-white/10 text-zinc-300 px-3 py-2 rounded-xl">
-                            <option value="all">Все статусы</option>
-                            <option value="done">✓ Готово</option>
-                            <option value="queue">⏳ Не готово</option>
-                        </select>
-                        <select id="wpCategoryFilter" onchange="renderWorkerAllItems()" class="bg-[#12141c] border border-white/10 text-zinc-300 px-3 py-2 rounded-xl">
-                            <option value="all">Все типы</option>
-                            <option value="duct">Воздуховоды</option>
-                            <option value="fitting">Фасонина</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="wpAllItemsList" class="space-y-2"></div>
-            </div>
+            <!-- СПИСОК ОБЪЕКТОВ С ДОЛЯМИ И ВЫРАБОТКОЙ -->
+            <div id="wpProjectsList" class="space-y-3"></div>
+            <div id="wpAllItemsList" class="hidden"></div>
         </div>
     </div>
 
@@ -705,7 +635,7 @@
             <button type="button" onclick="navigateTo(SCREENS.MENU)" class="flex items-center gap-2 text-xs font-bold text-white bg-white/5 hover:bg-white/10 px-3.5 py-2 rounded-2xl border border-white/10 tap-spring">
                 <span>←</span> <span>В меню</span>
             </button>
-            <h2 class="text-sm sm:text-base font-black uppercase tracking-wider text-amber-400">⚙ Админ-меню (Разработчик)</h2>
+            <h2 class="text-sm sm:text-base font-black uppercase tracking-wider text-amber-400">⚙ Админ-меню (Руководитель)</h2>
             <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">DEV</span>
         </div>
 
@@ -725,27 +655,36 @@
                 <div id="devUsersStatsList" class="space-y-2"></div>
             </div>
 
-            <!-- 2. МЕТАЛЛЫ, ТОЛЩИНЫ И БРИГАДЫ -->
+            <!-- 2. СПРАВОЧНИКИ ЦЕХА (С ОЧЕРЕДНОСТЬЮ) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div class="bg-[#12141c] p-4 rounded-3xl border border-white/10 space-y-2">
-                    <div class="font-bold text-white">Виды металлов</div>
-                    <div id="devMetalsList" class="flex flex-wrap gap-1.5"></div>
+                    <div class="font-bold text-white flex justify-between items-center">
+                        <span>Виды металлов</span>
+                        <span class="text-[10px] text-zinc-500">Порядок важен</span>
+                    </div>
+                    <div id="devMetalsList" class="space-y-1.5"></div>
                     <div class="flex gap-1 pt-1">
                         <input type="text" id="newMetalInp" placeholder="Оц." class="w-full bg-[#181b26] border border-white/10 rounded-xl px-2.5 py-1.5 text-white">
                         <button type="button" onclick="addCatalogItem('metals', 'newMetalInp')" class="bg-white text-black font-extrabold px-3 rounded-xl tap-spring">+</button>
                     </div>
                 </div>
                 <div class="bg-[#12141c] p-4 rounded-3xl border border-white/10 space-y-2">
-                    <div class="font-bold text-white">Толщины металла (мм)</div>
-                    <div id="devThickList" class="flex flex-wrap gap-1.5"></div>
+                    <div class="font-bold text-white flex justify-between items-center">
+                        <span>Толщины металла (мм)</span>
+                        <span class="text-[10px] text-zinc-500">Порядок важен</span>
+                    </div>
+                    <div id="devThickList" class="space-y-1.5"></div>
                     <div class="flex gap-1 pt-1">
                         <input type="number" step="0.05" id="newThickInp" placeholder="0.5" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-2.5 py-1.5 text-white">
                         <button type="button" onclick="addCatalogItem('thicknesses', 'newThickInp')" class="bg-white text-black font-extrabold px-3 rounded-xl tap-spring">+</button>
                     </div>
                 </div>
                 <div class="bg-[#12141c] p-4 rounded-3xl border border-white/10 space-y-2">
-                    <div class="font-bold text-white">Монтажные бригады</div>
-                    <div id="devGroupsList" class="flex flex-wrap gap-1.5"></div>
+                    <div class="font-bold text-white flex justify-between items-center">
+                        <span>Монтажные бригады</span>
+                        <span class="text-[10px] text-zinc-500">Порядок важен</span>
+                    </div>
+                    <div id="devGroupsList" class="space-y-1.5"></div>
                     <div class="flex gap-1 pt-1">
                         <input type="text" id="newGroupInp" placeholder="Бригада №1" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-2.5 py-1.5 text-white">
                         <button type="button" onclick="addCatalogItem('groups', 'newGroupInp')" class="bg-white text-black font-extrabold px-3 rounded-xl tap-spring">+</button>
@@ -753,14 +692,26 @@
                 </div>
             </div>
 
-            <!-- 3. КОНСТРУКТОР ИЗДЕЛИЙ -->
+            <!-- 3. ЗАМЕТКИ ДЛЯ ЦЕХА (ШПАРГАЛКА РАСХОДНИКОВ) -->
+            <div class="bg-[#12141c] p-4 sm:p-5 rounded-3xl border border-white/10 space-y-3">
+                <div class="flex justify-between items-center">
+                    <div class="font-black text-amber-300 uppercase tracking-wider text-sm">📝 Заметки цеха (Шпаргалка расходников)</div>
+                    <button type="button" onclick="saveShopNotes()" class="bg-white hover:bg-zinc-200 text-black font-extrabold px-3.5 py-1.5 rounded-xl text-xs tap-spring">
+                        Сохранить заметки
+                    </button>
+                </div>
+                <p class="text-xs text-zinc-400">Напишите здесь важные параметры для мастеров (размеры саморезов, заклепок, дисков болгарки и т.д.). Они видны всем.</p>
+                <textarea id="shopNotesTextarea" rows="4" placeholder="• Саморезы: 4.2x16 с прессшайбой&#10;• Заклепки: 3.2x8 алюминий&#10;• Диски болгарки: 125x1.0 Луга / Bosch&#10;• Лента: 10x4" class="w-full bg-[#181b26] border border-white/10 rounded-2xl p-3.5 text-xs text-white leading-relaxed focus:outline-none"></textarea>
+            </div>
+
+            <!-- 4. КОНСТРУКТОР ИЗДЕЛИЙ -->
             <div class="bg-[#12141c] p-4 sm:p-5 rounded-3xl border border-white/10 space-y-4">
                 <div class="flex justify-between items-center border-b border-white/10 pb-2">
                     <div id="customFitHeaderTitle" class="font-bold text-amber-300 uppercase tracking-wider">Конструктор: Настроить вид изделия</div>
                     <button type="button" id="btnCancelCustomFit" onclick="cancelEditCustomFitting()" class="hidden text-rose-400 hover:underline font-bold text-xs">✕ Отмена</button>
                 </div>
                 <input type="hidden" id="customFitId" value="">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     <div>
                         <label class="block text-zinc-400 mb-1">Название изделия</label>
                         <input type="text" id="customFitName" placeholder="Например: Адаптер" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white">
@@ -770,11 +721,21 @@
                         <select id="customFitShape" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white">
                             <option value="rect">Прямоугольное</option>
                             <option value="round">Круглое</option>
-                            <option value="smooth">Плавное</option>
+                            <option value="smooth">Плавное (Прям-Круг)</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-zinc-400 mb-1">Цена по умолчанию (₸)</label>
+                        <label class="block text-zinc-400 mb-1">Рамок шинки</label>
+                        <select id="customFitFramesCnt" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white font-bold">
+                            <option value="0">0 — Без шинки</option>
+                            <option value="1">1 рамка (заглушка)</option>
+                            <option value="2" selected>2 рамки (короб/отвод)</option>
+                            <option value="3">3 рамки (тройник)</option>
+                            <option value="4">4 рамки (крестовина)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Тариф сборки (₸)</label>
                         <input type="number" id="customFitPrice" value="1000" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
                     </div>
                 </div>
@@ -789,10 +750,11 @@
                 <!-- СОЗДАНИЕ КАСТОМНОГО ПАРАМЕТРА -->
                 <div class="border-t border-white/10 pt-3 space-y-2">
                     <div class="font-bold text-zinc-300">Создать свой параметр для изделий:</div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <input type="text" id="newParamLabel" placeholder="Название по-русски (напр: Вылет фланца)" class="bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white text-xs">
-                        <input type="text" id="newParamCode" placeholder="Код на англ. (напр: flange_offset)" class="bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white mono text-xs">
-                        <button type="button" onclick="addNewCustomParam()" class="bg-white hover:bg-zinc-200 text-black font-extrabold rounded-xl py-2 uppercase text-xs transition shadow-sm tap-spring">+ Добавить параметр</button>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                        <input type="text" id="newParamLabel" placeholder="Название (напр: Вылет)" class="bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white text-xs">
+                        <input type="text" id="newParamCode" placeholder="Код англ (offset)" class="bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white mono text-xs">
+                        <input type="text" id="newParamChips" placeholder="Быстрые чипсы: 100, 150, 200" class="bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white text-xs">
+                        <button type="button" onclick="addNewCustomParam()" class="bg-white hover:bg-zinc-200 text-black font-extrabold rounded-xl py-2 uppercase text-xs transition shadow-sm tap-spring">+ Добавить</button>
                     </div>
                 </div>
 
@@ -806,10 +768,10 @@
                 </div>
             </div>
 
-            <!-- 4. ФИНАНСОВОЕ УПРАВЛЕНИЕ -->
+            <!-- 5. ФИНАНСОВОЕ УПРАВЛЕНИЕ ЗАКАЗЧИКАМИ -->
             <div class="bg-[#12141c] p-4 sm:p-5 rounded-3xl border border-white/10 space-y-3">
                 <div class="flex justify-between items-center">
-                    <div class="font-black text-emerald-400 uppercase tracking-wider text-sm">₸ Финансовая ведомость цеха</div>
+                    <div class="font-black text-emerald-400 uppercase tracking-wider text-sm">₸ Финансовая ведомость цеха (Оплаты заказчиков)</div>
                     <button type="button" onclick="printGlobalFinancialReport()" class="bg-white hover:bg-zinc-200 text-black text-xs font-extrabold px-3 py-1.5 rounded-xl shadow tap-spring">
                         📄 Скачать PDF
                     </button>
@@ -817,15 +779,20 @@
                 <div id="globalFinanceContent" class="space-y-4"></div>
             </div>
 
-            <!-- 5. АРХИВАЦИЯ ПО МЕСЯЦАМ -->
+            <!-- 6. ЕЖЕМЕСЯЧНЫЙ ЭКСПОРТ И БЕЗОПАСНАЯ ПЕСОЧНИЦА -->
             <div class="bg-[#12141c] p-4 sm:p-5 rounded-3xl border border-white/10 space-y-3">
-                <div class="font-bold text-white uppercase tracking-wider">Архивация по месяцам</div>
-                <div class="flex flex-wrap gap-2">
+                <div class="font-bold text-white uppercase tracking-wider">Ежемесячная архивация и резервные копии</div>
+                <p class="text-xs text-zinc-400">Экспортируйте данные в файл, чтобы освободить приложение. Неоплаченные и активные объекты будут безопасно сохранены в новом месяце.</p>
+                <div class="flex flex-wrap gap-2 pt-1">
                     <button type="button" onclick="exportMonthlyArchive()" class="bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2.5 rounded-xl border border-white/10 transition tap-spring">
                         ⬇ Скачать архив месяца (.json)
                     </button>
+                    <label class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/25 font-bold px-4 py-2.5 rounded-xl transition tap-spring cursor-pointer flex items-center gap-1.5">
+                        <span>📂 Просмотреть старый архив</span>
+                        <input type="file" id="archiveSandboxFileInput" accept=".json" onchange="loadArchiveSandbox(event)" class="hidden">
+                    </label>
                     <button type="button" onclick="startNewMonthClean()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold px-4 py-2.5 rounded-xl border border-rose-500/20 transition tap-spring">
-                        Начать новый месяц (Очистить архив)
+                        Завершить месяц (Очистить сданные)
                     </button>
                 </div>
             </div>
@@ -847,26 +814,47 @@
         </div>
 
         <div class="flex-1 overflow-y-auto space-y-4 py-4 text-xs">
-            <!-- ВКЛАДКИ МЕТАЛЛОВ -->
+            <!-- 1. ВКЛАДКИ МЕТАЛЛОВ -->
             <div id="nestingSheetTabs" class="flex gap-2 overflow-x-auto pb-1"></div>
 
-            <!-- ПАРАМЕТРЫ ЛИСТА И ГИЛЬОТИНЫ -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#12141c] p-4 rounded-3xl border border-white/10">
-                <div>
-                    <label class="block text-zinc-400 mb-1">Ширина листа (мм)</label>
-                    <input type="number" id="nestSheetW" value="1250" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+            <!-- 2. ДЕЛОВЫЕ ОБРЕЗКИ ЛИСТА -->
+            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/10 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="font-bold text-amber-300">✂️ Деловые обрезки листа (идут в дело первыми):</div>
+                    <button type="button" onclick="openNestingAddScrapModal()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold px-3 py-1.5 rounded-xl tap-spring">
+                        ＋ Добавить обрезок листа
+                    </button>
                 </div>
-                <div>
-                    <label class="block text-zinc-400 mb-1">Длина листа (мм)</label>
-                    <input type="number" id="nestSheetH" value="2500" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+                <div id="nestingScrapsList" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <!-- 3. ПАРАМЕТРЫ СТАНДАРТНОГО ЛИСТА И НОЖНИЦ -->
+            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/10 space-y-3">
+                <div class="font-bold text-white">Стандартный лист и зазоры ножниц:</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Ширина листа (мм)</label>
+                        <input type="number" id="nestSheetW" value="1250" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Длина листа (мм)</label>
+                        <input type="number" id="nestSheetH" value="2500" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Ширина реза ножниц (мм)</label>
+                        <input type="number" id="nestKerf" value="0" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Отступ края (мм)</label>
+                        <input type="number" id="nestMargin" value="0" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-zinc-400 mb-1">Зазор реза (мм)</label>
-                    <input type="number" id="nestKerf" value="1" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
-                </div>
-                <div>
-                    <label class="block text-zinc-400 mb-1">Отступ края (мм)</label>
-                    <input type="number" id="nestMargin" value="5" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
+                <!-- Чипсы быстрых размеров листа -->
+                <div class="flex gap-1.5 pt-1">
+                    <button type="button" onclick="setNestingSheetPreset(1250, 2500)" class="chip-btn">1250×2500</button>
+                    <button type="button" onclick="setNestingSheetPreset(1000, 2000)" class="chip-btn">1000×2000</button>
+                    <button type="button" onclick="setNestingSheetPreset(1250, 2000)" class="chip-btn">1250×2000</button>
+                    <button type="button" onclick="setNestingSheetPreset(1250, 3000)" class="chip-btn">1250×3000</button>
                 </div>
             </div>
 
@@ -888,13 +876,12 @@
 
     <!-- 1. НИЖНЯЯ ШТОРКА ДОБАВЛЕНИЯ/РЕДАКТИРОВАНИЯ ИЗДЕЛИЯ (ITEM FORM SHEET) -->
     <div id="itemFormModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto modal-sheet-wrap no-print" onclick="if(event.target===this)closeItemAddSheet()">
-        <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-xl w-full p-5 sm:p-7 space-y-4 my-auto max-h-[90vh] overflow-y-auto shadow-2xl relative">
+        <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-xl w-full p-5 sm:p-7 space-y-4 my-auto max-h-[92vh] overflow-y-auto shadow-2xl relative">
             <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-2 sm:hidden cursor-grab"></div>
             
             <div class="flex items-center justify-between border-b border-white/10 pb-3">
                 <div class="flex items-center gap-3">
                     <h3 id="formHeaderTitle" class="text-sm font-black uppercase tracking-wider text-white">Добавить в проект</h3>
-                    <!-- Переключатель режима: Мастер по шагам / Все поля -->
                     <div class="flex items-center bg-black/40 border border-white/10 p-0.5 rounded-xl text-[11px]">
                         <button type="button" onclick="setFormMode('wizard')" id="btnModeWizard" class="px-2.5 py-1 rounded-lg font-bold bg-white text-black transition tap-spring">⚡ По шагам</button>
                         <button type="button" onclick="setFormMode('all')" id="btnModeAll" class="px-2.5 py-1 rounded-lg font-semibold text-zinc-400 hover:text-white transition tap-spring">📋 Все поля</button>
@@ -928,20 +915,22 @@
                 <!-- ШАГ 1: Изделие и сечение -->
                 <div id="wizStep-1" class="space-y-4">
                     <div class="grid grid-cols-2 gap-2 bg-black/30 p-1.5 rounded-2xl border border-white/5">
-                        <button type="button" onclick="selectCategory('duct')" id="btnCatDuct" class="py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition tap-spring">Воздуховод</button>
-                        <button type="button" onclick="selectCategory('fitting')" id="btnCatFitting" class="py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-transparent text-zinc-400 hover:text-white transition tap-spring">Изделие</button>
+                        <button type="button" onclick="selectCategory('duct')" id="btnCatDuct" class="py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition tap-spring">🟦 Воздуховод</button>
+                        <button type="button" onclick="selectCategory('fitting')" id="btnCatFitting" class="py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-transparent text-zinc-400 hover:text-white transition tap-spring">📐 Изделие</button>
                     </div>
                     <div>
                         <label class="block text-[11px] font-semibold text-zinc-400 mb-1.5">Форма сечения</label>
                         <div class="grid grid-cols-2 gap-2 bg-black/30 p-1.5 rounded-2xl border border-white/5" id="shapeButtonsWrap">
-                            <button type="button" onclick="selectShape('rect')" id="btnShapeRect" class="py-2.5 text-xs font-extrabold rounded-xl bg-white text-black shadow-sm transition tap-spring">Прямоугольное</button>
-                            <button type="button" onclick="selectShape('round')" id="btnShapeRound" class="py-2.5 text-xs font-semibold rounded-xl bg-transparent text-zinc-400 hover:text-white transition tap-spring">Круглое</button>
-                            <button type="button" onclick="selectShape('smooth')" id="btnShapeSmooth" class="hidden py-2.5 text-xs font-semibold rounded-xl bg-transparent text-zinc-400 hover:text-white transition tap-spring">Плавное</button>
+                            <button type="button" onclick="selectShape('rect')" id="btnShapeRect" class="py-2.5 text-xs font-extrabold rounded-xl bg-white text-black shadow-sm transition tap-spring">◼️ Прямоугольное</button>
+                            <button type="button" onclick="selectShape('round')" id="btnShapeRound" class="py-2.5 text-xs font-semibold rounded-xl bg-transparent text-zinc-400 hover:text-white transition tap-spring">⚪ Круглое</button>
+                            <button type="button" onclick="selectShape('smooth')" id="btnShapeSmooth" class="hidden py-2.5 text-xs font-semibold rounded-xl bg-transparent text-zinc-400 hover:text-white transition tap-spring">🔀 Прям-Круг</button>
                         </div>
                     </div>
-                    <div id="fittingSelectWrap" class="hidden">
-                        <label class="block text-[11px] font-semibold text-zinc-400 mb-1.5">Вид изделия</label>
-                        <select id="fittingTypeSelect" onchange="onFittingTypeChange()" class="w-full bg-[#181b26] border border-white/10 rounded-2xl px-3.5 py-3 text-sm font-semibold text-white focus:outline-none focus:border-white/30"></select>
+                    <!-- Сетка видов фасонных изделий с иконками -->
+                    <div id="fittingSelectWrap" class="hidden space-y-1.5">
+                        <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Вид изделия</label>
+                        <div id="fittingsCardsGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1"></div>
+                        <select id="fittingTypeSelect" onchange="onFittingTypeChange()" class="hidden"></select>
                     </div>
                     <div class="step-nav-btn pt-1">
                         <button type="button" onclick="goToWizardStep(2)" class="w-full bg-white/10 hover:bg-white/15 text-white font-extrabold py-3.5 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition tap-spring">
@@ -954,6 +943,13 @@
                 <!-- ШАГ 2: Размеры и рамки -->
                 <div id="wizStep-2" class="space-y-4">
                     <div id="dynamicFieldsBox" class="bg-[#181b26] border border-white/5 rounded-2xl p-4 sm:p-5 space-y-4"></div>
+                    
+                    <!-- БЛОК РАМОК ШИНКИ (ПЛАШКИ-ПЕРЕКЛЮЧАТЕЛИ) -->
+                    <div id="flangeFramesWrapper" class="bg-[#181b26] border border-white/5 rounded-2xl p-4 space-y-2.5">
+                        <div class="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Рамки шинки (Нажмите для включения/выключения):</div>
+                        <div id="flangeFramesTogglesList" class="space-y-2"></div>
+                    </div>
+
                     <div class="step-nav-btn grid grid-cols-2 gap-2 pt-1">
                         <button type="button" onclick="goToWizardStep(1)" class="w-full bg-white/5 hover:bg-white/10 text-zinc-300 font-bold py-3.5 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-1 transition tap-spring">
                             <span>← Назад</span>
@@ -978,52 +974,42 @@
                         <div>
                             <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Количество (шт)</label>
                             <div class="flex items-center bg-[#181b26] border border-white/10 rounded-xl p-0.5">
-                                <button type="button" onclick="adjustQtyStepper(-1)" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 active:scale-90 text-white font-bold flex items-center justify-center transition tap-spring select-none">－</button>
-                                <input type="number" id="inQty" min="1" value="1" required class="w-full bg-transparent border-0 text-center text-xs mono font-black text-white focus:outline-none">
-                                <button type="button" onclick="adjustQtyStepper(1)" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 active:scale-90 text-white font-bold flex items-center justify-center transition tap-spring select-none">＋</button>
+                                <button type="button" onclick="adjustQtyStepper(-1)" class="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 text-white font-bold text-base flex items-center justify-center tap-spring">-</button>
+                                <input type="number" id="inQty" value="1" min="1" inputmode="numeric" class="w-full bg-transparent text-center mono font-black text-white text-sm focus:outline-none">
+                                <button type="button" onclick="adjustQtyStepper(1)" class="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 text-white font-bold text-base flex items-center justify-center tap-spring">+</button>
                             </div>
                         </div>
                         <div id="priceInputWrap">
-                            <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Тариф (₸)</label>
-                            <input type="number" id="inPrice" min="0" value="1000" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2.5 text-xs mono font-bold text-emerald-400">
+                            <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Тариф (₸/шт)</label>
+                            <input type="number" id="inPrice" value="1000" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2.5 text-xs mono font-bold text-white">
                         </div>
                     </div>
-                    <div id="workersAssignWrap" class="bg-[#181b26] border border-white/5 rounded-2xl p-4 sm:p-5 space-y-3">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-                                <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Мастера / Исполнители</span>
-                            </div>
-                            <span id="workersCountBadge" class="text-[11px] text-zinc-400 mono">Выбрано: 0</span>
-                        </div>
-                        <div id="workersCheckboxes" class="flex flex-wrap gap-2 text-xs"></div>
 
-                        <!-- Секция распределения заработка при выборе >= 2 мастеров -->
-                        <div id="workerSharesBox" class="hidden pt-3 border-t border-white/10 space-y-3">
-                            <div class="flex items-center justify-between flex-wrap gap-2">
-                                <span class="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                                    <span>💰</span> Распределение заработка:
-                                </span>
-                                <div class="flex items-center gap-1 bg-[#12141c] p-0.5 rounded-xl border border-white/10">
-                                    <button type="button" onclick="setWorkersSplitMode('equal')" id="btnSplitEqual" class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white text-black transition tap-spring">Поровну</button>
-                                    <button type="button" onclick="setWorkersSplitMode('custom')" id="btnSplitCustom" class="px-2.5 py-1 text-[11px] font-semibold rounded-lg text-zinc-400 hover:text-white transition tap-spring">По долям (%)</button>
-                                </div>
-                            </div>
-                            
-                            <div id="workerSharesList" class="space-y-2 text-xs"></div>
-                            
-                            <div class="flex items-center justify-between text-[11px] pt-1">
-                                <span id="workerSharesTotalLabel" class="text-emerald-400 font-bold">Сумма долей: 100% ✓</span>
-                                <button type="button" onclick="balanceWorkerShares()" id="balanceSharesBtn" class="hidden text-amber-400 hover:underline font-semibold">Выровнять до 100%</button>
+                    <!-- УМНЫЙ СЛАЙДЕР ДОЛЕЙ МАСТЕРОВ -->
+                    <div class="bg-[#181b26] border border-white/5 rounded-2xl p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-zinc-300">Назначить мастеров цеха:</label>
+                            <div class="flex gap-1 text-[10px]">
+                                <button type="button" onclick="applyPresetShares('equal')" class="px-2 py-1 rounded-lg bg-white/10 text-zinc-200 font-bold tap-spring">⚖️ Поровну</button>
+                                <button type="button" onclick="applyPresetShares('chingis_half')" class="px-2 py-1 rounded-lg bg-white/10 text-zinc-200 font-bold tap-spring">👑 Чингис 50%</button>
                             </div>
                         </div>
+
+                        <!-- Индикатор долей (полоска памяти) -->
+                        <div id="workerSharesBreakdownBar" class="w-full h-3 bg-black/40 rounded-full overflow-hidden flex border border-white/10"></div>
+
+                        <div id="itemWorkersCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+                        <div id="workerSharesBox" class="space-y-2 pt-2 border-t border-white/5">
+                            <div id="workerSharesSlidersList" class="space-y-2.5"></div>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2 pt-1">
+
+                    <div class="step-nav-btn flex gap-2 pt-1">
                         <button type="button" onclick="goToWizardStep(2)" class="step-nav-btn w-1/3 bg-white/5 hover:bg-white/10 text-zinc-300 font-bold py-4 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-1 transition tap-spring">
                             <span>← Назад</span>
                         </button>
-                        <button type="submit" id="submitItemBtn" class="flex-1 bg-white hover:bg-zinc-200 text-black font-extrabold text-xs uppercase tracking-wider py-4 rounded-2xl shadow-lg transition tap-spring">
-                            Добавить
+                        <button type="submit" id="submitItemBtn" class="flex-1 bg-white hover:bg-zinc-200 text-black font-black py-4 rounded-2xl text-xs uppercase tracking-wider shadow-2xl transition tap-spring">
+                            ＋ Сохранить в проект
                         </button>
                     </div>
                 </div>
@@ -1031,105 +1017,81 @@
         </div>
     </div>
 
-    <!-- 2. МОДАЛКА ГРУППОВОГО ИЗМЕНЕНИЯ ИЗДЕЛИЙ (BULK EDIT) -->
-    <div id="bulkEditModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto modal-sheet-wrap no-print" onclick="if(event.target===this)closeBulkEditModal()">
-        <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-lg w-full p-5 sm:p-7 space-y-4 my-auto max-h-[90vh] overflow-y-auto shadow-2xl">
+    <!-- 2. МОДАЛКА ПРОФИЛЯ МАСТЕРА (PROFILE MODAL) -->
+    <div id="profileModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto modal-sheet-wrap no-print" onclick="if(event.target===this)closeProfileModal()">
+        <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-sm w-full p-6 sm:p-7 space-y-4 my-auto max-h-[92vh] overflow-y-auto shadow-2xl">
             <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-2 sm:hidden cursor-grab"></div>
             <div class="flex justify-between items-center border-b border-white/10 pb-3">
-                <div>
-                    <h3 class="text-sm font-black uppercase tracking-wider text-white">Групповое изменение изделий</h3>
-                    <p class="text-xs text-zinc-400 mt-0.5">Выбрано позиций: <strong id="bulkEditItemsCount" class="text-white mono">0</strong> шт</p>
-                </div>
-                <button type="button" onclick="closeBulkEditModal()" class="text-zinc-400 hover:text-white text-xl font-bold px-2">✕</button>
+                <h3 class="text-sm font-black uppercase tracking-wider text-white">Мой профиль</h3>
+                <button type="button" onclick="closeProfileModal()" class="text-zinc-400 hover:text-white text-xl font-bold px-2">✕</button>
             </div>
 
-            <p class="text-xs text-zinc-400">Отметьте галочками только те параметры, которые вы хотите изменить у всех выбранных изделий:</p>
-
-            <div class="space-y-3 text-xs">
-                <!-- 1. ВИД МЕТАЛЛА -->
-                <div class="bg-[#181b26] p-3.5 rounded-2xl border border-white/5 space-y-2">
-                    <label class="flex items-center gap-2 font-bold text-zinc-200 cursor-pointer">
-                        <input type="checkbox" id="bulkCheckMetal" onchange="toggleBulkField('bulkCheckMetal', 'bulkWrapMetal')" class="rounded text-white accent-white">
-                        <span>Изменить вид металла</span>
-                    </label>
-                    <div id="bulkWrapMetal" class="opacity-40 pointer-events-none pl-6 transition-all">
-                        <select id="bulkSelectMetal" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 text-white text-xs"></select>
-                    </div>
-                </div>
-
-                <!-- 2. ТОЛЩИНА МЕТАЛЛА -->
-                <div class="bg-[#181b26] p-3.5 rounded-2xl border border-white/5 space-y-2">
-                    <label class="flex items-center gap-2 font-bold text-zinc-200 cursor-pointer">
-                        <input type="checkbox" id="bulkCheckThickness" onchange="toggleBulkField('bulkCheckThickness', 'bulkWrapThickness')" class="rounded text-white accent-white">
-                        <span>Изменить толщину металла</span>
-                    </label>
-                    <div id="bulkWrapThickness" class="opacity-40 pointer-events-none pl-6 transition-all">
-                        <select id="bulkSelectThickness" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 text-white text-xs mono font-bold"></select>
-                    </div>
-                </div>
-
-                <!-- 3. ТАРИФ (ЦЕНА) -->
-                <div class="bg-[#181b26] p-3.5 rounded-2xl border border-white/5 space-y-2">
-                    <label class="flex items-center gap-2 font-bold text-zinc-200 cursor-pointer">
-                        <input type="checkbox" id="bulkCheckPrice" onchange="toggleBulkField('bulkCheckPrice', 'bulkWrapPrice')" class="rounded text-white accent-white">
-                        <span>Изменить тариф (₸)</span>
-                    </label>
-                    <div id="bulkWrapPrice" class="opacity-40 pointer-events-none pl-6 transition-all">
-                        <input type="number" id="bulkInputPrice" value="1000" min="0" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold text-emerald-400">
-                    </div>
-                </div>
-
-                <!-- 4. МАСТЕРА И РАСПРЕДЕЛЕНИЕ ДОЛЕЙ -->
-                <div class="bg-[#181b26] p-3.5 rounded-2xl border border-white/5 space-y-2">
-                    <label class="flex items-center gap-2 font-bold text-zinc-200 cursor-pointer">
-                        <input type="checkbox" id="bulkCheckWorkers" onchange="toggleBulkField('bulkCheckWorkers', 'bulkWrapWorkers')" class="rounded text-white accent-white">
-                        <span>Переназначить мастеров и доли</span>
-                    </label>
-                    <div id="bulkWrapWorkers" class="opacity-40 pointer-events-none pl-6 space-y-2 transition-all">
-                        <div id="bulkWorkersCheckboxes" class="flex flex-wrap gap-1.5 text-xs"></div>
-                        <div class="text-[11px] text-zinc-400">
-                            При участии Чингиса ему начисляется 50%, остальные делят поровну.
-                        </div>
-                    </div>
+            <!-- Аватарка и имя -->
+            <div class="flex flex-col items-center space-y-3 pt-1">
+                <div id="profEditAvatarPreview" class="w-16 h-16 rounded-3xl bg-white/10 border border-white/20 text-3xl font-black flex items-center justify-center text-white shadow-lg">👤</div>
+                <div class="w-full">
+                    <label class="block text-zinc-400 text-xs mb-1">Имя мастера:</label>
+                    <input type="text" id="profEditName" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none">
                 </div>
             </div>
 
-            <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
-                <button type="button" onclick="closeBulkEditModal()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white transition">Отмена</button>
-                <button type="button" onclick="applyBulkEdit()" class="bg-white hover:bg-zinc-200 text-black font-extrabold px-5 py-2.5 text-xs rounded-xl uppercase transition shadow-md tap-spring">
-                    ✓ Применить к выбранным
+            <!-- Выбор аватарки -->
+            <div class="space-y-1.5">
+                <label class="block text-zinc-400 text-xs">Выберите значок:</label>
+                <div id="profAvatarsGrid" class="flex flex-wrap gap-2 justify-center bg-[#181b26] p-3 rounded-2xl border border-white/5"></div>
+            </div>
+
+            <!-- Смена PIN-кода -->
+            <div class="border-t border-white/10 pt-3 space-y-2">
+                <div class="text-xs font-bold text-zinc-300">Смена PIN-кода (по желанию):</div>
+                <input type="password" id="profOldPin" placeholder="Старый PIN-код" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white mono text-xs">
+                <input type="password" id="profNewPin" placeholder="Новый PIN-код" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white mono text-xs font-bold">
+                <div id="profPinError" class="hidden text-[11px] text-rose-400 font-semibold"></div>
+            </div>
+
+            <div class="flex flex-col gap-2 pt-2 border-t border-white/10">
+                <button type="button" onclick="saveProfileModal()" class="w-full bg-white hover:bg-zinc-200 text-black font-extrabold py-3 rounded-xl uppercase text-xs transition shadow tap-spring">
+                    Сохранить изменения
+                </button>
+                <button type="button" onclick="logout()" class="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold py-2.5 rounded-xl text-xs transition border border-rose-500/20 tap-spring">
+                    Выйти из аккаунта ✕
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- 3. МОДАЛКА ПРОЕКТА (СОЗДАТЬ / ИЗМЕНИТЬ) -->
+    <!-- 3. МОДАЛКА СОЗДАНИЯ/РЕДАКТИРОВАНИЯ ПРОЕКТА -->
     <div id="projectModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target===this)closeProjectModal()">
-        <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 my-auto max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-4 shadow-2xl">
             <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-2 sm:hidden cursor-grab"></div>
-            <h3 id="projectModalHeader" class="text-sm font-black uppercase tracking-wider text-white">Создать проект</h3>
+            <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                <h3 id="projectModalHeader" class="text-sm font-black uppercase tracking-wider text-white">Новый проект</h3>
+                <button type="button" onclick="closeProjectModal()" class="text-zinc-400 hover:text-white text-xl font-bold">✕</button>
+            </div>
             <input type="hidden" id="modalProjId" value="">
-            <div>
-                <label class="block text-xs text-zinc-400 mb-1">Название объекта *</label>
-                <input type="text" id="modalProjTitle" required placeholder="Например: ТЦ Астана Молл" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-white/30">
-            </div>
-            <div>
-                <label class="block text-xs text-zinc-400 mb-1">Описание / Примечания</label>
-                <textarea id="modalProjDesc" rows="2" placeholder="Примечания по заказу..." class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-white/30"></textarea>
-            </div>
-            <div>
-                <label class="block text-xs text-zinc-400 mb-1">Монтажная группа</label>
-                <select id="modalProjGroup" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white"></select>
-            </div>
-            <div>
-                <label class="block text-xs text-zinc-400 mb-1">Текущий статус</label>
-                <select id="modalProjStatusText" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white">
-                    <option value="В работе">В работе</option>
-                    <option value="Ожидает металл">Ожидает металл</option>
-                    <option value="Воздуховоды отрезаны">Воздуховоды отрезаны</option>
-                    <option value="Готов к отгрузке">Готов к отгрузке</option>
-                    <option value="Сдан">Сдан</option>
-                </select>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-zinc-400 mb-1">Название проекта *</label>
+                    <input type="text" id="modalProjTitle" placeholder="ЖК Алатау, Блок Б" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2.5 text-white font-bold text-sm">
+                </div>
+                <div>
+                    <label class="block text-zinc-400 mb-1">Примечание / Адрес</label>
+                    <input type="text" id="modalProjDesc" placeholder="3 этаж, приточная система" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Монтажная бригада</label>
+                        <select id="modalProjGroup" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Статус объекта</label>
+                        <select id="modalProjStatusText" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white font-bold">
+                            <option value="not_started">⚪ Не начат</option>
+                            <option value="in_progress" selected>🟠 В работе</option>
+                            <option value="done">🟢 Готово</option>
+                        </select>
+                    </div>
+                </div>
             </div>
             <div class="border-t border-white/10 pt-3 space-y-2.5">
                 <div class="text-xs font-bold text-amber-400 uppercase tracking-wider">Припуски фальцев для объекта (мм)</div>
@@ -1159,7 +1121,27 @@
         </div>
     </div>
 
-    <!-- 4. МОДАЛКА НАСТРОЙКИ ФАЛЬЦЕВ ПРОЕКТА -->
+    <!-- 4. МОДАЛКА СОЗДАНИЯ ДОЗАКАЗА / ОЧЕРЕДИ (SUBPROJECT MODAL) -->
+    <div id="subprojectModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target===this)closeSubprojectModal()">
+        <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2">
+                <h3 class="text-sm font-black uppercase tracking-wider text-white">＋ Новый дозаказ / Очередь</h3>
+                <button type="button" onclick="closeSubprojectModal()" class="text-zinc-400 hover:text-white text-xl font-bold">✕</button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-zinc-400 mb-1">Название дозаказа:</label>
+                    <input type="text" id="subprojectTitleInput" placeholder="Напр: Дозаказ №1 (3-й этаж)" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-white font-bold">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button type="button" onclick="closeSubprojectModal()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Отмена</button>
+                <button type="button" onclick="saveSubprojectModal()" class="bg-white hover:bg-zinc-200 text-black font-extrabold px-5 py-2.5 text-xs rounded-xl uppercase transition shadow tap-spring">Создать дозаказ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. МОДАЛКА НАСТРОЙКИ ФАЛЬЦЕВ ПРОЕКТА -->
     <div id="projectSeamsModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target===this)closeProjectSeamsModal()">
         <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-4 shadow-2xl">
             <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-2 sm:hidden cursor-grab"></div>
@@ -1196,7 +1178,88 @@
         </div>
     </div>
 
-    <!-- 5. ГРУППОВОЕ ИЗМЕНЕНИЕ ИЗДЕЛИЙ (BULK EDIT MODAL) -->
+    <!-- 6. МОДАЛКА НАСТРОЕК ШИНКИ (FLANGE SETTINGS) -->
+    <div id="flangeSettingsModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target===this)closeFlangeSettingsModal()">
+        <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2">
+                <h3 class="text-sm font-black uppercase tracking-wider text-white">⚙️ Настройки шинорейки</h3>
+                <button type="button" onclick="closeFlangeSettingsModal()" class="text-zinc-400 hover:text-white text-xl font-bold">✕</button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-zinc-400 mb-1">Длина стандартной пачки (мм)</label>
+                    <input type="number" id="settPackLen" value="3000" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+                </div>
+                <div>
+                    <label class="block text-zinc-400 mb-1">Шинок в стандартной пачке (шт)</label>
+                    <input type="number" id="settPackQty" value="10" min="1" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold text-amber-300">
+                </div>
+                <div>
+                    <label class="block text-zinc-400 mb-1">Ширина пропила пилы (мм)</label>
+                    <input type="number" id="settKerf" value="2" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button type="button" onclick="closeFlangeSettingsModal()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Отмена</button>
+                <button type="button" onclick="saveFlangeSettingsModal()" class="bg-white hover:bg-zinc-200 text-black font-extrabold px-5 py-2.5 text-xs rounded-xl uppercase transition shadow-sm tap-spring">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. МОДАЛКА ДОБАВЛЕНИЯ ОБРЕЗКА ШИНКИ -->
+    <div id="flangeAddScrapModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target===this)closeFlangeAddScrapModal()">
+        <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2">
+                <h3 class="text-sm font-black uppercase tracking-wider text-amber-300">✂️ Добавить обрезок шинки</h3>
+                <button type="button" onclick="closeFlangeAddScrapModal()" class="text-zinc-400 hover:text-white text-xl font-bold">✕</button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-zinc-400 mb-1">Длина обрезка пачки (мм):</label>
+                    <input type="number" id="modalScrapLen" placeholder="Напр: 1450" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold text-base">
+                </div>
+                <div>
+                    <label class="block text-zinc-400 mb-1">Шинок в этом обрезке (шт):</label>
+                    <input type="number" id="modalScrapCount" value="10" min="1" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+                    <span class="text-[10px] text-zinc-500">По умолчанию 10 шт, но можно указать меньше</span>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button type="button" onclick="closeFlangeAddScrapModal()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Отмена</button>
+                <button type="button" onclick="submitFlangeAddScrapModal()" class="bg-amber-400 hover:bg-amber-300 text-black font-extrabold px-5 py-2.5 text-xs rounded-xl uppercase transition shadow tap-spring">+ Добавить обрезок</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. МОДАЛКА ДОБАВЛЕНИЯ ОБРЕЗКА ЛИСТА 2D -->
+    <div id="nestingAddScrapModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target===this)closeNestingAddScrapModal()">
+        <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2">
+                <h3 class="text-sm font-black uppercase tracking-wider text-amber-300">✂️ Добавить деловой обрезок листа</h3>
+                <button type="button" onclick="closeNestingAddScrapModal()" class="text-zinc-400 hover:text-white text-xl font-bold">✕</button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-zinc-400 mb-1">Ширина обрезка листа (мм):</label>
+                    <input type="number" id="modalSheetScrapW" value="1250" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+                </div>
+                <div>
+                    <label class="block text-zinc-400 mb-1">Длина обрезка листа (мм):</label>
+                    <input type="number" id="modalSheetScrapL" placeholder="Напр: 950" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+                </div>
+                <div>
+                    <label class="block text-zinc-400 mb-1">Количество таких обрезков (шт):</label>
+                    <input type="number" id="modalSheetScrapQty" value="1" min="1" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button type="button" onclick="closeNestingAddScrapModal()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Отмена</button>
+                <button type="button" onclick="submitNestingAddScrapModal()" class="bg-amber-400 hover:bg-amber-300 text-black font-extrabold px-5 py-2.5 text-xs rounded-xl uppercase transition shadow tap-spring">+ Добавить обрезок</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9. ГРУППОВОЕ ИЗМЕНЕНИЕ ИЗДЕЛИЙ (BULK EDIT MODAL) -->
     <div id="bulkEditModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto modal-sheet-wrap no-print" onclick="if(event.target===this)closeBulkEditModal()">
         <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-lg w-full p-5 sm:p-7 space-y-4 my-auto max-h-[90vh] overflow-y-auto shadow-2xl">
             <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-2 sm:hidden cursor-grab"></div>
@@ -1233,18 +1296,7 @@
                     </div>
                 </div>
 
-                <!-- 3. ТАРИФ / ЦЕНА -->
-                <div class="bg-[#181b26] p-3.5 rounded-2xl border border-white/5 space-y-2">
-                    <label class="flex items-center gap-2 font-bold text-zinc-200 cursor-pointer">
-                        <input type="checkbox" id="bulkCheckPrice" onchange="toggleBulkField('bulkCheckPrice', 'bulkWrapPrice')" class="rounded text-white accent-white">
-                        <span>Изменить тариф изготовления (₸ / шт)</span>
-                    </label>
-                    <div id="bulkWrapPrice" class="opacity-40 pointer-events-none pl-6 transition-all">
-                        <input type="number" id="bulkInputPrice" value="1000" min="0" placeholder="Тариф в ₸" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 text-white mono font-bold text-xs">
-                    </div>
-                </div>
-
-                <!-- 4. НАЗНАЧЕНИЕ МАСТЕРОВ И ДОЛЕЙ -->
+                <!-- 3. НАЗНАЧЕНИЕ МАСТЕРОВ И ДОЛЕЙ -->
                 <div class="bg-[#181b26] p-3.5 rounded-2xl border border-white/5 space-y-2.5">
                     <label class="flex items-center gap-2 font-bold text-zinc-200 cursor-pointer">
                         <input type="checkbox" id="bulkCheckWorkers" onchange="toggleBulkField('bulkCheckWorkers', 'bulkWrapWorkers')" class="rounded text-white accent-white">
@@ -1270,7 +1322,7 @@
         </div>
     </div>
 
-    <!-- 6. ФИНАНСЫ И ПЛАТЕЖИ ПРОЕКТА (PROJECT FINANCE MODAL) -->
+    <!-- 10. ФИНАНСЫ И ПЛАТЕЖИ ПРОЕКТА (PROJECT FINANCE MODAL) -->
     <div id="projectFinanceModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto modal-sheet-wrap no-print" onclick="if(event.target===this)closeProjectFinanceModal()">
         <div class="bg-[#12141c] border border-white/10 rounded-3xl max-w-xl w-full p-5 sm:p-7 space-y-4 my-auto max-h-[90vh] overflow-y-auto shadow-2xl">
             <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-2 sm:hidden cursor-grab"></div>
@@ -1287,6 +1339,8 @@
 
     <!-- ВСПОМОГАТЕЛЬНЫЕ КОНТЕЙНЕРЫ СОВМЕСТИМОСТИ -->
     <div id="profileDropdown" class="hidden"></div>
+
+    <!-- МОДУЛИ СИСТЕМЫ MAXVENT TOOLS -->
     <script src="js/config.js"></script>
     <script src="js/router.js"></script>
     <script src="js/auth.js"></script>
