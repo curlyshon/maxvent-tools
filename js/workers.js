@@ -12,13 +12,13 @@ function setWorkerProjectsFilter(f) {
     const btnArc = document.getElementById('wpFilterArchivedBtn');
     if (btnAct) {
         btnAct.className = f === 'active'
-            ? 'px-3.5 py-1.5 text-xs font-bold rounded-xl bg-white text-black transition tap-spring shadow-sm'
-            : 'px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white transition tap-spring';
+            ? 'px-3.5 py-1.5 text-xs font-bold rounded-xl bg-white text-black transition btn-press shadow-sm'
+            : 'px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white transition btn-press';
     }
     if (btnArc) {
         btnArc.className = f === 'archived'
-            ? 'px-3.5 py-1.5 text-xs font-bold rounded-xl bg-white text-black transition tap-spring shadow-sm'
-            : 'px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white transition tap-spring';
+            ? 'px-3.5 py-1.5 text-xs font-bold rounded-xl bg-white text-black transition btn-press shadow-sm'
+            : 'px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white transition btn-press';
     }
     renderWorkerProfileContent();
 }
@@ -192,7 +192,7 @@ function renderWorkerProjectsList(workerName, projectsList) {
 
     if (myProjects.length === 0) {
         listEl.innerHTML = `
-            <div class="bg-[#12141c] border border-white/5 rounded-3xl p-8 text-center text-xs text-zinc-500 space-y-2">
+            <div class="bg-[#121217] border border-white/5 rounded-3xl p-8 text-center text-xs text-zinc-500 space-y-2">
                 <span class="text-2xl block">💰</span>
                 <p>Нет назначенных позиций для мастера ${workerName}</p>
             </div>
@@ -230,7 +230,7 @@ function renderWorkerProjectsList(workerName, projectsList) {
         const pct = myTotalCount > 0 ? Math.round((myDoneCount / myTotalCount) * 100) : 0;
 
         const card = document.createElement('div');
-        card.className = 'bg-[#12141c] border border-white/5 rounded-3xl p-4 sm:p-5 space-y-3 shadow-sm';
+        card.className = 'bg-[#121217] border border-white/5 rounded-3xl p-4 sm:p-5 space-y-3 shadow-sm';
         card.innerHTML = `
             <div class="flex flex-wrap justify-between items-start gap-2">
                 <div>
@@ -260,7 +260,7 @@ function renderWorkerProjectsList(workerName, projectsList) {
             <!-- Разворачиваемый список позиций мастера в объекте -->
             <div class="pt-2 border-t border-white/5 flex justify-between items-center text-xs">
                 <span class="text-zinc-400 font-mono">${pItems.length} позиций закреплено</span>
-                <button type="button" onclick="openInsideProject(${p.id})" class="bg-white hover:bg-zinc-200 text-black font-extrabold px-3.5 py-1.5 rounded-xl text-xs transition tap-spring">
+                <button type="button" onclick="openInsideProject(${p.id})" class="bg-white hover:bg-zinc-200 text-black font-extrabold px-3.5 py-1.5 rounded-xl text-xs transition btn-press">
                     Открыть объект →
                 </button>
             </div>

@@ -24,42 +24,42 @@ function renderProjectFinance() {
     const body = document.getElementById('projFinanceBody');
     body.innerHTML = `
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-xs text-slate-400">Стоимость заказа:</div>
+            <div class="bg-[#09090b] p-4 rounded-xl border border-white/10">
+                <div class="text-xs text-zinc-400">Стоимость заказа:</div>
                 <div class="text-xl font-bold mono text-white mt-1">${fin.totalSum.toLocaleString()} ₸</div>
             </div>
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-xs text-slate-400">Оплачено:</div>
+            <div class="bg-[#09090b] p-4 rounded-xl border border-white/10">
+                <div class="text-xs text-zinc-400">Оплачено:</div>
                 <div class="text-xl font-bold mono text-emerald-400 mt-1">${fin.paid.toLocaleString()} ₸</div>
             </div>
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                <div class="text-xs text-slate-400">${fin.overpay > 0 ? 'Переплата:' : 'Остаток долга:'}</div>
-                <div class="text-xl font-bold mono ${fin.overpay > 0 ? 'text-blue-400' : 'text-amber-400'} mt-1">
+            <div class="bg-[#09090b] p-4 rounded-xl border border-white/10">
+                <div class="text-xs text-zinc-400">${fin.overpay > 0 ? 'Переплата:' : 'Остаток долга:'}</div>
+                <div class="text-xl font-bold mono ${fin.overpay > 0 ? 'text-zinc-300' : 'text-amber-400'} mt-1">
                     ${fin.overpay > 0 ? `+${fin.overpay.toLocaleString()} ₸` : `${fin.debt.toLocaleString()} ₸`}
                 </div>
             </div>
         </div>
 
-        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+        <div class="bg-[#09090b] p-4 rounded-xl border border-white/10 space-y-3">
             <div class="font-bold text-white text-xs uppercase tracking-wider">Зафиксировать платеж</div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <input type="number" id="payAmountInput" placeholder="Сумма (₸)" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs mono text-white font-bold">
-                <input type="text" id="payNoteInput" placeholder="Примечание (Kaspi, нал)" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
+                <input type="number" id="payAmountInput" placeholder="Сумма (₸)" class="bg-[#121217] border border-white/10 rounded-lg px-3 py-2 text-xs mono text-white font-bold">
+                <input type="text" id="payNoteInput" placeholder="Примечание (Kaspi, нал)" class="bg-[#121217] border border-white/10 rounded-lg px-3 py-2 text-xs text-white">
                 <button onclick="addProjectPayment()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase rounded-lg py-2">
                     + Внести платеж
                 </button>
             </div>
         </div>
 
-        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+        <div class="bg-[#09090b] p-4 rounded-xl border border-white/10 space-y-2">
             <div class="font-bold text-white text-xs uppercase tracking-wider">История платежей объекта:</div>
             <div class="space-y-1.5 mono">
                 ${(fin.payments && fin.payments.length) ? fin.payments.map((pay) => `
-                    <div class="flex justify-between items-center bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-xs">
-                        <div><span class="text-slate-400">${pay.pay_date}</span> — <strong class="text-emerald-400">${Number(pay.amount).toLocaleString()} ₸</strong> <span class="text-slate-400">(${pay.note || '—'})</span></div>
-                        <button onclick="deletePayment(${pay.id})" class="text-slate-500 hover:text-rose-400 font-bold px-2">✕</button>
+                    <div class="flex justify-between items-center bg-[#121217] p-2.5 rounded-lg border border-white/10 text-xs">
+                        <div><span class="text-zinc-400">${pay.pay_date}</span> — <strong class="text-emerald-400">${Number(pay.amount).toLocaleString()} ₸</strong> <span class="text-zinc-400">(${pay.note || '—'})</span></div>
+                        <button onclick="deletePayment(${pay.id})" class="text-zinc-500 hover:text-rose-400 font-bold px-2">✕</button>
                     </div>
-                `).join('') : '<div class="text-slate-500 text-xs">Платежей не зафиксировано</div>'}
+                `).join('') : '<div class="text-zinc-500 text-xs">Платежей не зафиксировано</div>'}
             </div>
         </div>
     `;
@@ -265,22 +265,22 @@ function renderGlobalFinanceReport() {
 
     content.innerHTML = `
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="bg-[#181b26] p-4 rounded-2xl border border-white/5">
+            <div class="bg-[#18181f] p-4 rounded-2xl border border-white/5">
                 <div class="text-zinc-400">Сумма всех заказов:</div>
                 <div class="text-xl font-bold mono text-white mt-1">${grandTotal.toLocaleString()} ₸</div>
             </div>
-            <div class="bg-[#181b26] p-4 rounded-2xl border border-white/5">
+            <div class="bg-[#18181f] p-4 rounded-2xl border border-white/5">
                 <div class="text-zinc-400">Всего оплачено:</div>
                 <div class="text-xl font-bold mono text-emerald-400 mt-1">${grandPaid.toLocaleString()} ₸</div>
             </div>
-            <div class="bg-[#181b26] p-4 rounded-2xl border border-white/5">
+            <div class="bg-[#18181f] p-4 rounded-2xl border border-white/5">
                 <div class="text-zinc-400">Общий остаток долга:</div>
                 <div class="text-xl font-bold mono text-amber-400 mt-1">${grandDebt.toLocaleString()} ₸</div>
             </div>
         </div>
-        <div class="overflow-x-auto bg-[#181b26] rounded-2xl border border-white/5">
+        <div class="overflow-x-auto bg-[#18181f] rounded-2xl border border-white/5">
             <table class="w-full text-left text-xs">
-                <thead class="bg-[#12141c] border-b border-white/5 uppercase text-zinc-400">
+                <thead class="bg-[#121217] border-b border-white/5 uppercase text-zinc-400">
                     <tr><th class="p-3">Объект</th><th class="p-3">Смета</th><th class="p-3">Оплачено</th><th class="p-3">Долг</th><th class="p-3">Статус</th></tr>
                 </thead>
                 <tbody>${rows}</tbody>

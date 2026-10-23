@@ -20,13 +20,13 @@ function setFormMode(mode) {
     const btnAll = document.getElementById('btnModeAll');
     if (btnWiz) {
         btnWiz.className = isWiz 
-            ? 'px-2.5 py-1 rounded-lg font-bold bg-white text-black transition tap-spring shadow-sm' 
-            : 'px-2.5 py-1 rounded-lg font-semibold text-zinc-400 hover:text-white transition tap-spring';
+            ? 'px-2.5 py-1 rounded-lg font-bold bg-white text-black transition btn-press shadow-sm' 
+            : 'px-2.5 py-1 rounded-lg font-semibold text-zinc-400 hover:text-white transition btn-press';
     }
     if (btnAll) {
         btnAll.className = !isWiz 
-            ? 'px-2.5 py-1 rounded-lg font-bold bg-white text-black transition tap-spring shadow-sm' 
-            : 'px-2.5 py-1 rounded-lg font-semibold text-zinc-400 hover:text-white transition tap-spring';
+            ? 'px-2.5 py-1 rounded-lg font-bold bg-white text-black transition btn-press shadow-sm' 
+            : 'px-2.5 py-1 rounded-lg font-semibold text-zinc-400 hover:text-white transition btn-press';
     }
 
     const stepIndicator = document.getElementById('wizardStepIndicator');
@@ -58,11 +58,11 @@ function goToWizardStep(step) {
             const tabEl = document.getElementById(`stepTab-${s}`);
             if (tabEl) {
                 if (s === currentFormStep) {
-                    tabEl.className = 'py-2 px-1 rounded-xl font-black bg-white text-black transition tap-spring flex items-center justify-center gap-1.5 shadow-sm';
+                    tabEl.className = 'py-2 px-1 rounded-xl font-black bg-white text-black transition btn-press flex items-center justify-center gap-1.5 shadow-sm';
                     const numBadge = tabEl.querySelector('span:first-child');
                     if (numBadge) numBadge.className = 'w-4 h-4 rounded-full bg-black text-white text-[10px] inline-flex items-center justify-center font-mono font-bold';
                 } else {
-                    tabEl.className = 'py-2 px-1 rounded-xl font-semibold text-zinc-400 hover:text-white transition tap-spring flex items-center justify-center gap-1.5';
+                    tabEl.className = 'py-2 px-1 rounded-xl font-semibold text-zinc-400 hover:text-white transition btn-press flex items-center justify-center gap-1.5';
                     const numBadge = tabEl.querySelector('span:first-child');
                     if (numBadge) numBadge.className = 'w-4 h-4 rounded-full bg-white/10 text-zinc-300 text-[10px] inline-flex items-center justify-center font-mono font-bold';
                 }
@@ -137,7 +137,7 @@ function renderWorkersCheckboxes() {
     if (!wBox) return;
 
     wBox.innerHTML = appState.users.map(u => `
-        <label class="bg-[#12141c] border border-white/5 hover:border-white/20 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer transition tap-spring">
+        <label class="bg-[#121217] border border-white/5 hover:border-white/20 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer transition btn-press">
             <input type="checkbox" name="assignWorker" onchange="onWorkerSelectionChanged()" value="${u.name}" ${session.user && session.user.name === u.name ? 'checked' : ''} class="rounded text-white accent-white">
             <span class="text-zinc-200 text-xs font-bold truncate">${u.name}</span>
         </label>
@@ -150,13 +150,13 @@ function selectCategory(cat) {
     const btnFitting = document.getElementById('btnCatFitting');
     if (btnDuct) {
         btnDuct.className = cat === 'duct' 
-            ? 'py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition tap-spring' 
-            : 'py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-white/5 text-zinc-400 hover:text-white transition tap-spring';
+            ? 'py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition btn-press' 
+            : 'py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-white/5 text-zinc-400 hover:text-white transition btn-press';
     }
     if (btnFitting) {
         btnFitting.className = cat === 'fitting' 
-            ? 'py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition tap-spring' 
-            : 'py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-white/5 text-zinc-400 hover:text-white transition tap-spring';
+            ? 'py-3 text-xs font-extrabold uppercase tracking-wider rounded-xl bg-white text-black shadow-sm transition btn-press' 
+            : 'py-3 text-xs font-semibold uppercase tracking-wider rounded-xl bg-white/5 text-zinc-400 hover:text-white transition btn-press';
     }
 
     if (cat === 'duct' && session.activeShape === 'smooth') {
@@ -192,8 +192,8 @@ function selectShape(sh) {
                 btn.className = 'hidden';
             } else {
                 btn.className = s === sh 
-                    ? 'py-2.5 text-xs font-extrabold rounded-xl bg-white text-black shadow-sm transition tap-spring' 
-                    : 'py-2.5 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white transition tap-spring';
+                    ? 'py-2.5 text-xs font-extrabold rounded-xl bg-white text-black shadow-sm transition btn-press' 
+                    : 'py-2.5 text-xs font-semibold rounded-xl bg-white/5 text-zinc-400 hover:text-white transition btn-press';
             }
         }
     });
@@ -237,29 +237,29 @@ function renderDynamicInputs() {
                     <div>
                         <div class="flex justify-between items-center mb-1">
                             <label class="block text-xs font-semibold text-zinc-400">Ширина (А) мм</label>
-                            <button type="button" onclick="swapDims('f_w', 'f_h')" class="text-[11px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 transition tap-spring">⇄ Поменять A ↔ B</button>
+                            <button type="button" onclick="swapDims('f_w', 'f_h')" class="text-[11px] text-zinc-300 hover:text-zinc-200 font-bold flex items-center gap-1 transition btn-press">⇄ Поменять A ↔ B</button>
                         </div>
-                        <input type="number" id="f_w" value="400" inputmode="numeric" oninput="updateFrameLabels()" required class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
+                        <input type="number" id="f_w" value="400" inputmode="numeric" oninput="updateFrameLabels()" required class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
                         ${renderChipScroller('f_w', POPULAR_RECT)}
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-zinc-400 mb-1">Высота (В) мм</label>
-                        <input type="number" id="f_h" value="300" inputmode="numeric" oninput="updateFrameLabels()" required class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
+                        <input type="number" id="f_h" value="300" inputmode="numeric" oninput="updateFrameLabels()" required class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
                         ${renderChipScroller('f_h', POPULAR_RECT)}
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-zinc-400 mb-1">Длина (L) мм (стандарт 1250)</label>
-                        <input type="number" id="f_l" value="1250" inputmode="numeric" required class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
+                        <input type="number" id="f_l" value="1250" inputmode="numeric" required class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
                         ${renderChipScroller('f_l', [500, 1000, 1250, 1500, 2000, 2500])}
                     </div>
                     <div class="pt-2 border-t border-white/5">
                         <div class="text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-2">Рамки шинорейки:</div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                            <label class="bg-[#181b26] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition tap-spring">
+                            <label class="bg-[#18181f] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition btn-press">
                                 <input type="checkbox" id="f_flange1" checked onchange="updateFrameLabels()" class="rounded text-white accent-white">
                                 <span id="label_flange1" class="font-bold text-zinc-200">Рамка 1: 400×300 мм</span>
                             </label>
-                            <label class="bg-[#181b26] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition tap-spring">
+                            <label class="bg-[#18181f] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition btn-press">
                                 <input type="checkbox" id="f_flange2" checked onchange="updateFrameLabels()" class="rounded text-white accent-white">
                                 <span id="label_flange2" class="font-bold text-zinc-200">Рамка 2: 400×300 мм</span>
                             </label>
@@ -272,12 +272,12 @@ function renderDynamicInputs() {
                 <div class="space-y-3">
                     <div>
                         <label class="block text-xs font-semibold text-zinc-400 mb-1">Диаметр (Ø) мм</label>
-                        <input type="number" id="f_d" value="200" inputmode="numeric" required class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
+                        <input type="number" id="f_d" value="200" inputmode="numeric" required class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
                         ${renderChipScroller('f_d', POPULAR_DIAM)}
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-zinc-400 mb-1">Длина (L) мм (стандарт 1250)</label>
-                        <input type="number" id="f_l" value="1250" inputmode="numeric" required class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
+                        <input type="number" id="f_l" value="1250" inputmode="numeric" required class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 text-sm mono text-white font-bold">
                         ${renderChipScroller('f_l', [500, 1000, 1250, 1500, 2000, 2500])}
                     </div>
                 </div>
@@ -295,7 +295,7 @@ function renderDynamicInputs() {
         html += `
             <div>
                 <label class="block text-xs font-semibold text-zinc-400 mb-1">Вид зонта</label>
-                <select id="f_hood_type" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-bold">
+                <select id="f_hood_type" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-bold">
                     <option value="Пристенный">Пристенный</option>
                     <option value="Островной">Островной</option>
                 </select>
@@ -303,68 +303,68 @@ function renderDynamicInputs() {
         `;
     }
 
-    if (fitDef.params.includes('deg')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Градус (°)</label><input type="number" id="f_deg" value="90" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
-    if (fitDef.params.includes('deg135')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Градус (°)</label><input type="number" id="f_deg" value="135" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
+    if (fitDef.params.includes('deg')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Градус (°)</label><input type="number" id="f_deg" value="90" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
+    if (fitDef.params.includes('deg135')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Градус (°)</label><input type="number" id="f_deg" value="135" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
 
     if (fitDef.params.includes('w') && fitDef.params.includes('h')) {
         html += `
             <div>
                 <div class="flex justify-between items-center mb-1">
                     <label class="block text-xs font-semibold text-zinc-400">Ширина (А) мм</label>
-                    <button type="button" onclick="swapDims('f_w', 'f_h')" class="text-[11px] text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 transition tap-spring">⇄ Поменять A ↔ B</button>
+                    <button type="button" onclick="swapDims('f_w', 'f_h')" class="text-[11px] text-zinc-300 hover:text-zinc-200 font-bold flex items-center gap-1 transition btn-press">⇄ Поменять A ↔ B</button>
                 </div>
-                <input type="number" id="f_w" value="400" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_w', POPULAR_RECT)}
+                <input type="number" id="f_w" value="400" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_w', POPULAR_RECT)}
             </div>
             <div>
                 <label class="block text-xs font-semibold text-zinc-400 mb-1">Высота (В) мм</label>
-                <input type="number" id="f_h" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_h', POPULAR_RECT)}
+                <input type="number" id="f_h" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_h', POPULAR_RECT)}
             </div>
         `;
     } else {
-        if (fitDef.params.includes('w')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Ширина (А) мм</label><input type="number" id="f_w" value="400" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_w', POPULAR_RECT)}</div>`;
-        if (fitDef.params.includes('h')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Высота (В) мм</label><input type="number" id="f_h" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_h', POPULAR_RECT)}</div>`;
+        if (fitDef.params.includes('w')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Ширина (А) мм</label><input type="number" id="f_w" value="400" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_w', POPULAR_RECT)}</div>`;
+        if (fitDef.params.includes('h')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Высота (В) мм</label><input type="number" id="f_h" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_h', POPULAR_RECT)}</div>`;
     }
 
     if (fitDef.params.includes('w1') && fitDef.params.includes('h1')) {
         const isSmoothTrans = fitDef.id === 's_trans' || session.activeShape === 'smooth';
         html += `
-            <div class="bg-[#181b26] p-3 rounded-2xl border border-white/5 space-y-2">
+            <div class="bg-[#18181f] p-3 rounded-2xl border border-white/5 space-y-2">
                 <div class="flex justify-between items-center">
                     <span class="text-[11px] font-bold text-zinc-300">${isSmoothTrans ? 'Прямоугольное сечение (Вход):' : 'Рамка 1 (Вход):'}</span>
-                    <button type="button" onclick="swapDims('f_w1', 'f_h1')" class="text-[10px] text-blue-400 hover:text-blue-300 font-bold transition tap-spring">⇄ Поменять A1 ↔ B1</button>
+                    <button type="button" onclick="swapDims('f_w1', 'f_h1')" class="text-[10px] text-zinc-300 hover:text-zinc-200 font-bold transition btn-press">⇄ Поменять A1 ↔ B1</button>
                 </div>
-                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Ширина 1 (мм)</label><input type="number" id="f_w1" value="400" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_w1', POPULAR_RECT)}</div>
-                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Высота 1 (мм)</label><input type="number" id="f_h1" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_h1', POPULAR_RECT)}</div>
+                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Ширина 1 (мм)</label><input type="number" id="f_w1" value="400" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#121217] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_w1', POPULAR_RECT)}</div>
+                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Высота 1 (мм)</label><input type="number" id="f_h1" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#121217] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_h1', POPULAR_RECT)}</div>
             </div>
         `;
     }
 
     if (fitDef.params.includes('w2') && fitDef.params.includes('h2')) {
         html += `
-            <div class="bg-[#181b26] p-3 rounded-2xl border border-white/5 space-y-2">
+            <div class="bg-[#18181f] p-3 rounded-2xl border border-white/5 space-y-2">
                 <div class="flex justify-between items-center">
                     <span class="text-[11px] font-bold text-zinc-300">Рамка 2 (Выход):</span>
-                    <button type="button" onclick="swapDims('f_w2', 'f_h2')" class="text-[10px] text-blue-400 hover:text-blue-300 font-bold transition tap-spring">⇄ A2 ↔ B2</button>
+                    <button type="button" onclick="swapDims('f_w2', 'f_h2')" class="text-[10px] text-zinc-300 hover:text-zinc-200 font-bold transition btn-press">⇄ A2 ↔ B2</button>
                 </div>
-                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Ширина 2 (мм)</label><input type="number" id="f_w2" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_w2', POPULAR_RECT)}</div>
-                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Высота 2 (мм)</label><input type="number" id="f_h2" value="250" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#12141c] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_h2', POPULAR_RECT)}</div>
+                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Ширина 2 (мм)</label><input type="number" id="f_w2" value="300" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#121217] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_w2', POPULAR_RECT)}</div>
+                <div><label class="block text-[10px] text-zinc-400 mb-0.5">Высота 2 (мм)</label><input type="number" id="f_h2" value="250" inputmode="numeric" oninput="updateFrameLabels()" class="w-full bg-[#121217] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs font-bold">${renderChipScroller('f_h2', POPULAR_RECT)}</div>
             </div>
         `;
     }
 
     if (fitDef.params.includes('d')) {
         const isSmoothTrans = fitDef.id === 's_trans' || session.activeShape === 'smooth';
-        html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">${isSmoothTrans ? 'Диаметр Ø (Выход) мм' : 'Диаметр Ø (мм)'}</label><input type="number" id="f_d" value="200" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d', POPULAR_DIAM)}</div>`;
+        html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">${isSmoothTrans ? 'Диаметр Ø (Выход) мм' : 'Диаметр Ø (мм)'}</label><input type="number" id="f_d" value="200" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d', POPULAR_DIAM)}</div>`;
     }
-    if (fitDef.params.includes('d1')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Диаметр 1 Ø (мм)</label><input type="number" id="f_d1" value="250" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d1', POPULAR_DIAM)}</div>`;
-    if (fitDef.params.includes('d2')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Диаметр 2 Ø (мм)</label><input type="number" id="f_d2" value="200" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d2', POPULAR_DIAM)}</div>`;
-    if (fitDef.params.includes('d_main')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Диаметр основного Ø (мм)</label><input type="number" id="f_d_main" value="315" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d_main', POPULAR_DIAM)}</div>`;
+    if (fitDef.params.includes('d1')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Диаметр 1 Ø (мм)</label><input type="number" id="f_d1" value="250" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d1', POPULAR_DIAM)}</div>`;
+    if (fitDef.params.includes('d2')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Диаметр 2 Ø (мм)</label><input type="number" id="f_d2" value="200" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d2', POPULAR_DIAM)}</div>`;
+    if (fitDef.params.includes('d_main')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Диаметр основного Ø (мм)</label><input type="number" id="f_d_main" value="315" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_d_main', POPULAR_DIAM)}</div>`;
 
-    if (fitDef.params.includes('len')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Длина L (мм)</label><input type="number" id="f_len" value="300" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
-    if (fitDef.params.includes('len_silencer')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Длина L (мм)</label><input type="number" id="f_len" value="1000" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_len', POPULAR_LEN_SILENCER)}</div>`;
-    if (fitDef.params.includes('hood_seat')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Посадочное место (мм)</label><input type="number" id="f_hood_seat" value="100" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
-    if (fitDef.params.includes('offset')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Смещение (мм)</label><input type="number" id="f_offset" value="100" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
-    if (fitDef.params.includes('inlets_cnt')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Количество врезок (шт)</label><input type="number" id="f_inlets_cnt" value="2" min="1" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
+    if (fitDef.params.includes('len')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Длина L (мм)</label><input type="number" id="f_len" value="300" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
+    if (fitDef.params.includes('len_silencer')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Длина L (мм)</label><input type="number" id="f_len" value="1000" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold">${renderChipScroller('f_len', POPULAR_LEN_SILENCER)}</div>`;
+    if (fitDef.params.includes('hood_seat')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Посадочное место (мм)</label><input type="number" id="f_hood_seat" value="100" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
+    if (fitDef.params.includes('offset')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Смещение (мм)</label><input type="number" id="f_offset" value="100" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
+    if (fitDef.params.includes('inlets_cnt')) html += `<div><label class="block text-xs font-semibold text-zinc-400 mb-1">Количество врезок (шт)</label><input type="number" id="f_inlets_cnt" value="2" min="1" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white font-bold"></div>`;
 
     if (fitDef.params.includes('flange1') || fitDef.params.includes('flange2')) {
         const isTwo = fitDef.params.includes('flange2');
@@ -372,12 +372,12 @@ function renderDynamicInputs() {
             <div class="pt-2 border-t border-white/5">
                 <div class="text-[11px] font-bold text-zinc-300 uppercase tracking-wider mb-2">Рамки шинорейки:</div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <label class="bg-[#181b26] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition tap-spring">
+                    <label class="bg-[#18181f] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition btn-press">
                         <input type="checkbox" id="f_flange1" checked onchange="updateFrameLabels()" class="rounded text-white accent-white">
                         <span id="label_flange1" class="font-bold text-zinc-200">Рамка 1</span>
                     </label>
                     ${isTwo ? `
-                        <label class="bg-[#181b26] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition tap-spring">
+                        <label class="bg-[#18181f] border border-white/5 p-2.5 rounded-xl flex items-center gap-2 cursor-pointer hover:border-white/20 transition btn-press">
                             <input type="checkbox" id="f_flange2" checked onchange="updateFrameLabels()" class="rounded text-white accent-white">
                             <span id="label_flange2" class="font-bold text-zinc-200">Рамка 2</span>
                         </label>
@@ -397,7 +397,7 @@ function renderDynamicInputs() {
             html += `
                 <div>
                     <label class="block text-xs font-semibold text-zinc-400 mb-1">${pDef.label}</label>
-                    <input type="text" id="f_${code}" placeholder="Введите ${pDef.label}..." class="w-full bg-[#181b26] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs">
+                    <input type="text" id="f_${code}" placeholder="Введите ${pDef.label}..." class="w-full bg-[#18181f] border border-white/10 rounded-xl px-3 py-2 mono text-white text-xs">
                 </div>
             `;
         });
@@ -441,7 +441,7 @@ function updateFrameLabels() {
 function renderChipScroller(targetId, arr) {
     return `
         <div class="chip-scroll mt-1.5">
-            ${arr.map(v => `<button type="button" onclick="triggerHaptic('light'); document.getElementById('${targetId}').value = ${v}; updateFrameLabels();" class="chip-btn tap-spring">${v}</button>`).join('')}
+            ${arr.map(v => `<button type="button" onclick="triggerHaptic('light'); document.getElementById('${targetId}').value = ${v}; updateFrameLabels();" class="chip-btn btn-press">${v}</button>`).join('')}
         </div>
     `;
 }
@@ -557,7 +557,7 @@ function renderWorkerSharesSlidersList() {
         const pct = session.workerSharesState[w] !== undefined ? session.workerSharesState[w] : Math.round(100 / checked.length);
         const color = WORKER_COLORS[idx % WORKER_COLORS.length];
         return `
-            <div class="bg-[#12141c] border border-white/5 rounded-2xl p-3 space-y-2">
+            <div class="bg-[#121217] border border-white/5 rounded-2xl p-3 space-y-2">
                 <div class="flex items-center justify-between text-xs">
                     <div class="flex items-center gap-2">
                         <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
@@ -566,7 +566,7 @@ function renderWorkerSharesSlidersList() {
                     <div class="flex items-center gap-2">
                         <span id="shareAmt_${w}" class="mono font-bold text-emerald-400">0 ₸</span>
                         <div class="flex items-center gap-1">
-                            <input type="number" id="shareNum_${w}" min="0" max="100" value="${pct}" inputmode="numeric" oninput="onWorkerSliderChanged('${w}', Number(this.value))" class="w-14 bg-[#181b26] border border-white/10 rounded-lg px-2 py-1 text-center font-mono font-black text-white text-xs">
+                            <input type="number" id="shareNum_${w}" min="0" max="100" value="${pct}" inputmode="numeric" oninput="onWorkerSliderChanged('${w}', Number(this.value))" class="w-14 bg-[#18181f] border border-white/10 rounded-lg px-2 py-1 text-center font-mono font-black text-white text-xs">
                             <span class="text-zinc-400 font-bold">%</span>
                         </div>
                     </div>
@@ -854,8 +854,8 @@ function toggleSpecSelectionMode() {
     const lbl = document.getElementById('lblToggleSelectionMode');
     if (btn) {
         btn.className = session.specSelectionMode
-            ? 'bg-white text-black font-extrabold text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition tap-spring shadow-sm'
-            : 'bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition tap-spring';
+            ? 'bg-white text-black font-extrabold text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition btn-press shadow-sm'
+            : 'bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition btn-press';
     }
     if (lbl) {
         lbl.textContent = session.specSelectionMode ? 'Готово' : 'Выбрать';
@@ -919,10 +919,10 @@ function renderSpecification() {
 
     if (items.length === 0) {
         container.innerHTML = `
-            <div class="bg-[#12141c] border border-white/5 rounded-3xl p-8 text-center text-xs text-zinc-500 space-y-2">
+            <div class="bg-[#121217] border border-white/5 rounded-3xl p-8 text-center text-xs text-zinc-500 space-y-2">
                 <span class="text-2xl block">📦</span>
                 <p>В этой очереди или по выбранным фильтрам нет позиций</p>
-                <button type="button" onclick="openItemAddSheet()" class="mt-2 bg-white text-black font-extrabold px-4 py-2 rounded-xl tap-spring">+ Добавить изделие</button>
+                <button type="button" onclick="openItemAddSheet()" class="mt-2 bg-white text-black font-extrabold px-4 py-2 rounded-xl btn-press">+ Добавить изделие</button>
             </div>
         `;
         return;
@@ -941,9 +941,9 @@ function renderSpecification() {
         const isExpanded = session.accordionState[sec.id] !== false;
 
         const block = document.createElement('div');
-        block.className = 'bg-[#12141c] border border-white/5 rounded-3xl overflow-hidden shadow-sm';
+        block.className = 'bg-[#121217] border border-white/5 rounded-3xl overflow-hidden shadow-sm';
         block.innerHTML = `
-            <button onclick="toggleSectionAccordion('${sec.id}')" class="w-full p-4 bg-[#181b26]/50 border-b border-white/5 flex justify-between items-center text-left hover:bg-[#181b26] transition tap-spring">
+            <button onclick="toggleSectionAccordion('${sec.id}')" class="w-full p-4 bg-[#18181f]/50 border-b border-white/5 flex justify-between items-center text-left hover:bg-[#18181f] transition btn-press">
                 <div class="flex items-center gap-2">
                     <span class="text-white font-bold text-xs">${isExpanded ? '▼' : '▶'}</span>
                     <span class="text-xs font-black uppercase tracking-wider text-white">${sec.title}</span>
@@ -1010,12 +1010,12 @@ function renderSpecItemRow(it) {
     const st = it.item_status || 'queue';
     const isDone = (st === 'done');
     const stBadge = isDone 
-        ? `<button type="button" onclick="triggerHaptic('light'); toggleItemStatus(${it.id}, event)" class="border border-emerald-500/20 bg-emerald-500/15 text-emerald-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold tap-spring">✓ Готово</button>`
-        : `<button type="button" onclick="triggerHaptic('light'); toggleItemStatus(${it.id}, event)" class="border border-white/10 bg-white/5 text-zinc-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold tap-spring hover:border-emerald-500">⏳ В очереди</button>`;
+        ? `<button type="button" onclick="triggerHaptic('light'); toggleItemStatus(${it.id}, event)" class="border border-emerald-500/20 bg-emerald-500/15 text-emerald-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold btn-press">✓ Готово</button>`
+        : `<button type="button" onclick="triggerHaptic('light'); toggleItemStatus(${it.id}, event)" class="border border-white/10 bg-white/5 text-zinc-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold btn-press hover:border-emerald-500">⏳ В очереди</button>`;
 
     // Если включен режим выделения, показываем красивый кружок чекбокса
     const selectCheckHtml = session.specSelectionMode ? `
-        <div onclick="toggleSpecItemSelect(${it.id})" class="cursor-pointer flex-shrink-0 mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition tap-spring ${
+        <div onclick="toggleSpecItemSelect(${it.id})" class="cursor-pointer flex-shrink-0 mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition btn-press ${
             isSelected ? 'border-white bg-white text-black' : 'border-white/30 bg-transparent'
         }">
             ${isSelected ? '<span class="text-xs font-black">✓</span>' : ''}
@@ -1031,14 +1031,14 @@ function renderSpecItemRow(it) {
             </div>
 
             <!-- Фоновый индикатор свайпа влево (Действия: Дубликат, Редактировать, Удалить) -->
-            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-44 bg-[#181b26] border border-white/10 rounded-2xl flex items-center justify-end px-3 gap-1.5 opacity-0 transition-opacity z-0">
-                <button type="button" onclick="triggerHaptic('light'); duplicateWithModal(${it.id})" title="Дублировать" class="px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold tap-spring">⧉</button>
-                <button type="button" onclick="triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold tap-spring">✎</button>
-                <button type="button" onclick="triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="px-2.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold tap-spring">✕</button>
+            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-44 bg-[#18181f] border border-white/10 rounded-2xl flex items-center justify-end px-3 gap-1.5 opacity-0 transition-opacity z-0">
+                <button type="button" onclick="triggerHaptic('light'); duplicateWithModal(${it.id})" title="Дублировать" class="px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold btn-press">⧉</button>
+                <button type="button" onclick="triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold btn-press">✎</button>
+                <button type="button" onclick="triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="px-2.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold btn-press">✕</button>
             </div>
 
             <!-- Основная карточка позиции -->
-            <div class="swipe-inner relative z-10 bg-[#12141c] border ${isSelected ? 'border-white/40 bg-[#181b26]' : 'border-white/5 hover:border-white/15'} rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition">
+            <div class="swipe-inner relative z-10 bg-[#121217] border ${isSelected ? 'border-white/40 bg-[#18181f]' : 'border-white/5 hover:border-white/15'} rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition">
                 <div class="flex items-start gap-3 w-full sm:w-auto min-w-0" onclick="${session.specSelectionMode ? `toggleSpecItemSelect(${it.id})` : ''}">
                     ${selectCheckHtml}
                     <div class="min-w-0">
@@ -1055,9 +1055,9 @@ function renderSpecItemRow(it) {
                 <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                     <div class="text-sm font-black mono text-white">${it.qty} шт</div>
                     <div class="flex gap-1.5">
-                        <button onclick="triggerHaptic('light'); duplicateWithModal(${it.id})" title="Дублировать" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-white/5 transition tap-spring">⧉</button>
-                        <button onclick="triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition tap-spring">✎</button>
-                        <button onclick="triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="bg-white/5 hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition tap-spring">✕</button>
+                        <button onclick="triggerHaptic('light'); duplicateWithModal(${it.id})" title="Дублировать" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-white/5 transition btn-press">⧉</button>
+                        <button onclick="triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition btn-press">✎</button>
+                        <button onclick="triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="bg-white/5 hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition btn-press">✕</button>
                     </div>
                 </div>
             </div>
@@ -1245,7 +1245,7 @@ function openBulkEditModal() {
     const wBox = document.getElementById('bulkWorkersCheckboxes');
     if (wBox) {
         wBox.innerHTML = appState.users.map(u => `
-            <label class="bg-[#12141c] border border-white/5 hover:border-white/20 px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer transition text-xs tap-spring">
+            <label class="bg-[#121217] border border-white/5 hover:border-white/20 px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer transition text-xs btn-press">
                 <input type="checkbox" name="bulkAssignWorker" onchange="onBulkWorkersSelectionChanged()" value="${u.name}" class="rounded text-white accent-white">
                 <span class="text-zinc-300 font-bold truncate">${u.name}</span>
             </label>
@@ -1289,10 +1289,10 @@ function renderBulkSharesList() {
     list.innerHTML = checked.map(w => {
         const pct = bulkSharesState[w] !== undefined ? bulkSharesState[w] : Math.round(100 / checked.length);
         return `
-            <div class="flex items-center justify-between gap-2 bg-[#12141c] border border-white/5 p-2 rounded-xl text-xs">
+            <div class="flex items-center justify-between gap-2 bg-[#121217] border border-white/5 p-2 rounded-xl text-xs">
                 <span class="font-bold text-white">${w}</span>
                 <div class="flex items-center gap-1">
-                    <input type="number" min="0" max="100" value="${pct}" inputmode="numeric" oninput="bulkSharesState['${w}'] = Number(this.value)" class="w-12 bg-[#181b26] border border-white/10 rounded-lg px-1.5 py-0.5 text-center mono font-bold text-amber-300">
+                    <input type="number" min="0" max="100" value="${pct}" inputmode="numeric" oninput="bulkSharesState['${w}'] = Number(this.value)" class="w-12 bg-[#18181f] border border-white/10 rounded-lg px-1.5 py-0.5 text-center mono font-bold text-amber-300">
                     <span class="text-zinc-400 font-bold">%</span>
                 </div>
             </div>

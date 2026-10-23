@@ -153,7 +153,7 @@ function showToast(message, type = 'info', duration = 3000) {
         success: 'bg-emerald-950/95 border-emerald-600 text-emerald-200',
         error: 'bg-rose-950/95 border-rose-600 text-rose-200',
         warning: 'bg-amber-950/95 border-amber-600 text-amber-200',
-        info: 'bg-blue-950/95 border-blue-600 text-blue-200'
+        info: 'bg-[#18181f] border-zinc-700 text-zinc-200'
     };
     const icons = {
         success: '✓',
@@ -325,19 +325,38 @@ window.addEventListener('keydown', (e) => {
 // ==========================================
 // ЗАГРУЗКА И СИНХРОНИЗАЦИЯ С SUPABASE
 // ==========================================
+function updateCloudIndicatorUI(status) {
+    const ind = document.getElementById('cloudIndicator');
+    const dot = document.getElementById('cloudDotIndicator');
+    const authSt = document.getElementById('cloudStatusAuth');
+
+    if (status === 'connecting') {
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+        if (ind) { ind.textContent = '🔄 Подключение...'; ind.className = 'text-[10px] text-amber-400 font-medium cursor-pointer'; }
+        if (authSt) authSt.textContent = '🔄 Подключение к базе...';
+    } else if (status === 'loading') {
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        if (ind) { ind.textContent = '● Загрузка...'; ind.className = 'text-[10px] text-amber-400 font-medium cursor-pointer'; }
+        if (authSt) authSt.textContent = '● Загрузка данных...';
+    } else if (status === 'online') {
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        if (ind) { ind.textContent = '🟢 Онлайн'; ind.className = 'text-[10px] text-emerald-400 font-medium cursor-pointer'; }
+        if (authSt) authSt.textContent = '🟢 Supabase: Онлайн (Синхронизировано)';
+    } else if (status === 'error') {
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+        if (ind) { ind.textContent = '🔴 Офлайн'; ind.className = 'text-[10px] text-rose-400 font-medium cursor-pointer'; }
+        if (authSt) authSt.textContent = '🔴 Ошибка связи (Нажмите для повтора)';
+    }
+}
+
 async function manualReconnectDatabase() {
     triggerHaptic('medium');
-    const ind = document.getElementById('cloudIndicator');
-    const authSt = document.getElementById('cloudStatusAuth');
-    if (ind) { ind.textContent = '🔄 Подключение...'; ind.className = 'text-[10px] text-amber-400 font-medium cursor-pointer'; }
-    if (authSt) authSt.textContent = '🔄 Подключение к базе...';
+    updateCloudIndicatorUI('connecting');
     await loadInitialData();
 }
 
 async function loadInitialData() {
-    const ind = document.getElementById('cloudIndicator');
-    const authSt = document.getElementById('cloudStatusAuth');
-    if (ind) { ind.textContent = '● Загрузка...'; ind.className = 'text-[10px] text-amber-400 font-medium cursor-pointer'; }
+    updateCloudIndicatorUI('loading');
 
     try {
         // 1. Загрузка справочников
@@ -398,15 +417,13 @@ async function loadInitialData() {
         }));
         appState.allPayments = payRes.data || [];
 
-        if (ind) { ind.textContent = '🟢 Онлайн (Supabase)'; ind.className = 'text-[10px] text-emerald-400 font-medium cursor-pointer'; }
-        if (authSt) authSt.textContent = '🟢 Supabase: Онлайн (Синхронизировано)';
+        updateCloudIndicatorUI('online');
 
         checkAuthState();
         refreshCurrentScreen();
     } catch (err) {
         console.error('Supabase load error:', err);
-        if (ind) { ind.textContent = '🔴 Офлайн (Нажмите для повтора)'; ind.className = 'text-[10px] text-rose-400 font-medium cursor-pointer'; }
-        if (authSt) authSt.textContent = '🔴 Ошибка связи с базой (Нажмите для повтора)';
+        updateCloudIndicatorUI('error');
     }
 }
 

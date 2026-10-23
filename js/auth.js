@@ -272,7 +272,7 @@ function openProfileModal() {
     const avBox = document.getElementById('profAvatarsGrid');
     if (avBox) {
         avBox.innerHTML = avatars.map(av => `
-            <button type="button" onclick="selectProfileAvatar('${av}')" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center text-lg transition tap-spring">
+            <button type="button" onclick="selectProfileAvatar('${av}')" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center text-lg transition btn-press">
                 ${av}
             </button>
         `).join('');

@@ -22,12 +22,12 @@ function renderDevCatalogs() {
     const mBox = document.getElementById('devMetalsList');
     if (mBox) {
         mBox.innerHTML = appState.metals.map((m, i) => `
-            <div class="bg-[#181b26] border border-white/10 px-3 py-1.5 rounded-xl text-white flex items-center justify-between text-xs">
+            <div class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-white flex items-center justify-between text-xs">
                 <span class="font-bold truncate">${m}</span>
                 <div class="flex items-center gap-1">
-                    <button type="button" onclick="moveCatalogItem('metals', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white tap-spring"'} title="Вверх">▲</button>
-                    <button type="button" onclick="moveCatalogItem('metals', ${i}, 1)" ${i === appState.metals.length - 1 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white tap-spring"'} title="Вниз">▼</button>
-                    <button type="button" onclick="removeCatalogItem('metals', ${i})" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 tap-spring">×</button>
+                    <button type="button" onclick="moveCatalogItem('metals', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вверх">▲</button>
+                    <button type="button" onclick="moveCatalogItem('metals', ${i}, 1)" ${i === appState.metals.length - 1 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вниз">▼</button>
+                    <button type="button" onclick="removeCatalogItem('metals', ${i})" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 btn-press">×</button>
                 </div>
             </div>
         `).join('');
@@ -36,12 +36,12 @@ function renderDevCatalogs() {
     const tBox = document.getElementById('devThickList');
     if (tBox) {
         tBox.innerHTML = appState.thicknesses.map((t, i) => `
-            <div class="bg-[#181b26] border border-white/10 px-3 py-1.5 rounded-xl text-white flex items-center justify-between text-xs mono">
+            <div class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-white flex items-center justify-between text-xs mono">
                 <span class="font-bold">${t} мм</span>
                 <div class="flex items-center gap-1">
-                    <button type="button" onclick="moveCatalogItem('thicknesses', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white tap-spring"'} title="Вверх">▲</button>
-                    <button type="button" onclick="moveCatalogItem('thicknesses', ${i}, 1)" ${i === appState.thicknesses.length - 1 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white tap-spring"'} title="Вниз">▼</button>
-                    <button type="button" onclick="removeCatalogItem('thicknesses', ${i})" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 tap-spring">×</button>
+                    <button type="button" onclick="moveCatalogItem('thicknesses', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вверх">▲</button>
+                    <button type="button" onclick="moveCatalogItem('thicknesses', ${i}, 1)" ${i === appState.thicknesses.length - 1 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вниз">▼</button>
+                    <button type="button" onclick="removeCatalogItem('thicknesses', ${i})" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 btn-press">×</button>
                 </div>
             </div>
         `).join('');
@@ -50,12 +50,12 @@ function renderDevCatalogs() {
     const gBox = document.getElementById('devGroupsList');
     if (gBox) {
         gBox.innerHTML = appState.groups.map((g, i) => `
-            <div class="bg-[#181b26] border border-white/10 px-3 py-1.5 rounded-xl text-white flex items-center justify-between text-xs">
+            <div class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-white flex items-center justify-between text-xs">
                 <span class="font-bold truncate">${g}</span>
                 <div class="flex items-center gap-1">
-                    <button type="button" onclick="moveCatalogItem('groups', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white tap-spring"'} title="Вверх">▲</button>
-                    <button type="button" onclick="moveCatalogItem('groups', ${i}, 1)" ${i === appState.groups.length - 1 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white tap-spring"'} title="Вниз">▼</button>
-                    <button type="button" onclick="removeCatalogItem('groups', ${i})" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 tap-spring">×</button>
+                    <button type="button" onclick="moveCatalogItem('groups', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вверх">▲</button>
+                    <button type="button" onclick="moveCatalogItem('groups', ${i}, 1)" ${i === appState.groups.length - 1 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вниз">▼</button>
+                    <button type="button" onclick="removeCatalogItem('groups', ${i})" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 btn-press">×</button>
                 </div>
             </div>
         `).join('');
@@ -196,7 +196,7 @@ function renderDevUsersStats() {
         });
 
         return `
-            <div class="bg-[#181b26] border border-white/5 p-3 sm:p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div class="bg-[#18181f] border border-white/5 p-3 sm:p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
                     <div class="font-extrabold text-white flex items-center gap-2 flex-wrap">
                         <span>${u.name}</span>
@@ -208,8 +208,8 @@ function renderDevUsersStats() {
                     </div>
                 </div>
                 <div class="flex items-center gap-1.5 w-full sm:w-auto justify-end">
-                    <button type="button" onclick="openWorkerProfileModal('${u.name}')" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition tap-spring">Кабинет →</button>
-                    ${u.role !== 'developer' ? `<button type="button" onclick="deleteWorker(${u.id})" class="bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 px-2.5 py-1.5 rounded-xl text-xs font-bold transition tap-spring">✕</button>` : ''}
+                    <button type="button" onclick="openWorkerProfileModal('${u.name}')" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition btn-press">Кабинет →</button>
+                    ${u.role !== 'developer' ? `<button type="button" onclick="deleteWorker(${u.id})" class="bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 px-2.5 py-1.5 rounded-xl text-xs font-bold transition btn-press">✕</button>` : ''}
                 </div>
             </div>
         `;
@@ -223,7 +223,7 @@ function renderCustomFitParamsCheckboxes() {
     const box = document.getElementById('customFitParamsCheckboxes');
     if (!box) return;
     box.innerHTML = ALL_PARAM_DEFS.map(p => `
-        <label class="flex items-center gap-1.5 cursor-pointer text-zinc-300 text-xs tap-spring">
+        <label class="flex items-center gap-1.5 cursor-pointer text-zinc-300 text-xs btn-press">
             <input type="checkbox" name="customParamCheckbox" value="${p.code}" class="rounded text-white accent-white">
             <span class="truncate">${p.label}</span>
         </label>
@@ -259,17 +259,17 @@ function renderDevFittingsList() {
                         }).join(', ');
 
                         return `
-                            <div class="bg-[#181b26] border border-white/5 p-2.5 rounded-xl flex items-center justify-between gap-2 text-xs">
+                            <div class="bg-[#18181f] border border-white/5 p-2.5 rounded-xl flex items-center justify-between gap-2 text-xs">
                                 <div class="space-y-0.5">
                                     <div class="flex items-center gap-2">
                                         <span class="font-bold text-white">${f.name}</span>
-                                        <span class="mono text-emerald-400 font-bold bg-[#12141c] px-2 py-0.5 rounded-lg border border-white/5">${f.price || 1000} ₸</span>
+                                        <span class="mono text-emerald-400 font-bold bg-[#121217] px-2 py-0.5 rounded-lg border border-white/5">${f.price || 1000} ₸</span>
                                     </div>
                                     <div class="text-[10px] text-zinc-400">Параметры: <span class="text-zinc-300">${paramNames || 'нет'}</span></div>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    <button type="button" onclick="editCustomFitting('${sh.code}', '${f.id}')" title="Редактировать" class="bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded-lg text-xs font-bold transition tap-spring">✎</button>
-                                    <button type="button" onclick="deleteCustomFitting('${sh.code}', '${f.id}')" title="Удалить" class="bg-rose-500/20 text-rose-300 px-2 py-1 rounded-lg text-xs font-bold transition tap-spring">✕</button>
+                                    <button type="button" onclick="editCustomFitting('${sh.code}', '${f.id}')" title="Редактировать" class="bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded-lg text-xs font-bold transition btn-press">✎</button>
+                                    <button type="button" onclick="deleteCustomFitting('${sh.code}', '${f.id}')" title="Удалить" class="bg-rose-500/20 text-rose-300 px-2 py-1 rounded-lg text-xs font-bold transition btn-press">✕</button>
                                 </div>
                             </div>
                         `;

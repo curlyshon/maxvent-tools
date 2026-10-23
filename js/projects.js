@@ -29,13 +29,13 @@ function setProjectFilter(f) {
     const btnArchived = document.getElementById('btnProjArchived');
     if (btnActive) {
         btnActive.className = f === 'active' 
-            ? 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-black transition tap-spring shadow-sm' 
-            : 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition tap-spring';
+            ? 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-black transition btn-press shadow-sm' 
+            : 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition btn-press';
     }
     if (btnArchived) {
         btnArchived.className = f === 'archived' 
-            ? 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-black transition tap-spring shadow-sm' 
-            : 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition tap-spring';
+            ? 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-black transition btn-press shadow-sm' 
+            : 'flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition btn-press';
     }
     renderMainMenuProjects();
 }
@@ -102,10 +102,10 @@ function renderMainMenuProjects() {
 
     if (list.length === 0) {
         container.innerHTML = `
-            <div class="bg-[#12141c] border border-white/5 rounded-3xl p-8 text-xs text-zinc-500 text-center space-y-2">
+            <div class="bg-[#121217] border border-white/5 rounded-3xl p-8 text-xs text-zinc-500 text-center space-y-2">
                 <span class="text-2xl block">📁</span>
                 <p>${session.projectFilter === 'archived' ? 'В архиве нет проектов' : 'Активных проектов не найдено'}</p>
-                ${session.projectFilter === 'active' ? `<button onclick="openProjectModal()" class="mt-2 text-xs bg-white text-black font-extrabold px-4 py-2 rounded-xl tap-spring">+ Создать проект</button>` : ''}
+                ${session.projectFilter === 'active' ? `<button onclick="openProjectModal()" class="mt-2 text-xs bg-white text-black font-extrabold px-4 py-2 rounded-xl btn-press">+ Создать проект</button>` : ''}
             </div>
         `;
         if (preview) preview.classList.add('hidden');
@@ -150,23 +150,23 @@ function renderMainMenuProjects() {
             </div>
 
             <!-- Фоновый индикатор свайпа влево (Действия) -->
-            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-44 bg-[#181b26] border border-white/10 rounded-3xl flex items-center justify-end px-3 gap-2 opacity-0 transition-opacity z-0">
-                <button type="button" onclick="triggerHaptic('light'); openProjectModal(${p.id})" title="Редактировать" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold tap-spring">✎</button>
-                <button type="button" onclick="triggerHaptic('medium'); archiveProjectSafe(${p.id})" title="${p.archive_state === 'archived' ? 'Восстановить' : 'В архив'}" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-300 text-xs font-bold tap-spring">${p.archive_state === 'archived' ? '↩' : '📁'}</button>
-                ${p.archive_state === 'archived' && isDev() ? `<button type="button" onclick="triggerHaptic('warning'); deleteProjectPermanent(${p.id})" title="Удалить" class="px-3 py-2 rounded-xl bg-rose-500/20 text-rose-300 text-xs font-bold tap-spring">🗑</button>` : ''}
+            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-44 bg-[#18181f] border border-white/10 rounded-3xl flex items-center justify-end px-3 gap-2 opacity-0 transition-opacity z-0">
+                <button type="button" onclick="triggerHaptic('light'); openProjectModal(${p.id})" title="Редактировать" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold btn-press">✎</button>
+                <button type="button" onclick="triggerHaptic('medium'); archiveProjectSafe(${p.id})" title="${p.archive_state === 'archived' ? 'Восстановить' : 'В архив'}" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-300 text-xs font-bold btn-press">${p.archive_state === 'archived' ? '↩' : '📁'}</button>
+                ${p.archive_state === 'archived' && isDev() ? `<button type="button" onclick="triggerHaptic('warning'); deleteProjectPermanent(${p.id})" title="Удалить" class="px-3 py-2 rounded-xl bg-rose-500/20 text-rose-300 text-xs font-bold btn-press">🗑</button>` : ''}
             </div>
 
             <!-- Основное тело карточки -->
             <div class="swipe-inner relative z-10 w-full text-left p-4 sm:p-5 rounded-3xl border transition-all duration-200 shadow-sm space-y-3 cursor-pointer ${
                 isSelected 
-                    ? 'bg-[#181b26] border-white/30 shadow-lg' 
-                    : 'bg-[#12141c] border-white/5 hover:border-white/20 hover:bg-[#151822]'
+                    ? 'bg-[#18181f] border-white/30 shadow-lg' 
+                    : 'bg-[#121217] border-white/5 hover:border-white/20 hover:bg-[#18181f]'
             }">
                 <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 flex-wrap">
                             <h3 class="font-extrabold text-sm sm:text-base text-white truncate">${p.title}</h3>
-                            <button type="button" onclick="cycleProjectStatus(${p.id}, event)" title="Нажмите, чтобы переключить статус" class="text-[10px] px-2.5 py-0.5 rounded-full font-bold border transition tap-spring ${stDef.cls}">
+                            <button type="button" onclick="cycleProjectStatus(${p.id}, event)" title="Нажмите, чтобы переключить статус" class="text-[10px] px-2.5 py-0.5 rounded-full font-bold border transition btn-press ${stDef.cls}">
                                 ${p.status_text || stDef.label}
                             </button>
                             ${phasesCount > 1 ? `<span class="text-[10px] bg-white/10 text-zinc-300 font-bold px-2 py-0.5 rounded-full">⚡ ${phasesCount} очер.</span>` : ''}
@@ -176,7 +176,7 @@ function renderMainMenuProjects() {
                             ${p.description ? `<span>• <span class="truncate max-w-[150px] inline-block align-bottom text-zinc-500">${p.description}</span></span>` : ''}
                         </div>
                     </div>
-                    <button type="button" onclick="openInsideProject(${p.id})" class="btn-direct-open bg-white hover:bg-zinc-200 text-black text-xs font-extrabold px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm tap-spring">
+                    <button type="button" onclick="openInsideProject(${p.id})" class="btn-direct-open bg-white hover:bg-zinc-200 text-black text-xs font-extrabold px-3.5 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm btn-press">
                         <span>Открыть</span> <span class="text-[10px]">→</span>
                     </button>
                 </div>
@@ -321,7 +321,7 @@ function renderProjectPreviewCard(projId) {
 
     let treeHtml = '';
     const dRect = ducts.filter(i => i.shape === 'rect');
-    if (dRect.length) treeHtml += `<div class="font-bold text-blue-400 mt-2">Воздуховоды прямоугольные</div>` + formatPreviewItems(dRect, false);
+    if (dRect.length) treeHtml += `<div class="font-bold text-zinc-300 mt-2">Воздуховоды прямоугольные</div>` + formatPreviewItems(dRect, false);
 
     const dRound = ducts.filter(i => i.shape === 'round');
     if (dRound.length) treeHtml += `<div class="font-bold text-emerald-400 mt-2">Воздуховоды круглые</div>` + formatPreviewItems(dRound, false);
@@ -350,30 +350,30 @@ function renderProjectPreviewCard(projId) {
         </div>
 
         <div class="grid grid-cols-2 gap-2 text-xs">
-            <div class="bg-[#181b26] p-3 rounded-2xl border border-white/5">
+            <div class="bg-[#18181f] p-3 rounded-2xl border border-white/5">
                 <span class="text-zinc-400">Воздуховоды:</span> <strong class="text-white mono">${totalDuctQty} шт</strong>
             </div>
-            <div class="bg-[#181b26] p-3 rounded-2xl border border-white/5">
+            <div class="bg-[#18181f] p-3 rounded-2xl border border-white/5">
                 <span class="text-zinc-400">Изделия:</span> <strong class="text-white mono">${totalFitQty} шт</strong>
             </div>
         </div>
 
-        <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1 bg-[#181b26] p-3.5 rounded-2xl border border-white/5 text-xs">
+        <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1 bg-[#18181f] p-3.5 rounded-2xl border border-white/5 text-xs">
             <div class="text-[11px] uppercase tracking-wider font-bold text-zinc-400 mb-1">Состав проекта:</div>
             ${treeHtml || '<div class="text-zinc-500">В проекте пока нет позиций</div>'}
         </div>
 
         <div class="flex flex-wrap gap-2 pt-2 border-t border-white/10">
-            <button onclick="openInsideProject(${p.id})" class="flex-1 bg-white hover:bg-zinc-200 text-black font-extrabold py-3 px-3 rounded-xl text-xs uppercase tracking-wider transition text-center shadow-sm tap-spring">
+            <button onclick="openInsideProject(${p.id})" class="flex-1 bg-white hover:bg-zinc-200 text-black font-extrabold py-3 px-3 rounded-xl text-xs uppercase tracking-wider transition text-center shadow-sm btn-press">
                 Открыть проект
             </button>
-            <button onclick="openProjectModal(${p.id})" class="bg-white/5 hover:bg-white/10 text-zinc-200 py-3 px-3.5 rounded-xl text-xs font-semibold border border-white/5 tap-spring">
+            <button onclick="openProjectModal(${p.id})" class="bg-white/5 hover:bg-white/10 text-zinc-200 py-3 px-3.5 rounded-xl text-xs font-semibold border border-white/5 btn-press">
                 ✎ Изменить
             </button>
-            <button onclick="archiveProjectSafe(${p.id})" class="bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white py-3 px-3.5 rounded-xl text-xs border border-white/5 tap-spring">
+            <button onclick="archiveProjectSafe(${p.id})" class="bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white py-3 px-3.5 rounded-xl text-xs border border-white/5 btn-press">
                 ${p.archive_state === 'archived' ? 'Восстановить' : 'В архив'}
             </button>
-            ${isDev() && p.archive_state === 'archived' ? `<button onclick="deleteProjectPermanent(${p.id})" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 py-3 px-3.5 rounded-xl text-xs font-semibold tap-spring">Удалить</button>` : ''}
+            ${isDev() && p.archive_state === 'archived' ? `<button onclick="deleteProjectPermanent(${p.id})" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 py-3 px-3.5 rounded-xl text-xs font-semibold btn-press">Удалить</button>` : ''}
         </div>
     `;
 }
@@ -390,15 +390,15 @@ function formatPreviewItems(items, isFitting) {
     });
 
     for (let [subName, metals] of Object.entries(byGroup)) {
-        if (isFitting) out += `<div class="text-[11px] font-semibold text-slate-300 mt-1 pl-1">${subName}</div>`;
+        if (isFitting) out += `<div class="text-[11px] font-semibold text-zinc-300 mt-1 pl-1">${subName}</div>`;
         for (let [mKey, arr] of Object.entries(metals)) {
-            out += `<div class="text-[10px] font-bold text-slate-400 pl-2 mt-0.5">${mKey}</div>`;
+            out += `<div class="text-[10px] font-bold text-zinc-400 pl-2 mt-0.5">${mKey}</div>`;
             arr.forEach(it => {
                 let dimText = '';
                 if (it.shape === 'rect') dimText = `${it.w}×${it.h} | L=${it.l || 1250}`;
                 else if (it.shape === 'round') dimText = `Ø${it.d} | L=${it.l || 1250}`;
                 else dimText = `${it.w1 || it.w}×${it.h1 || it.h} → Ø${it.d}${it.l ? ` | L=${it.l}` : ''}`;
-                out += `<div class="pl-4 text-[11px] text-slate-200 mono">${dimText} | <strong class="text-blue-300">${it.qty} шт</strong></div>`;
+                out += `<div class="pl-4 text-[11px] text-zinc-200 mono">${dimText} | <strong class="text-zinc-200">${it.qty} шт</strong></div>`;
             });
         }
     }
@@ -637,7 +637,7 @@ function renderProjectPhases() {
     const mainQty = allItems.filter(i => (!i.phase_id || i.phase_id === 'main' || i.dimensions?.phase_id === 'main')).reduce((s, i) => s + (Number(i.qty) || 1), 0);
 
     let html = `
-        <button type="button" onclick="selectPhase('all')" class="px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition tap-spring ${
+        <button type="button" onclick="selectPhase('all')" class="px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition btn-press ${
             activePh === 'all' 
                 ? 'bg-white text-black shadow-sm' 
                 : 'bg-white/5 text-zinc-400 hover:text-white border border-white/5'
@@ -645,7 +645,7 @@ function renderProjectPhases() {
             Все очереди (${totalQty})
         </button>
 
-        <button type="button" onclick="selectPhase('main')" class="px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition tap-spring ${
+        <button type="button" onclick="selectPhase('main')" class="px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition btn-press ${
             activePh === 'main' 
                 ? 'bg-white text-black shadow-sm' 
                 : 'bg-white/5 text-zinc-400 hover:text-white border border-white/5'
@@ -659,10 +659,10 @@ function renderProjectPhases() {
         const isSel = (activePh === ph.id);
         html += `
             <div class="inline-flex items-center rounded-xl overflow-hidden border ${isSel ? 'bg-white text-black border-white shadow-sm' : 'bg-white/5 text-zinc-400 border-white/5'}">
-                <button type="button" onclick="selectPhase('${ph.id}')" class="px-3 py-1.5 font-bold whitespace-nowrap transition tap-spring">
+                <button type="button" onclick="selectPhase('${ph.id}')" class="px-3 py-1.5 font-bold whitespace-nowrap transition btn-press">
                     ${ph.name} (${phQty})
                 </button>
-                <button type="button" onclick="deleteSubproject('${ph.id}')" title="Удалить очередь" class="px-2 py-1.5 text-xs font-bold ${isSel ? 'text-black/60 hover:text-rose-600' : 'text-zinc-500 hover:text-rose-400'} transition tap-spring">
+                <button type="button" onclick="deleteSubproject('${ph.id}')" title="Удалить очередь" class="px-2 py-1.5 text-xs font-bold ${isSel ? 'text-black/60 hover:text-rose-600' : 'text-zinc-500 hover:text-rose-400'} transition btn-press">
                     ✕
                 </button>
             </div>
@@ -670,7 +670,7 @@ function renderProjectPhases() {
     });
 
     html += `
-        <button type="button" onclick="openSubprojectModal()" class="px-3 py-1.5 rounded-xl font-bold bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 whitespace-nowrap transition tap-spring flex items-center gap-1">
+        <button type="button" onclick="openSubprojectModal()" class="px-3 py-1.5 rounded-xl font-bold bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 whitespace-nowrap transition btn-press flex items-center gap-1">
             <span>＋ Дозаказ</span>
         </button>
     `;
@@ -769,13 +769,13 @@ function renderSummarySection() {
 
     const dBox = document.getElementById('summaryDuctsBox');
     if (dBox) {
-        let dHtml = '<div class="font-bold text-blue-400 uppercase tracking-wider text-[11px] mb-1">1. Воздуховоды</div>';
+        let dHtml = '<div class="font-bold text-zinc-300 uppercase tracking-wider text-[11px] mb-1">1. Воздуховоды</div>';
         const dRect = ducts.filter(i => i.shape === 'rect');
         if (dRect.length) {
             dHtml += '<div class="text-[11px] font-bold text-zinc-300 mt-1">Прямоугольные:</div>';
             const grouped = groupSummaryDucts(dRect);
             for (let [m, d] of Object.entries(grouped)) {
-                dHtml += `<div class="pl-2 text-zinc-400 mono text-xs">${m} | <strong>${d.qty} шт</strong> | <strong class="text-blue-300">${d.area.toFixed(2)} м²</strong></div>`;
+                dHtml += `<div class="pl-2 text-zinc-400 mono text-xs">${m} | <strong>${d.qty} шт</strong> | <strong class="text-zinc-200">${d.area.toFixed(2)} м²</strong></div>`;
             }
         }
         const dRound = ducts.filter(i => i.shape === 'round');
@@ -783,7 +783,7 @@ function renderSummarySection() {
             dHtml += '<div class="text-[11px] font-bold text-zinc-300 mt-2">Круглые:</div>';
             const grouped = groupSummaryDucts(dRound);
             for (let [m, d] of Object.entries(grouped)) {
-                dHtml += `<div class="pl-2 text-zinc-400 mono text-xs">${m} | <strong>${d.qty} шт</strong> | <strong class="text-blue-300">${d.area.toFixed(2)} м²</strong></div>`;
+                dHtml += `<div class="pl-2 text-zinc-400 mono text-xs">${m} | <strong>${d.qty} шт</strong> | <strong class="text-zinc-200">${d.area.toFixed(2)} м²</strong></div>`;
             }
         }
         if (!dRect.length && !dRound.length) dHtml += '<div class="text-zinc-500">Нет воздуховодов</div>';

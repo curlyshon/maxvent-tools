@@ -164,9 +164,9 @@ function renderProjectFlange() {
                 const sLen = typeof s === 'number' ? s : s.len;
                 const sCnt = typeof s === 'number' ? data.pack_qty : (s.count || data.pack_qty);
                 return `
-                    <span class="bg-[#181b26] border border-white/10 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-1.5 text-xs font-bold">
+                    <span class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-1.5 text-xs font-bold">
                         ✂ ${sLen} мм <strong class="text-amber-300">(${sCnt} шт)</strong>
-                        <button type="button" onclick="removeFlangeScrap('project', ${i})" title="Удалить обрезок" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 tap-spring">×</button>
+                        <button type="button" onclick="removeFlangeScrap('project', ${i})" title="Удалить обрезок" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 btn-press">×</button>
                     </span>
                 `;
             }).join('');
@@ -215,9 +215,9 @@ function renderStandaloneFlange() {
             scrapBox.innerHTML = '<span class="text-zinc-500 italic">Нет обрезков. Добавьте, если в цехе есть остатки пачек.</span>';
         } else {
             scrapBox.innerHTML = stData.scraps.map((s, i) => `
-                <span class="bg-[#181b26] border border-white/10 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-1.5 text-xs font-bold">
+                <span class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-1.5 text-xs font-bold">
                     ✂ ${s.len} мм <strong class="text-amber-300">(${s.count} шт)</strong>
-                    <button type="button" onclick="removeFlangeScrap('standalone', ${i})" title="Удалить обрезок" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 tap-spring">×</button>
+                    <button type="button" onclick="removeFlangeScrap('standalone', ${i})" title="Удалить обрезок" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 btn-press">×</button>
                 </span>
             `).join('');
         }
@@ -296,7 +296,7 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, reserveMode, scrapsL
 
     if (Object.keys(cutsNeeded).length === 0) {
         return `
-            <div class="bg-[#12141c] p-8 rounded-3xl border border-white/5 text-center text-xs text-zinc-500 space-y-1">
+            <div class="bg-[#121217] p-8 rounded-3xl border border-white/5 text-center text-xs text-zinc-500 space-y-1">
                 <span class="text-2xl block">📐</span>
                 <p>Нет рамок с шинорейкой для расчета</p>
                 <p class="text-[11px] text-zinc-600">Добавьте прямоугольные воздуховоды или фасонину с включенными рамками</p>
@@ -480,22 +480,22 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, reserveMode, scrapsL
     let html = `
         <!-- KPI КАРТОЧКИ -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/5 space-y-1">
+            <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-1">
                 <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Уголки УГФ (точно):</div>
                 <div class="text-xl sm:text-2xl font-black mono text-emerald-400">${totalCorners} шт</div>
                 <div class="text-[10px] text-zinc-500">по 4 шт на каждую рамку</div>
             </div>
-            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/5 space-y-1">
+            <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-1">
                 <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Всего рамок:</div>
                 <div class="text-xl sm:text-2xl font-black mono text-white">${totalFrames} шт</div>
                 <div class="text-[10px] text-zinc-500">${exactTotalShinkas} заготовок шинки</div>
             </div>
-            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/5 space-y-1">
+            <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-1">
                 <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Шинка (метраж):</div>
                 <div class="text-xl sm:text-2xl font-black mono text-white">${totalShinkaMeters.toFixed(1)} м</div>
                 <div class="text-[10px] text-zinc-500">чистая длина заготовок</div>
             </div>
-            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/5 space-y-1">
+            <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-1">
                 <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Межфланцевая лента:</div>
                 <div class="text-xl sm:text-2xl font-black mono text-cyan-400">${tapeMeters.toFixed(1)} м</div>
                 <div class="text-[10px] text-zinc-500">периметр всех рамок</div>
@@ -503,7 +503,7 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, reserveMode, scrapsL
         </div>
 
         <!-- ТОЧНОЕ КОЛИЧЕСТВО ШИНОК ПО РАЗМЕРАМ С КНОПКАМИ РЕЖИМА -->
-        <div class="bg-[#12141c] p-4 sm:p-5 rounded-3xl border border-white/5 space-y-3">
+        <div class="bg-[#121217] p-4 sm:p-5 rounded-3xl border border-white/5 space-y-3">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-white/5 pb-3">
                 <div>
                     <h3 class="font-extrabold text-sm text-white">Количество заготовок шинки</h3>
@@ -511,14 +511,14 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, reserveMode, scrapsL
                 </div>
                 <!-- Сегментированный переключатель режима раскроя -->
                 <div class="flex items-center bg-black/40 border border-white/10 rounded-2xl p-1 gap-1">
-                    <button type="button" onclick="setFlangeReserveMode('tail')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition tap-spring ${
+                    <button type="button" onclick="setFlangeReserveMode('tail')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition btn-press ${
                         !isSpare 
                             ? 'bg-amber-400 text-black shadow-md' 
                             : 'text-zinc-400 hover:text-white'
                     }">
                         ✂️ Хвостики на дорез
                     </button>
-                    <button type="button" onclick="setFlangeReserveMode('spare')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition tap-spring ${
+                    <button type="button" onclick="setFlangeReserveMode('spare')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition btn-press ${
                         isSpare 
                             ? 'bg-white text-black shadow-md' 
                             : 'text-zinc-400 hover:text-white'
@@ -531,7 +531,7 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, reserveMode, scrapsL
             <!-- Список точных размеров шинок -->
             <div class="flex flex-wrap gap-2 mono text-xs">
                 ${Object.entries(cutsNeeded).map(([k, v]) => `
-                    <div class="bg-[#181b26] border border-white/5 px-3 py-2 rounded-2xl flex items-center gap-2">
+                    <div class="bg-[#18181f] border border-white/5 px-3 py-2 rounded-2xl flex items-center gap-2">
                         <span class="text-zinc-300 font-bold">${k} мм</span>
                         <span class="text-zinc-500">—</span>
                         <strong class="text-emerald-400">${v} шт</strong>
@@ -553,7 +553,7 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, reserveMode, scrapsL
         const used = p.cuts.length > 0 ? (p.cuts.reduce((s, x) => s + x, 0) + (p.cuts.length - 1) * kerf) : 0;
         const rem = Math.max(0, p.totalLen - used);
         html += `
-            <div class="bg-[#12141c] p-4 rounded-3xl border border-white/5 space-y-3">
+            <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-3">
                 <div class="flex justify-between items-center text-xs">
                     <span class="font-extrabold text-white">${p.isScrap ? `✂ Обрезок (${p.count} шт в пачке)` : `Пачка №${idx + 1} (${p.count} шт в пачке)`} — ${p.totalLen} мм</span>
                     <span class="text-zinc-400">Деловой остаток: <strong class="text-amber-400 mono">${rem} мм</strong></span>
@@ -583,7 +583,7 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, reserveMode, scrapsL
                     </div>
                     <div class="flex flex-wrap gap-2 mono">
                         ${singleTails.map(t => `
-                            <span class="bg-[#12141c] border border-amber-500/30 text-amber-200 px-3 py-1.5 rounded-xl font-bold">
+                            <span class="bg-[#121217] border border-amber-500/30 text-amber-200 px-3 py-1.5 rounded-xl font-bold">
                                 ${t.len} мм — ${t.qty} шт
                             </span>
                         `).join('')}
@@ -603,14 +603,14 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, reserveMode, scrapsL
         if (spareEntries.length > 0) {
             const totalSpare = spareEntries.reduce((s, [, q]) => s + q, 0);
             html += `
-                <div class="bg-blue-500/10 border border-blue-500/25 p-4 rounded-3xl text-xs space-y-2">
-                    <div class="flex items-center gap-2 text-blue-300 font-extrabold">
+                <div class="bg-white/5 border border-white/10 p-4 rounded-3xl text-xs space-y-2">
+                    <div class="flex items-center gap-2 text-zinc-200 font-extrabold">
                         <span>📦</span>
                         <span>Отрезано в запас на склад (всего +${totalSpare} шт готовых шинок в запасе):</span>
                     </div>
                     <div class="flex flex-wrap gap-2 mono">
                         ${spareEntries.map(([len, q]) => `
-                            <span class="bg-[#12141c] border border-blue-500/30 text-blue-200 px-3 py-1.5 rounded-xl font-bold">
+                            <span class="bg-[#121217] border border-white/10 text-zinc-200 px-3 py-1.5 rounded-xl font-bold">
                                 ${len} мм — +${q} шт
                             </span>
                         `).join('')}

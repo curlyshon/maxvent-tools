@@ -106,11 +106,11 @@ function renderNestingScrapsList() {
     }
 
     box.innerHTML = list.map((s, i) => `
-        <span class="bg-[#181b26] border border-amber-500/30 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-2 text-xs font-bold">
+        <span class="bg-[#18181f] border border-amber-500/30 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-2 text-xs font-bold">
             <span class="text-amber-300">✂️ ${s.w}×${s.l} мм</span>
             <strong class="text-white">(${s.qty} шт)</strong>
-            <button type="button" onclick="openNestingAddScrapModal(${i})" title="Редактировать" class="text-zinc-400 hover:text-white ml-1 tap-spring">✎</button>
-            <button type="button" onclick="deleteNestingScrap(${i})" title="Удалить" class="text-zinc-500 hover:text-rose-400 font-bold tap-spring">×</button>
+            <button type="button" onclick="openNestingAddScrapModal(${i})" title="Редактировать" class="text-zinc-400 hover:text-white ml-1 btn-press">✎</button>
+            <button type="button" onclick="deleteNestingScrap(${i})" title="Удалить" class="text-zinc-500 hover:text-rose-400 font-bold btn-press">×</button>
         </span>
     `).join('');
 }
@@ -155,8 +155,8 @@ function renderProjectNesting() {
     keys.forEach(k => {
         const btn = document.createElement('button');
         const isSel = (k === session.activeNestingKey);
-        btn.className = `px-3.5 py-2 rounded-xl text-xs font-bold transition tap-spring whitespace-nowrap ${
-            isSel ? 'bg-white text-black shadow-sm' : 'bg-[#181b26] border border-white/5 text-zinc-300 hover:text-white'
+        btn.className = `px-3.5 py-2 rounded-xl text-xs font-bold transition btn-press whitespace-nowrap ${
+            isSel ? 'bg-white text-black shadow-sm' : 'bg-[#18181f] border border-white/5 text-zinc-300 hover:text-white'
         }`;
         btn.textContent = `${k} (${queues[k].reduce((s, i) => s + i.qty, 0)} шт)`;
         btn.onclick = () => {
@@ -200,17 +200,17 @@ function renderProjectNesting() {
                     if (d.shape === 'round') {
                         const unfold = Math.round(Math.PI * d.d + seams.round_seam);
                         return `
-                            <div class="bg-[#181b26] p-3 rounded-2xl border border-white/5 text-xs flex flex-wrap justify-between items-center gap-3">
+                            <div class="bg-[#18181f] p-3 rounded-2xl border border-white/5 text-xs flex flex-wrap justify-between items-center gap-3">
                                 <div class="flex items-center gap-3">
                                     <input type="checkbox" id="nestDuctCheck_${d.id}" checked class="rounded text-white accent-white">
                                     <div>
                                         <div class="font-bold text-white">Ø${d.d} мм <span class="text-zinc-400 font-normal">| L=${d.l || 1250} мм</span></div>
-                                        <div class="text-[11px] text-zinc-400 mono mt-0.5">Развертка (πD + ${seams.round_seam} мм): <strong class="text-blue-300">${unfold} × ${d.l || 1250} мм</strong></div>
+                                        <div class="text-[11px] text-zinc-400 mono mt-0.5">Развертка (πD + ${seams.round_seam} мм): <strong class="text-zinc-200">${unfold} × ${d.l || 1250} мм</strong></div>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-zinc-400">Штук:</span>
-                                    <input type="number" id="nestDuctQty_${d.id}" value="${d.qty}" min="1" max="${d.qty}" inputmode="numeric" class="w-16 bg-[#12141c] border border-white/10 rounded-xl px-2 py-1 text-center mono text-white font-bold">
+                                    <input type="number" id="nestDuctQty_${d.id}" value="${d.qty}" min="1" max="${d.qty}" inputmode="numeric" class="w-16 bg-[#121217] border border-white/10 rounded-xl px-2 py-1 text-center mono text-white font-bold">
                                 </div>
                             </div>
                         `;
@@ -223,7 +223,7 @@ function renderProjectNesting() {
                     const exceeds2500 = unfoldWhole > 2500;
 
                     return `
-                        <div class="bg-[#181b26] p-3.5 rounded-2xl border ${exceeds2500 && cfg.mode === 'whole' ? 'border-rose-500/40 bg-rose-950/10' : 'border-white/5'} text-xs space-y-2.5">
+                        <div class="bg-[#18181f] p-3.5 rounded-2xl border ${exceeds2500 && cfg.mode === 'whole' ? 'border-rose-500/40 bg-rose-950/10' : 'border-white/5'} text-xs space-y-2.5">
                             <div class="flex flex-wrap justify-between items-center gap-2">
                                 <div class="flex items-center gap-3">
                                     <input type="checkbox" id="nestDuctCheck_${d.id}" checked class="rounded text-white accent-white">
@@ -235,47 +235,47 @@ function renderProjectNesting() {
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-zinc-400">Всего:</span>
-                                    <input type="number" id="nestDuctQty_${d.id}" value="${d.qty}" min="1" max="${d.qty}" inputmode="numeric" class="w-16 bg-[#12141c] border border-white/10 rounded-xl px-2 py-1 text-center mono text-white font-bold" onchange="onNestingDuctQtyChange(${d.id})">
+                                    <input type="number" id="nestDuctQty_${d.id}" value="${d.qty}" min="1" max="${d.qty}" inputmode="numeric" class="w-16 bg-[#121217] border border-white/10 rounded-xl px-2 py-1 text-center mono text-white font-bold" onchange="onNestingDuctQtyChange(${d.id})">
                                     <span class="text-zinc-400">шт</span>
                                 </div>
                             </div>
 
                             <!-- Кнопки выбора типа гибки -->
-                            <div class="bg-[#12141c] p-2.5 rounded-xl border border-white/5 flex flex-wrap items-center justify-between gap-2">
+                            <div class="bg-[#121217] p-2.5 rounded-xl border border-white/5 flex flex-wrap items-center justify-between gap-2">
                                 <div class="flex flex-wrap items-center gap-1.5">
                                     <span class="text-[11px] text-zinc-400 font-semibold mr-1">Гибка:</span>
-                                    <button type="button" onclick="setNestingDuctMode(${d.id}, 'whole')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition tap-spring ${cfg.mode === 'whole' ? 'bg-white text-black shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-white'}">
+                                    <button type="button" onclick="setNestingDuctMode(${d.id}, 'whole')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition btn-press ${cfg.mode === 'whole' ? 'bg-white text-black shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-white'}">
                                         Цельный (${unfoldWhole} мм)
                                     </button>
-                                    <button type="button" onclick="setNestingDuctMode(${d.id}, 'L')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition tap-spring ${cfg.mode === 'L' ? 'bg-white text-black shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-white'}">
+                                    <button type="button" onclick="setNestingDuctMode(${d.id}, 'L')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition btn-press ${cfg.mode === 'L' ? 'bg-white text-black shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-white'}">
                                         L-половинки (2×${unfoldL} мм)
                                     </button>
-                                    <button type="button" onclick="setNestingDuctMode(${d.id}, 'U')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition tap-spring ${cfg.mode === 'U' ? 'bg-white text-black shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-white'}">
+                                    <button type="button" onclick="setNestingDuctMode(${d.id}, 'U')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition btn-press ${cfg.mode === 'U' ? 'bg-white text-black shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-white'}">
                                         П-корыто (${unfoldTrough}) + Крышка (${unfoldCap})
                                     </button>
                                 </div>
                                 ${d.qty > 1 ? `
-                                    <button type="button" onclick="toggleNestingDuctSplit(${d.id})" class="text-[11px] font-bold ${cfg.showSplit ? 'text-amber-300 underline' : 'text-zinc-400 hover:text-white'} tap-spring">
+                                    <button type="button" onclick="toggleNestingDuctSplit(${d.id})" class="text-[11px] font-bold ${cfg.showSplit ? 'text-amber-300 underline' : 'text-zinc-400 hover:text-white'} btn-press">
                                         ${cfg.showSplit ? '▾ Скрыть разделение' : '⚙ Разбить партию'}
                                     </button>
                                 ` : ''}
                             </div>
 
                             ${cfg.showSplit && d.qty > 1 ? `
-                                <div class="bg-[#12141c] p-3 rounded-xl border border-amber-500/20 space-y-2">
+                                <div class="bg-[#121217] p-3 rounded-xl border border-amber-500/20 space-y-2">
                                     <div class="text-[11px] text-amber-300 font-bold">Распределение партии (сумма должна быть ${d.qty} шт):</div>
                                     <div class="grid grid-cols-3 gap-2">
                                         <div>
                                             <label class="block text-[10px] text-zinc-400 mb-0.5">Цельных (шт)</label>
-                                            <input type="number" id="split_whole_${d.id}" value="${cfg.wholeQty}" min="0" max="${d.qty}" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-lg px-2 py-1 text-center mono text-white text-xs font-bold" onchange="updateNestingSplitValues(${d.id})">
+                                            <input type="number" id="split_whole_${d.id}" value="${cfg.wholeQty}" min="0" max="${d.qty}" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-lg px-2 py-1 text-center mono text-white text-xs font-bold" onchange="updateNestingSplitValues(${d.id})">
                                         </div>
                                         <div>
                                             <label class="block text-[10px] text-zinc-400 mb-0.5">L-образных (шт)</label>
-                                            <input type="number" id="split_l_${d.id}" value="${cfg.lQty}" min="0" max="${d.qty}" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-lg px-2 py-1 text-center mono text-white text-xs font-bold" onchange="updateNestingSplitValues(${d.id})">
+                                            <input type="number" id="split_l_${d.id}" value="${cfg.lQty}" min="0" max="${d.qty}" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-lg px-2 py-1 text-center mono text-white text-xs font-bold" onchange="updateNestingSplitValues(${d.id})">
                                         </div>
                                         <div>
                                             <label class="block text-[10px] text-zinc-400 mb-0.5">П-образных (шт)</label>
-                                            <input type="number" id="split_u_${d.id}" value="${cfg.uQty}" min="0" max="${d.qty}" inputmode="numeric" class="w-full bg-[#181b26] border border-white/10 rounded-lg px-2 py-1 text-center mono text-white text-xs font-bold" onchange="updateNestingSplitValues(${d.id})">
+                                            <input type="number" id="split_u_${d.id}" value="${cfg.uQty}" min="0" max="${d.qty}" inputmode="numeric" class="w-full bg-[#18181f] border border-white/10 rounded-lg px-2 py-1 text-center mono text-white text-xs font-bold" onchange="updateNestingSplitValues(${d.id})">
                                         </div>
                                     </div>
                                 </div>
@@ -471,7 +471,7 @@ function renderNestingResult(p) {
     const nestingData = appState.activeProjectNestings[session.activeNestingKey];
 
     if (!nestingData || !nestingData.sheets || nestingData.sheets.length === 0) {
-        box.innerHTML = `<div class="bg-[#12141c] p-8 rounded-3xl border border-white/5 text-center text-xs text-zinc-500">Нажмите «Рассчитать карту раскроя», чтобы получить карты раскроя</div>`;
+        box.innerHTML = `<div class="bg-[#121217] p-8 rounded-3xl border border-white/5 text-center text-xs text-zinc-500">Нажмите «Рассчитать карту раскроя», чтобы получить карты раскроя</div>`;
         return;
     }
 
@@ -492,7 +492,7 @@ function renderNestingResult(p) {
                 <span class="font-extrabold text-white uppercase tracking-wider">Карты раскроя листа (${session.activeNestingKey}):</span>
                 <span class="text-zinc-400 ml-2">Всего: <strong class="text-white mono">${sheets.length} шт</strong></span>
             </div>
-            <button onclick="finishCuttingWork()" class="${allDone ? 'bg-emerald-500 text-black' : 'bg-white/10 text-white hover:bg-white/15 border border-white/10'} text-xs font-bold px-4 py-2 rounded-xl transition tap-spring">
+            <button onclick="finishCuttingWork()" class="${allDone ? 'bg-emerald-500 text-black' : 'bg-white/10 text-white hover:bg-white/15 border border-white/10'} text-xs font-bold px-4 py-2 rounded-xl transition btn-press">
                 ✓ Воздуховоды отрезаны
             </button>
         </div>
@@ -506,7 +506,7 @@ function renderNestingResult(p) {
         const remL = Math.max(0, fullL - usedL);
 
         html += `
-            <div class="bg-[#12141c] border ${s.cutDone ? 'border-emerald-500/40 bg-emerald-950/10' : (s.isScrap ? 'border-amber-500/30' : 'border-white/5')} rounded-3xl p-4 sm:p-5 space-y-3">
+            <div class="bg-[#121217] border ${s.cutDone ? 'border-emerald-500/40 bg-emerald-950/10' : (s.isScrap ? 'border-amber-500/30' : 'border-white/5')} rounded-3xl p-4 sm:p-5 space-y-3">
                 <div class="flex justify-between items-center text-xs">
                     <label class="flex items-center gap-2 cursor-pointer font-extrabold text-white">
                         <input type="checkbox" onchange="toggleSheetCutDone(${idx}, this.checked)" ${s.cutDone ? 'checked' : ''} class="rounded text-white accent-white">
@@ -514,7 +514,7 @@ function renderNestingResult(p) {
                     </label>
                     <span class="text-zinc-400">Деловой остаток: <strong class="text-amber-400 mono">${remL} × ${fullW} мм</strong></span>
                 </div>
-                <div class="w-full bg-[#181b26] border border-white/10 rounded-2xl p-1.5 flex h-24 overflow-hidden relative">
+                <div class="w-full bg-[#18181f] border border-white/10 rounded-2xl p-1.5 flex h-24 overflow-hidden relative">
                     ${s.parts.map(pt => {
                         const styleClass = typeStyles[pt.type] || typeStyles.whole;
                         return `
