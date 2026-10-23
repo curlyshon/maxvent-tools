@@ -593,3 +593,11 @@ async function startNewMonthClean() {
     renderMainMenuProjects();
     updateHeaderUI();
 }
+
+async function performMonthlyReset() {
+    triggerHaptic('medium');
+    await exportMonthlyArchive();
+    setTimeout(async () => {
+        await startNewMonthClean();
+    }, 1200);
+}

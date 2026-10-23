@@ -3,6 +3,32 @@
 // Расчет выработки, долей мастеров, личный кабинет выработки по активным проектам
 // ==========================================
 
+function formatMoney(amount) {
+    return Math.round(Number(amount) || 0).toLocaleString('ru-RU');
+}
+
+function calculateWorkerEarned(workerName, period = 'all') {
+    let earnedDone = 0;
+    let earnedPlanned = 0;
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    appState.allItems.forEach(it => {
+        const p = appState.projects.find(x => x.id === it.project_id);
+        if (!p || p.archive_state === 'archived') return;
+        if ((it.workers || []).includes(workerName)) {
+            if (period === 'today') {
+                const itemDate = (it.created_at || '').split('T')[0];
+                if (itemDate && itemDate !== todayStr) return;
+            }
+            const info = getWorkerItemShareInfo(it, workerName, p);
+            earnedPlanned += info.amount;
+            if (it.item_status === 'done') earnedDone += info.amount;
+        }
+    });
+    return { earnedDone, earnedPlanned };
+}
+
 let workerProjectsFilter = 'active'; // 'active' or 'archived'
 
 function setWorkerProjectsFilter(f) {
@@ -176,7 +202,9 @@ function renderWorkerProfileContent() {
     if (elDuctsCount) elDuctsCount.textContent = `${ductsCount} шт деталей`;
     if (elFitCount) elFitCount.textContent = `${fittingsCount} шт`;
     if (elFitEarned) elFitEarned.textContent = `Фасонина: ${fittingsEarned.toLocaleString()} ₸`;
-    if (elDoneRatio) elDoneRatio.textContent = `${doneItems} / ${totalItems} поз.`;
+    if (elDoneRatio) elDoneRatio.textContent = `${doneItems} / ${totalItems}`;
+    const elDoneRatioSub = document.getElementById('wpStatDoneRatioSub');
+    if (elDoneRatioSub) elDoneRatioSub.textContent = `${doneItems} / ${totalItems} поз.`;
     if (elDonePct) elDonePct.textContent = `${pctDone}% собрано`;
 
     // Рендер проектов с заработком мастера

@@ -22,13 +22,17 @@ function openFlangeSettingsModal() {
     if (kerfInp) kerfInp.value = data.kerf !== undefined ? data.kerf : 2;
 
     const modal = document.getElementById('flangeSettingsModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (typeof lockScroll === 'function') lockScroll();
+    }
 }
 
 function closeFlangeSettingsModal() {
     triggerHaptic('light');
     const modal = document.getElementById('flangeSettingsModal');
     if (modal) modal.classList.add('hidden');
+    if (typeof unlockScroll === 'function') unlockScroll();
 }
 
 async function saveFlangeSettingsModal() {
@@ -545,7 +549,7 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, reserveMode, scrapsL
                         spareProduced[l] = (spareProduced[l] || 0) + extraInPack;
                     }
                 }
-                remainingDemand[l] = 0;
+                remainingDemand[l] = Math.max(0, rem - (placed ? (resultPacks[resultPacks.length - 1]?.count || packQty) : packQty));
             } else {
                 // Режим 'tail': оставляем хвостики для штучного дореза
                 singleTails.push({ len: l, qty: rem });

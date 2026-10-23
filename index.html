@@ -35,6 +35,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
+        :root {
+            --ios-spring: cubic-bezier(0.16, 1, 0.3, 1);
+        }
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
@@ -308,14 +311,17 @@
     <!-- ЭКРАН 3: СПИСОК ПРОЕКТОВ (SCREEN-PROJECTS) -->
     <!-- ========================================== -->
     <div id="screen-projects" class="app-screen hidden min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-4xl mx-auto w-full no-print safe-top">
-        <!-- Шапка: Поиск в левом углу, Порядок и В меню -->
+        <!-- Шапка: Поиск в левом углу, Порядок, Создать и В меню -->
         <div class="flex items-center justify-between gap-2 pb-3 border-b border-white/10">
             <button type="button" onclick="navigateTo(SCREENS.MENU)" class="flex items-center gap-1.5 text-xs font-bold text-white bg-[#18181f] border border-white/10 px-3 py-2 rounded-xl btn-press shrink-0">
                 <span>←</span> <span>В меню</span>
             </button>
             <input type="text" id="projectSearchInput" oninput="renderMainMenuProjects()" placeholder="🔍 Поиск проекта или бригады..." class="flex-1 bg-[#121217] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 min-w-0">
-            <button type="button" onclick="toggleProjectReorderMode()" id="btnToggleReorder" class="text-xs font-bold text-zinc-300 bg-[#18181f] border border-white/10 px-3 py-2 rounded-xl btn-press shrink-0" title="Включить перетаскивание">
+            <button type="button" onclick="toggleProjectReorderMode()" id="btnToggleReorder" class="text-xs font-bold text-zinc-300 bg-[#18181f] border border-white/10 px-2.5 py-2 rounded-xl btn-press shrink-0" title="Включить перетаскивание">
                 ⇅ Порядок
+            </button>
+            <button type="button" onclick="openProjectModal()" id="btnHeaderCreateProject" class="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/30 px-3 py-2 rounded-xl btn-press shrink-0 flex items-center gap-1 shadow-md">
+                <span>＋</span> <span>Проект</span>
             </button>
         </div>
 
@@ -339,16 +345,17 @@
         <!-- Список карточек проектов -->
         <div id="projectsButtonsContainer" class="space-y-3 py-4 flex-1"></div>
 
-        <!-- Большая кнопка Создать проект внизу -->
-        <div class="pt-3 sticky bottom-3 z-20">
-            <button type="button" onclick="openProjectModal()" class="w-full bg-white text-black font-black py-3.5 rounded-2xl text-sm uppercase tracking-wider shadow-lg btn-press">
-                ＋ Создать проект
+        <!-- Кнопка Создать проект внизу списка -->
+        <div id="projectsBottomBar" class="pt-3 sticky bottom-4 z-20">
+            <button type="button" onclick="openProjectModal()" class="w-full bg-[#18181f] hover:bg-[#22222b] border border-white/20 hover:border-white/40 text-white font-bold py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider shadow-xl flex items-center justify-center gap-2 btn-press">
+                <span class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-sm font-black">＋</span>
+                <span>Создать новый проект</span>
             </button>
         </div>
     </div>
 
     <!-- ========================================== -->
-    <div id="screen-flange" class="app-screen hidden min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-4xl mx-auto w-full no-print">
+    <div id="screen-flange" class="app-screen hidden min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-4xl mx-auto w-full no-print safe-top safe-bottom">
         <div class="flex items-center justify-between pb-3 border-b border-white/10">
             <button type="button" onclick="goBack()" class="flex items-center gap-1.5 text-xs font-bold text-white bg-[#18181f] border border-white/10 px-3 py-2 rounded-xl btn-press">
                 <span>←</span> <span>Назад</span>
@@ -513,7 +520,7 @@
         </div>
 
         <!-- Нижний бар действий -->
-        <nav class="fixed bottom-0 inset-x-0 z-40 bg-[#09090b]/95 backdrop-blur-md border-t border-white/10 px-4 py-2 flex items-center justify-around sm:max-w-md sm:mx-auto sm:bottom-4 sm:rounded-3xl sm:border safe-bottom shadow-2xl">
+        <nav class="fixed bottom-0 inset-x-0 z-40 bg-[#09090b]/95 backdrop-blur-md border-t border-white/10 px-4 pt-2 flex items-center justify-around sm:max-w-md sm:mx-auto sm:bottom-4 sm:rounded-3xl sm:border shadow-2xl" style="padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);">
             <button type="button" onclick="openProjectFinanceModal()" class="flex flex-col items-center gap-0.5 text-zinc-400 hover:text-white btn-press">
                 <span class="text-xl">₸</span>
                 <span class="text-[10px] font-bold">Смета</span>
@@ -539,7 +546,7 @@
     <!-- ========================================== -->
     <!-- ЭКРАН 6: ВЫРАБОТКА МАСТЕРА (SCREEN-WORKER) -->
     <!-- ========================================== -->
-    <div id="screen-worker" class="app-screen hidden min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-4xl mx-auto w-full no-print">
+    <div id="screen-worker" class="app-screen hidden min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-4xl mx-auto w-full no-print safe-top safe-bottom">
         <div class="flex items-center justify-between border-b border-white/10 pb-3">
             <div class="flex items-center gap-2.5 min-w-0">
                 <button type="button" onclick="goBack()" class="flex items-center gap-1.5 text-xs font-bold text-white bg-[#18181f] border border-white/10 px-3 py-2 rounded-xl btn-press">
@@ -577,7 +584,7 @@
                 <div class="bg-[#121217] border border-white/10 p-3.5 rounded-2xl space-y-0.5">
                     <div class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Заработано (Собрано):</div>
                     <div class="text-lg sm:text-xl font-black mono text-emerald-400" id="wpStatEarnedDone">0 ₸</div>
-                    <div class="text-[10px] text-zinc-500 font-mono" id="wpStatDoneRatio">0 / 0 поз.</div>
+                    <div class="text-[10px] text-zinc-500 font-mono" id="wpStatDoneRatioSub">0 / 0 поз.</div>
                 </div>
                 <div class="bg-[#121217] border border-white/10 p-3.5 rounded-2xl space-y-0.5">
                     <div class="text-[10px] text-amber-400 font-bold uppercase tracking-wider">В работе (План):</div>
@@ -775,7 +782,7 @@
     </div>
 
     <!-- ========================================== -->
-    <div id="screen-nesting" class="app-screen hidden min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-4xl mx-auto w-full no-print">
+    <div id="screen-nesting" class="app-screen hidden min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-4xl mx-auto w-full no-print safe-top safe-bottom">
         <div class="flex items-center justify-between pb-3 border-b border-white/10">
             <button type="button" onclick="goBack()" class="flex items-center gap-1.5 text-xs font-bold text-white bg-[#18181f] border border-white/10 px-3 py-2 rounded-xl btn-press">
                 <span>←</span> <span>Назад</span>
@@ -852,7 +859,7 @@
     <!-- ========================================== -->
 
     <!-- 1. МОДАЛКА ДОБАВЛЕНИЯ ИЗДЕЛИЯ (WIZARD SHEET) -->
-    <div id="itemFormModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 overflow-y-auto modal-sheet-wrap no-print">
+    <div id="itemFormModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 overflow-y-auto modal-sheet-wrap no-print" onclick="if(event.target === this) closeItemAddSheet()">
         <div class="bg-[#121217] border border-white/10 rounded-3xl max-w-lg w-full p-5 sm:p-6 space-y-4 my-auto max-h-[92vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-white/10 pb-2.5">
                 <div class="min-w-0">
@@ -979,10 +986,11 @@
     </div>
 
     <!-- 2. МОДАЛКА ПРОФИЛЯ МАСТЕРА -->
-    <div id="profileModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print">
+    <div id="profileModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target === this) closeProfileModal()">
         <div class="bg-[#121217] border border-white/10 rounded-3xl max-w-sm w-full p-5 space-y-4">
-            <div class="border-b border-white/10 pb-2">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2">
                 <h3 class="text-sm font-black uppercase text-white">Мой профиль</h3>
+                <button type="button" onclick="closeProfileModal()" class="text-zinc-400 hover:text-white text-lg font-bold p-1">✕</button>
             </div>
             <div class="space-y-3 text-xs">
                 <div>
@@ -1017,7 +1025,7 @@
     </div>
 
     <!-- 3. МОДАЛКА ПРОЕКТА (СОЗДАНИЕ / РЕДАКТИРОВАНИЕ) -->
-    <div id="projectModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print">
+    <div id="projectModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target === this) closeProjectModal()">
         <div class="bg-[#121217] border border-white/10 rounded-3xl max-w-sm w-full p-5 space-y-3.5">
             <div class="flex justify-between items-center border-b border-white/10 pb-2">
                 <h3 id="projectModalHeader" class="text-sm font-black uppercase text-white">Создать проект</h3>
@@ -1051,7 +1059,7 @@
     </div>
 
     <!-- 4.1 МОДАЛКА НАСТРОЕК ПРОЕКТА (Фальцы, статус, наряд) -->
-    <div id="projectSettingsModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print">
+    <div id="projectSettingsModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target === this) closeProjectSettingsModal()">
         <div class="bg-[#121217] border border-white/10 rounded-3xl max-w-sm w-full p-5 space-y-4">
             <div class="flex justify-between items-center border-b border-white/10 pb-2.5">
                 <h3 class="text-sm font-black uppercase text-white">⚙️ Настройки проекта</h3>
@@ -1105,7 +1113,7 @@
     </div>
 
     <!-- 4. МОДАЛКА ДОЗАКАЗА / ОЧЕРЕДИ -->
-    <div id="subprojectModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print">
+    <div id="subprojectModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target === this) closeSubprojectModal()">
         <div class="bg-[#121217] border border-white/10 rounded-3xl max-w-sm w-full p-5 space-y-3">
             <div class="flex justify-between items-center border-b border-white/10 pb-2">
                 <h3 class="text-sm font-black uppercase text-white">Добавить дозаказ / очередь</h3>
@@ -1123,7 +1131,7 @@
     </div>
 
     <!-- 5. МОДАЛКА ФАЛЬЦЕВ ОБЪЕКТА -->
-    <div id="projectSeamsModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print">
+    <div id="projectSeamsModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target === this) closeProjectSeamsModal()">
         <div class="bg-[#121217] border border-white/10 rounded-3xl max-w-xs w-full p-5 space-y-3">
             <div class="flex justify-between items-center border-b border-white/10 pb-2">
                 <h3 class="text-sm font-black uppercase text-white">⚙ Фальцы объекта</h3>
@@ -1152,10 +1160,11 @@
     </div>
 
     <!-- 6. МОДАЛКА НАСТРОЕК ШИНКИ -->
-    <div id="flangeSettingsModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print">
+    <div id="flangeSettingsModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target === this) closeFlangeSettingsModal()">
         <div class="bg-[#121217] border border-white/10 rounded-3xl max-w-xs w-full p-5 space-y-3">
-            <div class="border-b border-white/10 pb-2">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2">
                 <h3 class="text-sm font-black uppercase text-white">⚙️ Настройки шинки</h3>
+                <button type="button" onclick="closeFlangeSettingsModal()" class="text-zinc-400 hover:text-white text-lg font-bold p-1">✕</button>
             </div>
             <div class="space-y-2 text-xs">
                 <div>
@@ -1178,7 +1187,7 @@
     </div>
 
     <!-- 7. МОДАЛКА ОБРЕЗКА ШИНКИ -->
-    <div id="flangeAddScrapModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print">
+    <div id="flangeAddScrapModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target === this) closeFlangeAddScrapModal()">
         <div class="bg-[#121217] border border-white/10 rounded-3xl max-w-xs w-full p-5 space-y-3">
             <div class="flex justify-between items-center border-b border-white/10 pb-2">
                 <h3 id="flangeScrapModalHeader" class="text-sm font-black uppercase text-amber-300">✂️ Обрезок шинки</h3>
@@ -1201,7 +1210,7 @@
     </div>
 
     <!-- 8. МОДАЛКА ОБРЕЗКА ЛИСТА 2D -->
-    <div id="nestingAddScrapModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print">
+    <div id="nestingAddScrapModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 modal-sheet-wrap no-print" onclick="if(event.target === this) closeNestingAddScrapModal()">
         <div class="bg-[#121217] border border-white/10 rounded-3xl max-w-xs w-full p-5 space-y-3">
             <div class="flex justify-between items-center border-b border-white/10 pb-2">
                 <h3 class="text-sm font-black uppercase text-amber-300">✂️ Обрезок листа</h3>
@@ -1228,7 +1237,7 @@
     </div>
 
     <!-- 9. МОДАЛКА ГРУППОВОГО ИЗМЕНЕНИЯ (BULK EDIT) -->
-    <div id="bulkEditModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 overflow-y-auto modal-sheet-wrap no-print">
+    <div id="bulkEditModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 overflow-y-auto modal-sheet-wrap no-print" onclick="if(event.target === this) closeBulkEditModal()">
         <div class="bg-[#121217] border border-white/10 rounded-3xl max-w-sm w-full p-5 space-y-3.5 my-auto max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-white/10 pb-2">
                 <div>
@@ -1283,7 +1292,7 @@
     </div>
 
     <!-- 10. МОДАЛКА СМЕТЫ И ПЛАТЕЖЕЙ -->
-    <div id="projectFinanceModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 overflow-y-auto modal-sheet-wrap no-print">
+    <div id="projectFinanceModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 overflow-y-auto modal-sheet-wrap no-print" onclick="if(event.target === this) closeProjectFinanceModal()">
         <div class="bg-[#121217] border border-white/10 rounded-3xl max-w-lg w-full p-5 space-y-3.5 my-auto max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-white/10 pb-2">
                 <h3 class="text-sm font-black uppercase text-white">₸ Смета и платежи объекта</h3>

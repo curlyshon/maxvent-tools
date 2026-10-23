@@ -368,10 +368,10 @@ function renderProjectPreviewCard(projId) {
     if (fRect.length) treeHtml += `<div class="font-bold text-amber-400 mt-2">Изделия прямоугольные</div>` + formatPreviewItems(fRect, true);
 
     const fRound = fittings.filter(i => i.shape === 'round');
-    if (fRound.length) treeHtml += `<div class="font-bold text-purple-400 mt-2">Изделия круглые</div>` + formatPreviewItems(fRound, true);
+    if (fRound.length) treeHtml += `<div class="font-bold text-amber-400 mt-2">Изделия круглые</div>` + formatPreviewItems(fRound, true);
 
     const fSmooth = fittings.filter(i => i.shape === 'smooth');
-    if (fSmooth.length) treeHtml += `<div class="font-bold text-cyan-400 mt-2">Изделия плавные</div>` + formatPreviewItems(fSmooth, true);
+    if (fSmooth.length) treeHtml += `<div class="font-bold text-emerald-400 mt-2">Изделия плавные</div>` + formatPreviewItems(fSmooth, true);
 
     const stDef = PROJECT_STATUSES[getProjectStatusKey(p.status_text)] || PROJECT_STATUSES.in_progress;
 
@@ -610,6 +610,8 @@ async function deleteProjectPermanent(id) {
     await supabaseClient.from('projects').delete().eq('id', id);
     await supabaseClient.from('items').delete().eq('project_id', id);
     await supabaseClient.from('nestings').delete().eq('project_id', id);
+    await supabaseClient.from('payments').delete().eq('project_id', id);
+    await supabaseClient.from('payments').delete().eq('project_id', id);
 
     appState.projects = appState.projects.filter(x => x.id !== id);
     appState.allItems = appState.allItems.filter(x => x.project_id !== id);
@@ -628,7 +630,10 @@ function openSubprojectModal() {
     const input = document.getElementById('subprojectTitleInput');
     if (input) input.value = '';
     const modal = document.getElementById('subprojectModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (typeof lockScroll === 'function') lockScroll();
+    }
     setTimeout(() => input?.focus(), 80);
 }
 
@@ -636,6 +641,7 @@ function closeSubprojectModal() {
     triggerHaptic('light');
     const modal = document.getElementById('subprojectModal');
     if (modal) modal.classList.add('hidden');
+    if (typeof unlockScroll === 'function') unlockScroll();
 }
 
 async function saveSubprojectModal() {
@@ -903,12 +909,17 @@ function renderSummarySection() {
 
 function groupSummaryDucts(arr) {
     const res = {};
+    const p = appState.projects.find(x => x.id === session.insideProjectId);
+    const seams = typeof getProjectSeams === 'function' ? getProjectSeams(p) : { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 };
     arr.forEach(it => {
         const k = `${it.metal} ${it.thickness} мм`;
         if (!res[k]) res[k] = { qty: 0, area: 0 };
-        res[k].qty += it.qty;
-        const unfold = it.shape === 'rect' ? (2 * (it.w + it.h) + 41) : Math.round(Math.PI * it.d + 22);
-        res[k].area += (unfold * (it.l || 1250) * it.qty) / 1e6;
+        const q = Number(it.qty) || 1;
+        res[k].qty += q;
+        const unfold = it.shape === 'rect' 
+            ? (2 * (Number(it.w || 0) + Number(it.h || 0)) + seams.lock_pittsburgh + seams.lock_single) 
+            : Math.round(Math.PI * Number(it.d || 0) + seams.round_seam);
+        res[k].area += (unfold * Number(it.l || 1250) * q) / 1e6;
     });
     return res;
 }
@@ -945,6 +956,10 @@ function toggleProjectReorderMode() {
             archBtn.classList.remove('pointer-events-none', 'opacity-30');
         }
     }
+    const bottomBar = document.getElementById('projectsBottomBar');
+    if (bottomBar) bottomBar.classList.toggle('hidden', session.projectReorderMode);
+    const topCreateBtn = document.getElementById('btnHeaderCreateProject');
+    if (topCreateBtn) topCreateBtn.classList.toggle('hidden', session.projectReorderMode);
     renderMainMenuProjects();
     if (!session.projectReorderMode) {
         saveProjectsOrder();
@@ -1075,4 +1090,70 @@ async function saveProjectSettingsModal() {
     updateProjectSeamsUI(p);
     closeProjectSettingsModal();
     showToast('Настройки проекта сохранены', 'success');
+}
+
+function printWorkshopOrder() {
+    const p = appState.projects.find(x => x.id === session.insideProjectId);
+    if (!p) { showToast('Проект не найден', 'warning'); return; }
+
+    const items = appState.allItems.filter(i => i.project_id === p.id);
+    let printArea = document.getElementById('printReportArea');
+    if (!printArea) {
+        printArea = document.createElement('div');
+        printArea.id = 'printReportArea';
+        document.body.appendChild(printArea);
+    }
+
+    const today = new Date().toLocaleDateString('ru-RU');
+    let rowsHtml = items.map((it, idx) => {
+        const title = it.custom_name || `${it.category === 'duct' ? 'Воздуховод' : 'Фасонина'} ${it.shape === 'round' ? 'круглый' : 'прямоуг.'}`;
+        const dims = it.shape === 'round' ? `Ø${it.d || 0} L=${it.l || 1250}` : `${it.w || 0}x${it.h || 0} L=${it.l || 1250}`;
+        const workers = (it.workers || []).join(', ') || '—';
+        return `
+            <tr style="border-bottom: 1px solid #ddd; text-align: left;">
+                <td style="padding: 6px 8px;">${idx + 1}</td>
+                <td style="padding: 6px 8px; font-weight: bold;">${title}</td>
+                <td style="padding: 6px 8px;">${dims}</td>
+                <td style="padding: 6px 8px;">${it.metal} ${it.thickness} мм</td>
+                <td style="padding: 6px 8px; font-weight: bold; text-align: center;">${it.qty || 1} шт</td>
+                <td style="padding: 6px 8px;">${workers}</td>
+                <td style="padding: 6px 8px; text-align: center;">${it.item_status === 'done' ? '✓ Готово' : 'В очереди'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    printArea.innerHTML = `
+        <div style="font-family: sans-serif; color: #000; padding: 24px; max-width: 900px; margin: 0 auto; background: #fff;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px;">
+                <div>
+                    <h1 style="margin: 0; font-size: 20px; font-weight: 900;">НАРЯД-ЗАКАЗ ЦЕХА: ${p.title}</h1>
+                    <p style="margin: 4px 0 0; font-size: 13px; color: #555;">${p.description || 'Вентиляция'} | Бригада: ${p.group_name || 'Цех'}</p>
+                </div>
+                <div style="text-align: right; font-size: 12px;">
+                    <div>Дата: <strong>${today}</strong></div>
+                    <div>Позиций: <strong>${items.length} шт</strong></div>
+                </div>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                    <tr style="background: #eee; border-bottom: 2px solid #333; text-align: left;">
+                        <th style="padding: 6px 8px;">#</th>
+                        <th style="padding: 6px 8px;">Изделие</th>
+                        <th style="padding: 6px 8px;">Размеры</th>
+                        <th style="padding: 6px 8px;">Металл</th>
+                        <th style="padding: 6px 8px; text-align: center;">Кол-во</th>
+                        <th style="padding: 6px 8px;">Мастера</th>
+                        <th style="padding: 6px 8px; text-align: center;">Статус</th>
+                    </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+            </table>
+            <div style="margin-top: 24px; display: flex; justify-content: space-between; font-size: 12px;">
+                <div>Наряд выдал: ___________________</div>
+                <div>Наряд принял: ___________________</div>
+            </div>
+        </div>
+    `;
+
+    window.print();
 }

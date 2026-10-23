@@ -43,14 +43,20 @@ function calculateProjectFinances(projId) {
 function openProjectFinanceModal() {
     triggerHaptic('light');
     const modal = document.getElementById('projectFinanceModal');
-    if (modal) { modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
+    if (modal) { 
+        modal.classList.remove('hidden'); 
+        if (typeof lockScroll === 'function') lockScroll();
+    }
     renderProjectFinance();
 }
 
 function closeProjectFinanceModal() {
     triggerHaptic('light');
     const modal = document.getElementById('projectFinanceModal');
-    if (modal) { modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+    if (modal) { 
+        modal.classList.add('hidden'); 
+        if (typeof unlockScroll === 'function') unlockScroll();
+    }
 }
 
 function renderProjectFinance() {

@@ -140,11 +140,13 @@ function checkAuthState() {
 
 function logout() {
     triggerHaptic('light');
+    closeProfileModal();
     session.user = null;
     localStorage.removeItem('mv_online_session');
     const drop = document.getElementById('profileDropdown');
     if (drop) drop.classList.add('hidden');
     clearAuthPin();
+    if (typeof unlockScroll === 'function') unlockScroll();
     if (typeof navigateTo === 'function') {
         navigateTo(SCREENS.AUTH);
     }
@@ -299,6 +301,7 @@ function openProfileModal() {
     if (pinErr) pinErr.classList.add('hidden');
 
     modal.classList.remove('hidden');
+    if (typeof lockScroll === 'function') lockScroll();
 }
 
 function selectProfileAvatar(av) {
@@ -367,4 +370,5 @@ function closeProfileModal() {
     const modal = document.getElementById('profileModal');
     if (modal) modal.classList.add('hidden');
     session.selectedAvatar = null;
+    if (typeof unlockScroll === 'function') unlockScroll();
 }

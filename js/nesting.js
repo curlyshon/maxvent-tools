@@ -607,9 +607,7 @@ async function resetNestingCalculation() {
     }
 
     try {
-        await supabaseClient.from('projects').update({
-            nesting_data: appState.activeProjectNestings
-        }).eq('id', projId);
+        await supabaseClient.from('nestings').delete().eq('project_id', projId).eq('metal_key', session.activeNestingKey);
         showToast('Карта раскроя сброшена', 'info');
     } catch (err) {
         console.error('Error resetting nesting:', err);

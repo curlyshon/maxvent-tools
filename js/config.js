@@ -18,6 +18,36 @@ function triggerHaptic(type = 'light') {
 }
 
 // ==========================================
+// SCROLL LOCKING HELPERS
+// ==========================================
+let activeModalCount = 0;
+function lockScroll() {
+    activeModalCount++;
+    document.body.classList.add('overflow-hidden');
+    document.documentElement.classList.add('overflow-hidden');
+}
+function unlockScroll() {
+    activeModalCount = Math.max(0, activeModalCount - 1);
+    if (activeModalCount === 0) {
+        document.body.classList.remove('overflow-hidden');
+        document.documentElement.classList.remove('overflow-hidden');
+    }
+}
+
+// ==========================================
+// CALCULATION HELPERS
+// ==========================================
+function calcDuctArea(it, project = null) {
+    if (!it || it.category !== 'duct') return 0;
+    const p = project || appState.projects.find(x => x.id === it.project_id);
+    const seams = typeof getProjectSeams === 'function' ? getProjectSeams(p) : { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 };
+    const unfold = it.shape === 'rect'
+        ? (2 * (Number(it.w || 0) + Number(it.h || 0)) + seams.lock_pittsburgh + seams.lock_single)
+        : Math.round(Math.PI * Number(it.d || 0) + seams.round_seam);
+    return (unfold * Number(it.l || 1250)) / 1e6;
+}
+
+// ==========================================
 // ЧАСТЬ 1: ИНИЦИАЛИЗАЦИЯ SUPABASE И КОНСТАНТЫ
 // ==========================================
 const SUPABASE_URL = "https://anwuikxtqesewifvipaw.supabase.co";
@@ -192,23 +222,28 @@ function parseFlangeScrapItem(s, defCount) {
 
 // Хелперы припусков фальцев и пачек шинки для проекта
 function getProjectFlangeData(p) {
-    if (!p) return { scraps: [], seams: { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 }, pack_qty: 10 };
+    const def = { scraps: [], seams: { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 }, pack_qty: 10, pack_len: 3000, kerf: 2, phases: [] };
+    if (!p || !p.flange_scraps) return def;
     if (Array.isArray(p.flange_scraps)) {
         return {
-            scraps: p.flange_scraps.map(s => parseFlangeScrapItem(s, 10)),
-            seams: { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 },
-            pack_qty: 10
+            ...def,
+            scraps: p.flange_scraps.map(s => parseFlangeScrapItem(s, 10))
         };
     }
     if (typeof p.flange_scraps === 'object' && p.flange_scraps !== null) {
-        const pQty = Number(p.flange_scraps.pack_qty) || 10;
+        const fs = p.flange_scraps;
+        const pQty = Number(fs.pack_qty) || 10;
         return {
-            scraps: (p.flange_scraps.scraps || []).map(s => parseFlangeScrapItem(s, pQty)),
-            seams: p.flange_scraps.seams || { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 },
-            pack_qty: pQty
+            ...fs,
+            scraps: (fs.scraps || []).map(s => parseFlangeScrapItem(s, pQty)),
+            seams: fs.seams || def.seams,
+            pack_qty: pQty,
+            pack_len: Number(fs.pack_len) || 3000,
+            kerf: fs.kerf !== undefined ? Number(fs.kerf) : 2,
+            phases: Array.isArray(fs.phases) ? fs.phases : []
         };
     }
-    return { scraps: [], seams: { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 }, pack_qty: 10 };
+    return def;
 }
 
 function getProjectSeams(p) {
@@ -233,10 +268,13 @@ function openProjectSeamsModal() {
     document.getElementById('quickSeamRound').value = data.seams.round_seam;
     document.getElementById('quickPackQty').value = data.pack_qty;
     document.getElementById('projectSeamsModal').classList.remove('hidden');
+    if (typeof lockScroll === 'function') lockScroll();
 }
 
 function closeProjectSeamsModal() {
+    triggerHaptic('light');
     document.getElementById('projectSeamsModal').classList.add('hidden');
+    if (typeof unlockScroll === 'function') unlockScroll();
 }
 
 async function saveProjectSeamsModal() {
@@ -312,10 +350,15 @@ function getItemFrames(it) {
 }
 
 function closeAllModals() {
-    ['projectModal', 'devModal', 'standaloneFlangeModal', 'globalFinanceModal', 'projectSeamsModal', 'profileDropdown'].forEach(id => {
+    [
+        'itemFormModal', 'profileModal', 'projectModal', 'projectSettingsModal',
+        'subprojectModal', 'projectSeamsModal', 'flangeSettingsModal', 'flangeAddScrapModal',
+        'nestingAddScrapModal', 'bulkEditModal', 'projectFinanceModal', 'profileDropdown'
+    ].forEach(id => {
         const el = document.getElementById(id);
         if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
     });
+    if (typeof unlockScroll === 'function') unlockScroll();
 }
 
 window.addEventListener('keydown', (e) => {
@@ -436,12 +479,23 @@ async function loadInitialData() {
 
         // 3. Загрузка всех проектов, позиций и платежей
         const [pRes, itRes, payRes] = await Promise.all([
-            supabaseClient.from('projects').select('*').order('id', { ascending: false }),
+            supabaseClient.from('projects').select('*').order('order_index', { ascending: true, nullsFirst: false }),
             supabaseClient.from('items').select('*').order('id', { ascending: true }),
             supabaseClient.from('payments').select('*').order('id', { ascending: true })
         ]);
 
-        appState.projects = pRes.data || [];
+        let projs = pRes.data || [];
+        try {
+            const savedOrder = JSON.parse(localStorage.getItem('mv_projects_order') || '[]');
+            if (Array.isArray(savedOrder) && savedOrder.length > 0) {
+                const orderMap = new Map(savedOrder.map(x => [x.id, x.order_index]));
+                projs.forEach(p => {
+                    if (orderMap.has(p.id)) p.order_index = orderMap.get(p.id);
+                });
+            }
+        } catch (_) {}
+        projs.sort((a, b) => (a.order_index ?? 999999) - (b.order_index ?? 999999));
+        appState.projects = projs;
         appState.allItems = (itRes.data || []).map(i => ({
             ...i,
             ...(i.dimensions || {}),

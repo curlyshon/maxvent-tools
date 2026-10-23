@@ -1170,18 +1170,22 @@ function attachSpecSwipeHandlers() {
             if (currentX > 80) {
                 // Свайп вправо: переключить статус Готово / Не готово
                 toggleItemStatus(itemId);
-            } else if (currentX < -80) {
+                row.style.transform = 'translateX(0px)';
+                if (hintDone) hintDone.style.opacity = 0;
+                if (hintActions) hintActions.style.opacity = 0;
+            } else if (currentX < -60) {
                 // Свайп влево: приоткрыть действия
-                row.style.transform = 'translateX(-130px)';
+                row.style.transform = 'translateX(-140px)';
+                if (hintActions) hintActions.style.opacity = 1;
                 setTimeout(() => {
                     if (row) row.style.transform = 'translateX(0px)';
-                }, 3000);
+                    if (hintActions) hintActions.style.opacity = 0;
+                }, 4000);
             } else {
                 row.style.transform = 'translateX(0px)';
+                if (hintDone) hintDone.style.opacity = 0;
+                if (hintActions) hintActions.style.opacity = 0;
             }
-
-            if (hintDone) hintDone.style.opacity = 0;
-            if (hintActions) hintActions.style.opacity = 0;
             isSwiping = false;
         }, { passive: true });
     });
@@ -1293,12 +1297,14 @@ function openBulkEditModal() {
     if (sharesBox) sharesBox.classList.add('hidden');
 
     modal.classList.remove('hidden');
+    if (typeof lockScroll === 'function') lockScroll();
 }
 
 function closeBulkEditModal() {
     triggerHaptic('light');
     const modal = document.getElementById('bulkEditModal');
     if (modal) modal.classList.add('hidden');
+    if (typeof unlockScroll === 'function') unlockScroll();
 }
 
 function onBulkWorkersSelectionChanged() {
