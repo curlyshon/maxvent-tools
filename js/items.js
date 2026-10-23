@@ -79,13 +79,17 @@ function openItemAddSheet() {
     triggerHaptic('light');
     resetItemForm();
     const modal = document.getElementById('itemFormModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (typeof lockScroll === 'function') lockScroll();
+    }
 }
 
 function closeItemAddSheet() {
     triggerHaptic('light');
     const modal = document.getElementById('itemFormModal');
     if (modal) modal.classList.add('hidden');
+    if (typeof unlockScroll === 'function') unlockScroll();
 }
 
 function adjustQtyStepper(delta) {
@@ -688,6 +692,15 @@ async function saveProjectItem(e) {
     const projId = session.insideProjectId;
     if (!projId) return;
 
+    if (session.isSavingItem) return;
+    session.isSavingItem = true;
+    const submitBtn = document.getElementById('submitItemBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-50', 'pointer-events-none');
+        submitBtn.textContent = '⏳ Добавление...';
+    }
+
     const editId = document.getElementById('editItemId')?.value;
     const metal = document.getElementById('inMetal')?.value || 'Оцинкованная сталь';
     const thickness = Number(document.getElementById('inThickness')?.value) || 0.5;
@@ -824,11 +837,24 @@ async function saveProjectItem(e) {
         }
     }
 
-    await supabaseClient.from('projects').update({ updated_at: new Date().toISOString() }).eq('id', projId);
-    await loadProjectDetails(projId);
-    resetItemForm();
-    closeItemAddSheet();
-    renderProjectInside();
+    try {
+        await supabaseClient.from('projects').update({ updated_at: new Date().toISOString() }).eq('id', projId);
+        await loadProjectDetails(projId);
+        resetItemForm();
+        closeItemAddSheet();
+        renderProjectInside();
+    } catch (err) {
+        console.error('Error saving item:', err);
+        showToast('Ошибка при сохранении позиции', 'error');
+    } finally {
+        session.isSavingItem = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'pointer-events-none');
+            const editId = document.getElementById('editItemId')?.value;
+            submitBtn.textContent = editId ? 'Сохранить изменения' : 'Добавить в проект';
+        }
+    }
 }
 
 function resetItemForm() {
@@ -839,7 +865,7 @@ function resetItemForm() {
     const cancelBtn = document.getElementById('cancelEditBtn');
     if (cancelBtn) cancelBtn.classList.add('hidden');
     const submitBtn = document.getElementById('submitItemBtn');
-    if (submitBtn) submitBtn.textContent = '＋ Сохранить в проект';
+    if (submitBtn) submitBtn.textContent = 'Добавить в проект';
 
     const tSel = document.getElementById('inThickness');
     if (tSel && appState.thicknesses.includes(0.5)) tSel.value = '0.5';
@@ -1047,7 +1073,7 @@ function renderSpecItemRow(it) {
             </div>
 
             <!-- Основная карточка позиции -->
-            <div class="swipe-inner relative z-10 bg-[#121217] border ${isSelected ? 'border-white/40 bg-[#18181f]' : 'border-white/5 hover:border-white/15'} rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition">
+            <div onclick="${session.specSelectionMode ? `toggleSpecItemSelect(${it.id})` : ''}" class="swipe-inner relative z-10 bg-[#121217] border ${isSelected ? 'border-white/40 bg-[#18181f] ring-1 ring-white/20' : 'border-white/5 hover:border-white/15'} rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition cursor-pointer">
                 <div class="flex items-start gap-3 w-full sm:w-auto min-w-0" onclick="${session.specSelectionMode ? `toggleSpecItemSelect(${it.id})` : ''}">
                     ${selectCheckHtml}
                     <div class="min-w-0">
@@ -1076,6 +1102,7 @@ function renderSpecItemRow(it) {
 
 // Свайп-жесты для позиций спецификации
 function attachSpecSwipeHandlers() {
+    if (session.specSelectionMode) return;
     const cards = document.querySelectorAll('.spec-swipe-card');
     cards.forEach(card => {
         if (card.dataset.hasSwipeListener) return;

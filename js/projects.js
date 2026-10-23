@@ -150,10 +150,16 @@ function renderMainMenuProjects() {
             </div>
 
             <!-- Фоновый индикатор свайпа влево (Действия) -->
-            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-44 bg-[#18181f] border border-white/10 rounded-3xl flex items-center justify-end px-3 gap-2 opacity-0 transition-opacity z-0">
-                <button type="button" onclick="triggerHaptic('light'); openProjectModal(${p.id})" title="Редактировать" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold btn-press">✎</button>
-                <button type="button" onclick="triggerHaptic('medium'); archiveProjectSafe(${p.id})" title="${p.archive_state === 'archived' ? 'Восстановить' : 'В архив'}" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-300 text-xs font-bold btn-press">${p.archive_state === 'archived' ? '↩' : '📁'}</button>
-                ${p.archive_state === 'archived' && isDev() ? `<button type="button" onclick="triggerHaptic('warning'); deleteProjectPermanent(${p.id})" title="Удалить" class="px-3 py-2 rounded-xl bg-rose-500/20 text-rose-300 text-xs font-bold btn-press">🗑</button>` : ''}
+            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-52 bg-[#18181f] border border-white/10 rounded-3xl flex items-center justify-end px-3 gap-2 opacity-0 transition-opacity z-0 pointer-events-none">
+                <button type="button" onclick="event.stopPropagation(); triggerHaptic('light'); openProjectModal(${p.id})" title="Изменить" class="h-11 px-3 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold flex items-center gap-1.5 btn-press shadow">
+                    <span>✎</span>
+                    <span>Изменить</span>
+                </button>
+                <button type="button" onclick="event.stopPropagation(); triggerHaptic('medium'); archiveProjectSafe(${p.id})" title="${p.archive_state === 'archived' ? 'Восстановить' : 'В архив'}" class="h-11 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1.5 btn-press shadow">
+                    <span>${p.archive_state === 'archived' ? '↩' : '📁'}</span>
+                    <span>${p.archive_state === 'archived' ? 'Из архива' : 'В архив'}</span>
+                </button>
+                ${p.archive_state === 'archived' && isDev() ? `<button type="button" onclick="event.stopPropagation(); triggerHaptic('warning'); deleteProjectPermanent(${p.id})" title="Удалить" class="h-11 px-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold btn-press">🗑</button>` : ''}
             </div>
 
             <!-- Основное тело карточки -->
@@ -164,7 +170,10 @@ function renderMainMenuProjects() {
             }">
                 <div class="flex items-start justify-between gap-2">
                     ${session.projectReorderMode ? `
-                        <div class="cursor-grab active:cursor-grabbing text-zinc-400 text-lg pr-1 shrink-0 select-none">☰</div>
+                        <div class="flex items-center gap-1.5 shrink-0 select-none" onclick="event.stopPropagation()">
+                            <button type="button" onclick="moveProjectOrderBtn(${p.id}, -1)" class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black text-sm flex items-center justify-center btn-press shadow">▲</button>
+                            <button type="button" onclick="moveProjectOrderBtn(${p.id}, 1)" class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black text-sm flex items-center justify-center btn-press shadow">▼</button>
+                        </div>
                     ` : ''}
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 flex-wrap">
@@ -227,6 +236,7 @@ function renderMainMenuProjects() {
 
 // Свайп-жесты для карточек проектов
 function attachProjectSwipeHandlers() {
+    if (session.projectReorderMode) return;
     const cards = document.querySelectorAll('.project-swipe-card');
     cards.forEach(card => {
         if (card.dataset.hasSwipeListener) return;
@@ -234,12 +244,14 @@ function attachProjectSwipeHandlers() {
 
         let startX = 0, startY = 0, currentX = 0;
         let isSwiping = false, isDecided = false;
+        let isOpen = false;
         const row = card.querySelector('.swipe-inner');
         const projId = Number(card.dataset.projectId);
         const hintStatus = card.querySelector('.swipe-hint-status');
         const hintActions = card.querySelector('.swipe-hint-actions');
 
         card.addEventListener('touchstart', (e) => {
+            if (session.projectReorderMode) return;
             if (e.touches.length !== 1) return;
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
@@ -250,6 +262,7 @@ function attachProjectSwipeHandlers() {
         }, { passive: true });
 
         card.addEventListener('touchmove', (e) => {
+            if (session.projectReorderMode) return;
             if (e.touches.length !== 1) return;
             const x = e.touches[0].clientX;
             const y = e.touches[0].clientY;
@@ -271,46 +284,66 @@ function attachProjectSwipeHandlers() {
             if (!isSwiping || !row) return;
 
             currentX = dx;
-            const damp = 0.5;
-            const tx = dx * damp;
+            const damp = 0.55;
+            const tx = isOpen ? (-180 + dx * damp) : (dx * damp);
             row.style.transform = `translateX(${tx}px)`;
 
             if (dx > 30) {
                 if (hintStatus) hintStatus.style.opacity = Math.min(1, (dx - 30) / 40);
-                if (hintActions) hintActions.style.opacity = 0;
-            } else if (dx < -30) {
-                if (hintActions) hintActions.style.opacity = Math.min(1, (-dx - 30) / 40);
-                if (hintStatus) hintStatus.style.opacity = 0;
-            } else {
-                if (hintStatus) hintStatus.style.opacity = 0;
-                if (hintActions) hintActions.style.opacity = 0;
+                if (hintActions) hintActions.style.opacity = '0';
+            } else if (dx < -30 || isOpen) {
+                if (hintActions) {
+                    hintActions.style.opacity = '1';
+                    hintActions.style.pointerEvents = 'auto';
+                }
+                if (hintStatus) hintStatus.style.opacity = '0';
             }
         }, { passive: true });
 
         card.addEventListener('touchend', () => {
+            if (session.projectReorderMode) return;
             if (!isSwiping || !row) return;
             row.style.transition = 'transform 0.25s var(--ios-spring)';
 
-            if (currentX > 80) {
-                // Свайп вправо: переключить статус проекта
+            if (currentX > 80 && !isOpen) {
                 cycleProjectStatus(projId);
-            } else if (currentX < -80) {
-                // Свайп влево: приоткрыть быстрые действия
-                row.style.transform = 'translateX(-120px)';
-                setTimeout(() => {
-                    if (row) row.style.transform = 'translateX(0px)';
-                }, 3000);
-            } else {
                 row.style.transform = 'translateX(0px)';
+                if (hintStatus) hintStatus.style.opacity = '0';
+            } else if (currentX < -50 || (isOpen && currentX < 30)) {
+                isOpen = true;
+                row.style.transform = 'translateX(-180px)';
+                if (hintActions) {
+                    hintActions.style.opacity = '1';
+                    hintActions.style.pointerEvents = 'auto';
+                }
+                if (hintStatus) hintStatus.style.opacity = '0';
+            } else {
+                isOpen = false;
+                row.style.transform = 'translateX(0px)';
+                if (hintStatus) hintStatus.style.opacity = '0';
+                if (hintActions) {
+                    hintActions.style.opacity = '0';
+                    hintActions.style.pointerEvents = 'none';
+                }
             }
-
-            if (hintStatus) hintStatus.style.opacity = 0;
-            if (hintActions) hintActions.style.opacity = 0;
             isSwiping = false;
         }, { passive: true });
+
+        row.addEventListener('click', (e) => {
+            if (isOpen) {
+                e.stopPropagation();
+                e.preventDefault();
+                isOpen = false;
+                row.style.transition = 'transform 0.25s var(--ios-spring)';
+                row.style.transform = 'translateX(0px)';
+                if (hintActions) {
+                    hintActions.style.opacity = '0';
+                    hintActions.style.pointerEvents = 'none';
+                }
+            }
+        });
     });
 }
-
 // Превью карточка
 function renderProjectPreviewCard(projId) {
     const preview = document.getElementById('projectPreviewCard');
@@ -418,92 +451,125 @@ function openProjectModal(editId = null) {
     document.getElementById('modalProjId').value = editId || '';
     document.getElementById('projectModalHeader').textContent = editId ? 'Редактировать проект' : 'Создать проект';
 
+    const submitBtn = document.getElementById('modalProjSubmitBtn');
+    if (submitBtn) {
+        submitBtn.textContent = editId ? 'Сохранить изменения' : 'Создать';
+    }
+
     const groupSel = document.getElementById('modalProjGroup');
-    groupSel.innerHTML = appState.groups.map(g => `<option value="${g}">${g}</option>`).join('');
+    if (groupSel) {
+        groupSel.innerHTML = appState.groups.map(g => `<option value="${g}">${g}</option>`).join('');
+    }
+
+    const dateInp = document.getElementById('modalProjDate');
+    const today = new Date().toISOString().split('T')[0];
 
     if (editId) {
         const p = appState.projects.find(x => x.id === editId);
         if (p) {
-            document.getElementById('modalProjTitle').value = p.title;
+            document.getElementById('modalProjTitle').value = p.title || '';
             document.getElementById('modalProjDesc').value = p.description || '';
-            document.getElementById('modalProjGroup').value = p.group_name || appState.groups[0];
-            document.getElementById('modalProjStatusText').value = p.status_text || 'В работе';
-            const fData = getProjectFlangeData(p);
-            document.getElementById('modalProjSeamBig').value = fData.seams.lock_pittsburgh;
-            document.getElementById('modalProjSeamSmall').value = fData.seams.lock_single;
-            document.getElementById('modalProjSeamRound').value = fData.seams.round_seam;
-            document.getElementById('modalProjPackQty').value = fData.pack_qty;
+            if (groupSel) groupSel.value = p.group_name || appState.groups[0];
+            if (dateInp) {
+                dateInp.value = p.created_at ? p.created_at.split('T')[0] : today;
+            }
         }
     } else {
         document.getElementById('modalProjTitle').value = '';
         document.getElementById('modalProjDesc').value = '';
-        document.getElementById('modalProjStatusText').value = 'В работе';
-        document.getElementById('modalProjSeamBig').value = 32;
-        document.getElementById('modalProjSeamSmall').value = 9;
-        document.getElementById('modalProjSeamRound').value = 22;
-        document.getElementById('modalProjPackQty').value = 10;
+        if (groupSel && appState.groups.length) groupSel.value = appState.groups[0];
+        if (dateInp) dateInp.value = today;
     }
-    document.getElementById('projectModal').classList.remove('hidden');
+    const modal = document.getElementById('projectModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (typeof lockScroll === 'function') lockScroll();
+    }
 }
 
 function closeProjectModal() {
     triggerHaptic('light');
-    document.getElementById('projectModal').classList.add('hidden');
+    const modal = document.getElementById('projectModal');
+    if (modal) modal.classList.add('hidden');
+    if (typeof unlockScroll === 'function') unlockScroll();
 }
 
 async function saveProjectModal() {
+    if (session.isSavingProject) return;
     const title = document.getElementById('modalProjTitle').value.trim();
     if (!title) { showToast('Укажите название проекта', 'warning'); return; }
-    const editId = document.getElementById('modalProjId').value;
-    const desc = document.getElementById('modalProjDesc').value.trim();
-    const group = document.getElementById('modalProjGroup').value;
-    const statusText = document.getElementById('modalProjStatusText').value;
 
-    const big = Number(document.getElementById('modalProjSeamBig').value) || 32;
-    const small = Number(document.getElementById('modalProjSeamSmall').value) || 9;
-    const round = Number(document.getElementById('modalProjSeamRound').value) || 22;
-    const packQty = Number(document.getElementById('modalProjPackQty').value) || 10;
-
-    if (editId) {
-        const p = appState.projects.find(x => x.id === Number(editId));
-        const currentData = getProjectFlangeData(p);
-        currentData.seams = { lock_pittsburgh: big, lock_single: small, round_seam: round };
-        currentData.pack_qty = packQty;
-
-        await supabaseClient.from('projects').update({
-            title, description: desc, group_name: group, status_text: statusText, flange_scraps: currentData, updated_at: new Date().toISOString()
-        }).eq('id', Number(editId));
-
-        if (p) {
-            p.title = title;
-            p.description = desc;
-            p.group_name = group;
-            p.status_text = statusText;
-            p.flange_scraps = currentData;
-        }
-        showToast('Проект успешно обновлен!', 'success');
-    } else {
-        const newFlangeData = {
-            scraps: [],
-            seams: { lock_pittsburgh: big, lock_single: small, round_seam: round },
-            pack_qty: packQty,
-            phases: []
-        };
-        const { data: newP } = await supabaseClient.from('projects').insert({
-            title, description: desc, group_name: group, status_text: statusText, archive_state: 'active', flange_scraps: newFlangeData
-        }).select().single();
-
-        if (newP) {
-            appState.projects.unshift(newP);
-            session.clickedProjectId = newP.id;
-            await loadProjectDetails(newP.id);
-            showToast(`Проект "${title}" создан!`, 'success');
-        }
+    session.isSavingProject = true;
+    const submitBtn = document.getElementById('modalProjSubmitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-50', 'pointer-events-none');
     }
 
-    closeProjectModal();
-    renderMainMenuProjects();
-    updateHeaderUI();
+    try {
+        const editId = document.getElementById('modalProjId').value;
+        const desc = document.getElementById('modalProjDesc').value.trim();
+        const group = document.getElementById('modalProjGroup').value;
+        const dateVal = document.getElementById('modalProjDate')?.value;
+        const createdIso = dateVal ? new Date(dateVal + 'T12:00:00Z').toISOString() : new Date().toISOString();
+
+        if (editId) {
+            const p = appState.projects.find(x => x.id === Number(editId));
+            const currentData = getProjectFlangeData(p);
+
+            await supabaseClient.from('projects').update({
+                title,
+                description: desc,
+                group_name: group,
+                created_at: createdIso,
+                updated_at: new Date().toISOString()
+            }).eq('id', Number(editId));
+
+            if (p) {
+                p.title = title;
+                p.description = desc;
+                p.group_name = group;
+                p.created_at = createdIso;
+            }
+            showToast('Проект успешно обновлен!', 'success');
+        } else {
+            const newFlangeData = {
+                scraps: [],
+                seams: { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 },
+                pack_qty: 10,
+                phases: []
+            };
+            const { data: newP } = await supabaseClient.from('projects').insert({
+                title,
+                description: desc,
+                group_name: group,
+                status_text: 'В работе',
+                archive_state: 'active',
+                created_at: createdIso,
+                flange_scraps: newFlangeData
+            }).select().single();
+
+            if (newP) {
+                appState.projects.unshift(newP);
+                session.clickedProjectId = newP.id;
+                await loadProjectDetails(newP.id);
+                showToast(`Проект "${title}" создан!`, 'success');
+            }
+        }
+
+        closeProjectModal();
+        renderMainMenuProjects();
+        updateHeaderUI();
+    } catch (err) {
+        console.error('Error saving project:', err);
+        showToast('Ошибка при сохранении проекта', 'error');
+    } finally {
+        session.isSavingProject = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'pointer-events-none');
+        }
+    }
 }
 
 async function archiveProjectSafe(id) {
@@ -511,11 +577,17 @@ async function archiveProjectSafe(id) {
     if (!p) return;
 
     if (p.archive_state !== 'archived') {
-        await loadProjectDetails(id);
-        const fin = calculateProjectFinances(id);
-        if (fin.debt > 0) {
-            const confirmArch = confirm(`Внимание: по объекту "${p.title}" есть непогашенная задолженность: ${fin.debt.toLocaleString()} ₸!\n\nВы действительно хотите отправить его в архив с долгом?`);
-            if (!confirmArch) return;
+        try {
+            await loadProjectDetails(id);
+            if (typeof calculateProjectFinances === 'function') {
+                const fin = calculateProjectFinances(id);
+                if (fin && fin.debt > 0) {
+                    const confirmArch = confirm(`Внимание: по объекту "${p.title}" есть непогашенный остаток долга ${fin.debt.toLocaleString()} ₸.\nПереместить в архив?`);
+                    if (!confirmArch) return;
+                }
+            }
+        } catch (err) {
+            console.warn('Finance check failed during archive check:', err);
         }
         p.archive_state = 'archived';
         showToast(`Проект "${p.title}" перемещен в архив`, 'info');
@@ -524,7 +596,11 @@ async function archiveProjectSafe(id) {
         showToast(`Проект "${p.title}" восстановлен из архива`, 'success');
     }
 
-    await supabaseClient.from('projects').update({ archive_state: p.archive_state, updated_at: new Date().toISOString() }).eq('id', id);
+    try {
+        await supabaseClient.from('projects').update({ archive_state: p.archive_state, updated_at: new Date().toISOString() }).eq('id', id);
+    } catch (err) {
+        console.error('Archive DB update error:', err);
+    }
     renderMainMenuProjects();
     updateHeaderUI();
 }
@@ -854,17 +930,39 @@ let draggedProjId = null;
 function toggleProjectReorderMode() {
     triggerHaptic('light');
     session.projectReorderMode = !session.projectReorderMode;
-    const btn = document.getElementById('btnToggleReorder');
+    const btn = document.getElementById('projectReorderBtn') || document.getElementById('btnToggleReorder');
     if (btn) {
         btn.className = session.projectReorderMode 
-            ? 'text-xs font-black text-black bg-white px-3 py-2 rounded-xl shadow-md btn-press' 
+            ? 'text-xs font-black text-black bg-white px-3.5 py-2 rounded-xl shadow-md btn-press' 
             : 'text-xs font-bold text-zinc-300 bg-[#18181f] border border-white/10 px-3 py-2 rounded-xl btn-press';
-        btn.textContent = session.projectReorderMode ? '✓ Готово' : '⇅ Порядок';
+        btn.textContent = session.projectReorderMode ? '✓ Завершить' : '⇅ Порядок';
+    }
+    const archBtn = document.getElementById('filterArchivedBtn') || document.getElementById('btnProjArchived');
+    if (archBtn) {
+        if (session.projectReorderMode) {
+            archBtn.classList.add('pointer-events-none', 'opacity-30');
+        } else {
+            archBtn.classList.remove('pointer-events-none', 'opacity-30');
+        }
     }
     renderMainMenuProjects();
     if (!session.projectReorderMode) {
+        saveProjectsOrder();
         showToast('Порядок проектов сохранен', 'success');
     }
+}
+
+function moveProjectOrderBtn(id, dir) {
+    triggerHaptic('light');
+    const idx = appState.projects.findIndex(x => x.id === id);
+    if (idx === -1) return;
+    const targetIdx = idx + dir;
+    if (targetIdx < 0 || targetIdx >= appState.projects.length) return;
+    const [moved] = appState.projects.splice(idx, 1);
+    appState.projects.splice(targetIdx, 0, moved);
+    appState.projects.forEach((p, i) => { p.order_index = i; });
+    saveProjectsOrder();
+    renderMainMenuProjects();
 }
 
 function onProjectDragStart(e, id) {
@@ -910,4 +1008,71 @@ async function saveProjectsOrder() {
             supabaseClient.from('projects').update({ order_index: item.order_index }).eq('id', item.id).then(() => {});
         }
     } catch (_) {}
+}
+
+
+// ==========================================
+// НАСТРОЙКИ ПРОЕКТА (ФАЛЬЦЫ, СТАТУС, НАРЯД)
+// ==========================================
+function openProjectSettingsModal(projId = null) {
+    triggerHaptic('light');
+    const pId = projId || session.insideProjectId;
+    const p = appState.projects.find(x => x.id === pId);
+    if (!p) return;
+
+    const fData = getProjectFlangeData(p);
+    const inBig = document.getElementById('settProjSeamBig');
+    const inSmall = document.getElementById('settProjSeamSmall');
+    const inRound = document.getElementById('settProjSeamRound');
+    const selStatus = document.getElementById('settProjStatus');
+    if (inBig) inBig.value = fData.seams.lock_pittsburgh;
+    if (inSmall) inSmall.value = fData.seams.lock_single;
+    if (inRound) inRound.value = fData.seams.round_seam;
+    if (selStatus) selStatus.value = p.status_text || 'В работе';
+
+    const modal = document.getElementById('projectSettingsModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (typeof lockScroll === 'function') lockScroll();
+    }
+}
+
+function closeProjectSettingsModal() {
+    triggerHaptic('light');
+    const modal = document.getElementById('projectSettingsModal');
+    if (modal) modal.classList.add('hidden');
+    if (typeof unlockScroll === 'function') unlockScroll();
+}
+
+async function saveProjectSettingsModal() {
+    triggerHaptic('medium');
+    const pId = session.insideProjectId;
+    const p = appState.projects.find(x => x.id === pId);
+    if (!p) return;
+
+    const inBig = document.getElementById('settProjSeamBig');
+    const inSmall = document.getElementById('settProjSeamSmall');
+    const inRound = document.getElementById('settProjSeamRound');
+    const selStatus = document.getElementById('settProjStatus');
+
+    const big = Number(inBig?.value) || 32;
+    const small = Number(inSmall?.value) || 9;
+    const round = Number(inRound?.value) || 22;
+    const statusText = selStatus?.value || p.status_text;
+
+    const currentData = getProjectFlangeData(p);
+    currentData.seams = { lock_pittsburgh: big, lock_single: small, round_seam: round };
+
+    p.status_text = statusText;
+    p.flange_scraps = currentData;
+
+    await supabaseClient.from('projects').update({
+        status_text: statusText,
+        flange_scraps: currentData,
+        updated_at: new Date().toISOString()
+    }).eq('id', pId);
+
+    updateProjectSeamsUI(p);
+    closeProjectSettingsModal();
+    showToast('Настройки проекта сохранены', 'success');
 }

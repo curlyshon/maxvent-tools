@@ -66,6 +66,7 @@ async function saveFlangeSettingsModal() {
 function openFlangeAddScrapModal(target) {
     triggerHaptic('light');
     flangeModalTarget = target || 'project';
+    session.editFlangeScrapIndex = null;
     const isProj = (flangeModalTarget === 'project');
     const p = appState.projects.find(x => x.id === session.insideProjectId);
     const defPackQty = isProj ? getProjectPackQty(p) : (appState.standaloneFlange?.pack_qty || 10);
@@ -75,18 +76,67 @@ function openFlangeAddScrapModal(target) {
     if (lenInp) lenInp.value = '';
     if (cntInp) cntInp.value = defPackQty;
 
+    const hdr = document.getElementById('flangeScrapModalHeader');
+    if (hdr) hdr.textContent = '✂️ Обрезок шинки';
+    const btn = document.getElementById('btnSubmitFlangeScrap');
+    if (btn) btn.textContent = '+ Добавить обрезок';
+
     const modal = document.getElementById('flangeAddScrapModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (typeof lockScroll === 'function') lockScroll();
+    }
+    setTimeout(() => lenInp?.focus(), 80);
+}
+
+function editFlangeScrap(target, index) {
+    triggerHaptic('light');
+    flangeModalTarget = target || 'project';
+    session.editFlangeScrapIndex = index;
+
+    let s = null;
+    if (flangeModalTarget === 'project') {
+        const p = appState.projects.find(x => x.id === session.insideProjectId);
+        if (p) {
+            const data = getProjectFlangeData(p);
+            s = data.scraps ? data.scraps[index] : null;
+        }
+    } else {
+        s = appState.standaloneFlange?.scraps ? appState.standaloneFlange.scraps[index] : null;
+    }
+
+    if (!s) return;
+    const sLen = typeof s === 'number' ? s : s.len;
+    const sCnt = typeof s === 'number' ? 10 : (s.count || 10);
+
+    const lenInp = document.getElementById('modalScrapLen');
+    const cntInp = document.getElementById('modalScrapCount');
+    if (lenInp) lenInp.value = sLen;
+    if (cntInp) cntInp.value = sCnt;
+
+    const hdr = document.getElementById('flangeScrapModalHeader');
+    if (hdr) hdr.textContent = '✂️ Редактировать обрезок';
+    const btn = document.getElementById('btnSubmitFlangeScrap');
+    if (btn) btn.textContent = 'Сохранить изменения';
+
+    const modal = document.getElementById('flangeAddScrapModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        if (typeof lockScroll === 'function') lockScroll();
+    }
     setTimeout(() => lenInp?.focus(), 80);
 }
 
 function closeFlangeAddScrapModal() {
     triggerHaptic('light');
+    session.editFlangeScrapIndex = null;
     const modal = document.getElementById('flangeAddScrapModal');
     if (modal) modal.classList.add('hidden');
+    if (typeof unlockScroll === 'function') unlockScroll();
 }
 
 async function submitFlangeAddScrapModal() {
+    if (session.isSavingScrap) return;
     const len = Number(document.getElementById('modalScrapLen')?.value);
     const count = Number(document.getElementById('modalScrapCount')?.value) || 10;
 
@@ -95,25 +145,53 @@ async function submitFlangeAddScrapModal() {
         return;
     }
 
-    const isProj = (flangeModalTarget === 'project');
-    if (isProj) {
-        const p = appState.projects.find(x => x.id === session.insideProjectId);
-        if (p) {
-            const data = getProjectFlangeData(p);
-            data.scraps.push({ len, count });
-            await saveProjectFlangeData(p, data);
-            renderProjectFlange();
-        }
-    } else {
-        if (!appState.standaloneFlange) appState.standaloneFlange = {};
-        if (!appState.standaloneFlange.scraps) appState.standaloneFlange.scraps = [];
-        appState.standaloneFlange.scraps.push({ len, count });
-        await saveGlobalSettings();
-        renderStandaloneFlange();
+    session.isSavingScrap = true;
+    const submitBtn = document.getElementById('btnSubmitFlangeScrap');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-50', 'pointer-events-none');
     }
 
-    closeFlangeAddScrapModal();
-    showToast(`Обрезок ${len} мм (${count} шт) добавлен`, 'success');
+    try {
+        const isProj = (flangeModalTarget === 'project');
+        const editIdx = session.editFlangeScrapIndex;
+
+        if (isProj) {
+            const p = appState.projects.find(x => x.id === session.insideProjectId);
+            if (p) {
+                const data = getProjectFlangeData(p);
+                if (editIdx !== null && editIdx !== undefined && editIdx >= 0) {
+                    data.scraps[editIdx] = { len, count };
+                } else {
+                    data.scraps.push({ len, count });
+                }
+                await saveProjectFlangeData(p, data);
+                renderProjectFlange();
+            }
+        } else {
+            if (!appState.standaloneFlange) appState.standaloneFlange = {};
+            if (!appState.standaloneFlange.scraps) appState.standaloneFlange.scraps = [];
+            if (editIdx !== null && editIdx !== undefined && editIdx >= 0) {
+                appState.standaloneFlange.scraps[editIdx] = { len, count };
+            } else {
+                appState.standaloneFlange.scraps.push({ len, count });
+            }
+            await saveGlobalSettings();
+            renderStandaloneFlange();
+        }
+
+        closeFlangeAddScrapModal();
+        showToast(editIdx !== null ? `Обрезок обновлен: ${len} мм (${count} шинок)` : `Обрезок ${len} мм (${count} шинок) добавлен`, 'success');
+    } catch (err) {
+        console.error('Error in submitFlangeAddScrapModal:', err);
+    } finally {
+        session.isSavingScrap = false;
+        session.editFlangeScrapIndex = null;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'pointer-events-none');
+        }
+    }
 }
 
 async function removeFlangeScrap(target, idx) {
@@ -164,9 +242,12 @@ function renderProjectFlange() {
                 const sLen = typeof s === 'number' ? s : s.len;
                 const sCnt = typeof s === 'number' ? data.pack_qty : (s.count || data.pack_qty);
                 return `
-                    <span class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-1.5 text-xs font-bold">
-                        ✂ ${sLen} мм <strong class="text-amber-300">(${sCnt} шт)</strong>
-                        <button type="button" onclick="removeFlangeScrap('project', ${i})" title="Удалить обрезок" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 btn-press">×</button>
+                    <span class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-2 text-xs font-bold shadow-sm">
+                        <span>✂ ${sLen} мм <strong class="text-amber-300">(${sCnt} шинок)</strong></span>
+                        <div class="flex items-center gap-1">
+                            <button type="button" onclick="editFlangeScrap('project', ${i})" title="Редактировать" class="text-zinc-400 hover:text-white font-bold px-1 py-0.5 rounded btn-press">✎</button>
+                            <button type="button" onclick="removeFlangeScrap('project', ${i})" title="Удалить обрезок" class="text-zinc-500 hover:text-rose-400 font-bold px-1 py-0.5 rounded btn-press">×</button>
+                        </div>
                     </span>
                 `;
             }).join('');
@@ -215,9 +296,12 @@ function renderStandaloneFlange() {
             scrapBox.innerHTML = '<span class="text-zinc-500 italic">Нет обрезков. Добавьте, если в цехе есть остатки пачек.</span>';
         } else {
             scrapBox.innerHTML = stData.scraps.map((s, i) => `
-                <span class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-1.5 text-xs font-bold">
-                    ✂ ${s.len} мм <strong class="text-amber-300">(${s.count} шт)</strong>
-                    <button type="button" onclick="removeFlangeScrap('standalone', ${i})" title="Удалить обрезок" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 btn-press">×</button>
+                <span class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-zinc-200 mono flex items-center gap-2 text-xs font-bold shadow-sm">
+                    <span>✂ ${s.len} мм <strong class="text-amber-300">(${s.count} шинок)</strong></span>
+                    <div class="flex items-center gap-1">
+                        <button type="button" onclick="editFlangeScrap('standalone', ${i})" title="Редактировать" class="text-zinc-400 hover:text-white font-bold px-1 py-0.5 rounded btn-press">✎</button>
+                        <button type="button" onclick="removeFlangeScrap('standalone', ${i})" title="Удалить обрезок" class="text-zinc-500 hover:text-rose-400 font-bold px-1 py-0.5 rounded btn-press">×</button>
+                    </div>
                 </span>
             `).join('');
         }
@@ -478,27 +562,27 @@ function buildFlangeCalculationUI(framesObj, packLen, kerf, reserveMode, scrapsL
 
     // Формирование HTML
     let html = `
-        <!-- KPI КАРТОЧКИ -->
+        <!-- KPI КАРТОЧКИ (Ровно 4 карточки) -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-1">
-                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Уголки УГФ (точно):</div>
+                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Общая длина шинки:</div>
+                <div class="text-xl sm:text-2xl font-black mono text-white">${totalShinkaMeters.toFixed(1)} м</div>
+                <div class="text-[10px] text-zinc-500">чистый метраж шинорейки</div>
+            </div>
+            <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-1">
+                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Общее количество шинок:</div>
+                <div class="text-xl sm:text-2xl font-black mono text-amber-300">${exactTotalShinkas} шт</div>
+                <div class="text-[10px] text-zinc-500">заготовок для резки</div>
+            </div>
+            <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-1">
+                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Общее количество рамок:</div>
+                <div class="text-xl sm:text-2xl font-black mono text-white">${totalFrames} шт</div>
+                <div class="text-[10px] text-zinc-500">фланцевых рамок в заказе</div>
+            </div>
+            <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-1">
+                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Общее количество уголков:</div>
                 <div class="text-xl sm:text-2xl font-black mono text-emerald-400">${totalCorners} шт</div>
                 <div class="text-[10px] text-zinc-500">по 4 шт на каждую рамку</div>
-            </div>
-            <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-1">
-                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Всего рамок:</div>
-                <div class="text-xl sm:text-2xl font-black mono text-white">${totalFrames} шт</div>
-                <div class="text-[10px] text-zinc-500">${exactTotalShinkas} заготовок шинки</div>
-            </div>
-            <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-1">
-                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Шинка (метраж):</div>
-                <div class="text-xl sm:text-2xl font-black mono text-white">${totalShinkaMeters.toFixed(1)} м</div>
-                <div class="text-[10px] text-zinc-500">чистая длина заготовок</div>
-            </div>
-            <div class="bg-[#121217] p-4 rounded-3xl border border-white/5 space-y-1">
-                <div class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Межфланцевая лента:</div>
-                <div class="text-xl sm:text-2xl font-black mono text-cyan-400">${tapeMeters.toFixed(1)} м</div>
-                <div class="text-[10px] text-zinc-500">периметр всех рамок</div>
             </div>
         </div>
 

@@ -48,6 +48,7 @@ function openNestingAddScrapModal(editIdx = null) {
     }
 
     modal.classList.remove('hidden');
+    if (typeof lockScroll === 'function') lockScroll();
     setTimeout(() => inpL?.focus(), 80);
 }
 
@@ -55,6 +56,7 @@ function closeNestingAddScrapModal() {
     triggerHaptic('light');
     const modal = document.getElementById('nestingAddScrapModal');
     if (modal) modal.classList.add('hidden');
+    if (typeof unlockScroll === 'function') unlockScroll();
     editingSheetScrapIdx = null;
 }
 
@@ -469,11 +471,14 @@ function renderNestingResult(p) {
     const box = document.getElementById('nestingVisualizerBox');
     if (!box) return;
     const nestingData = appState.activeProjectNestings[session.activeNestingKey];
+    const resetBtn = document.getElementById('btnResetNesting');
 
     if (!nestingData || !nestingData.sheets || nestingData.sheets.length === 0) {
+        if (resetBtn) resetBtn.classList.add('hidden');
         box.innerHTML = `<div class="bg-[#121217] p-8 rounded-3xl border border-white/5 text-center text-xs text-zinc-500">Нажмите «Рассчитать карту раскроя», чтобы получить карты раскроя</div>`;
         return;
     }
+    if (resetBtn) resetBtn.classList.remove('hidden');
 
     const sheets = nestingData.sheets;
     const allDone = sheets.every(s => s.cutDone);
@@ -588,4 +593,27 @@ function exportNestingPDF() {
         </div>
     `;
     window.print();
+}
+
+
+async function resetNestingCalculation() {
+    if (!confirm('Сбросить рассчитанную карту раскроя для этого металла?')) return;
+    triggerHaptic('warning');
+    const projId = session.insideProjectId;
+    if (!projId) return;
+
+    if (appState.activeProjectNestings && appState.activeProjectNestings[session.activeNestingKey]) {
+        delete appState.activeProjectNestings[session.activeNestingKey];
+    }
+
+    try {
+        await supabaseClient.from('projects').update({
+            nesting_data: appState.activeProjectNestings
+        }).eq('id', projId);
+        showToast('Карта раскроя сброшена', 'info');
+    } catch (err) {
+        console.error('Error resetting nesting:', err);
+    }
+    const p = appState.projects.find(x => x.id === projId);
+    renderNestingResult(p);
 }

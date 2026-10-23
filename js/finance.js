@@ -3,17 +3,54 @@
 // Финансовый учет объектов, платежи и сводные отчеты
 // ==========================================
 
+function calculateProjectFinances(projId) {
+    const p = appState.projects.find(x => x.id === projId);
+    const seams = typeof getProjectSeams === 'function' ? getProjectSeams(p) : { lock_pittsburgh: 32, lock_single: 9, round_seam: 22 };
+    
+    // Используем позиции проекта (из кэша или активные)
+    let items = appState.allItems.filter(x => x.project_id === projId);
+    if (items.length === 0 && session.insideProjectId === projId && appState.activeProjectItems.length > 0) {
+        items = appState.activeProjectItems;
+    }
+    
+    let payments = appState.allPayments.filter(x => x.project_id === projId);
+    if (payments.length === 0 && session.insideProjectId === projId && appState.activeProjectPayments.length > 0) {
+        payments = appState.activeProjectPayments;
+    }
+
+    let totalSum = 0;
+    items.forEach(it => {
+        const price = Number(it.price) || 0;
+        const qty = Number(it.qty) || 1;
+        if (it.category === 'duct') {
+            const unfold = it.shape === 'rect' 
+                ? (2 * (Number(it.w || 0) + Number(it.h || 0)) + seams.lock_pittsburgh + seams.lock_single) 
+                : Math.round(Math.PI * Number(it.d || 0) + seams.round_seam);
+            const area = (unfold * Number(it.l || 1250) * qty) / 1e6;
+            totalSum += Math.round(area * price);
+        } else {
+            totalSum += Math.round(qty * price);
+        }
+    });
+
+    const paid = payments.reduce((s, pay) => s + (Number(pay.amount) || 0), 0);
+    const debt = Math.max(0, totalSum - paid);
+    const overpay = Math.max(0, paid - totalSum);
+    return { totalSum, paid, debt, overpay, items, payments };
+}
+
+
 function openProjectFinanceModal() {
     triggerHaptic('light');
     const modal = document.getElementById('projectFinanceModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) { modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
     renderProjectFinance();
 }
 
 function closeProjectFinanceModal() {
     triggerHaptic('light');
     const modal = document.getElementById('projectFinanceModal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) { modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
 }
 
 function renderProjectFinance() {

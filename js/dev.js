@@ -36,16 +36,42 @@ function renderDevDashboard() {
 // ==========================================
 // СПРАВОЧНИКИ ЦЕХА С ИЗМЕНЕНИЕМ ОЧЕРЕДНОСТИ
 // ==========================================
+let draggedCatalogType = null;
+let draggedCatalogIdx = null;
+
+function onCatalogDragStart(e, catType, idx) {
+    draggedCatalogType = catType;
+    draggedCatalogIdx = idx;
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+}
+
+function onCatalogDrop(e, catType, targetIdx) {
+    e.preventDefault();
+    if (draggedCatalogType !== catType || draggedCatalogIdx === null || draggedCatalogIdx === targetIdx) return;
+    const arr = appState[catType];
+    if (!arr) return;
+    const [moved] = arr.splice(draggedCatalogIdx, 1);
+    arr.splice(targetIdx, 0, moved);
+    saveGlobalSettings();
+    renderDevCatalogs();
+    draggedCatalogType = null;
+    draggedCatalogIdx = null;
+    showToast('Порядок сохранен', 'success');
+}
+
 function renderDevCatalogs() {
     const mBox = document.getElementById('devMetalsList');
     if (mBox) {
         mBox.innerHTML = appState.metals.map((m, i) => `
-            <div class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-white flex items-center justify-between text-xs">
-                <span class="font-bold truncate">${m}</span>
-                <div class="flex items-center gap-1">
-                    <button type="button" onclick="moveCatalogItem('metals', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вверх">▲</button>
-                    <button type="button" onclick="moveCatalogItem('metals', ${i}, 1)" ${i === appState.metals.length - 1 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вниз">▼</button>
-                    <button type="button" onclick="removeCatalogItem('metals', ${i})" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 btn-press">×</button>
+            <div draggable="true" ondragstart="onCatalogDragStart(event, 'metals', ${i})" ondragover="event.preventDefault()" ondrop="onCatalogDrop(event, 'metals', ${i})" class="bg-[#18181f] border border-white/10 px-3 py-2 rounded-2xl text-white flex items-center justify-between text-xs select-none">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="cursor-grab active:cursor-grabbing text-zinc-500 hover:text-zinc-300 font-bold text-sm">☰</span>
+                    <span class="font-bold truncate">${m}</span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button type="button" onclick="moveCatalogItem('metals', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-600"' : 'class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center font-bold text-xs btn-press shadow"'} title="Вверх">▲</button>
+                    <button type="button" onclick="moveCatalogItem('metals', ${i}, 1)" ${i === appState.metals.length - 1 ? 'disabled class="opacity-20 text-zinc-600"' : 'class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center font-bold text-xs btn-press shadow"'} title="Вниз">▼</button>
+                    <button type="button" onclick="removeCatalogItem('metals', ${i})" class="w-8 h-8 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 flex items-center justify-center font-bold text-sm ml-1 btn-press">×</button>
                 </div>
             </div>
         `).join('');
@@ -54,12 +80,15 @@ function renderDevCatalogs() {
     const tBox = document.getElementById('devThicknessesList') || document.getElementById('devThickList');
     if (tBox) {
         tBox.innerHTML = appState.thicknesses.map((t, i) => `
-            <div class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-white flex items-center justify-between text-xs mono">
-                <span class="font-bold">${t} мм</span>
-                <div class="flex items-center gap-1">
-                    <button type="button" onclick="moveCatalogItem('thicknesses', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вверх">▲</button>
-                    <button type="button" onclick="moveCatalogItem('thicknesses', ${i}, 1)" ${i === appState.thicknesses.length - 1 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вниз">▼</button>
-                    <button type="button" onclick="removeCatalogItem('thicknesses', ${i})" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 btn-press">×</button>
+            <div draggable="true" ondragstart="onCatalogDragStart(event, 'thicknesses', ${i})" ondragover="event.preventDefault()" ondrop="onCatalogDrop(event, 'thicknesses', ${i})" class="bg-[#18181f] border border-white/10 px-3 py-2 rounded-2xl text-white flex items-center justify-between text-xs mono select-none">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="cursor-grab active:cursor-grabbing text-zinc-500 hover:text-zinc-300 font-bold text-sm">☰</span>
+                    <span class="font-bold">${t} мм</span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button type="button" onclick="moveCatalogItem('thicknesses', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-600"' : 'class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center font-bold text-xs btn-press shadow"'} title="Вверх">▲</button>
+                    <button type="button" onclick="moveCatalogItem('thicknesses', ${i}, 1)" ${i === appState.thicknesses.length - 1 ? 'disabled class="opacity-20 text-zinc-600"' : 'class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center font-bold text-xs btn-press shadow"'} title="Вниз">▼</button>
+                    <button type="button" onclick="removeCatalogItem('thicknesses', ${i})" class="w-8 h-8 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 flex items-center justify-center font-bold text-sm ml-1 btn-press">×</button>
                 </div>
             </div>
         `).join('');
@@ -68,12 +97,15 @@ function renderDevCatalogs() {
     const gBox = document.getElementById('devGroupsList');
     if (gBox) {
         gBox.innerHTML = appState.groups.map((g, i) => `
-            <div class="bg-[#18181f] border border-white/10 px-3 py-1.5 rounded-xl text-white flex items-center justify-between text-xs">
-                <span class="font-bold truncate">${g}</span>
-                <div class="flex items-center gap-1">
-                    <button type="button" onclick="moveCatalogItem('groups', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вверх">▲</button>
-                    <button type="button" onclick="moveCatalogItem('groups', ${i}, 1)" ${i === appState.groups.length - 1 ? 'disabled class="opacity-20 text-zinc-500"' : 'class="text-zinc-300 hover:text-white btn-press"'} title="Вниз">▼</button>
-                    <button type="button" onclick="removeCatalogItem('groups', ${i})" class="text-zinc-500 hover:text-rose-400 font-bold ml-1 btn-press">×</button>
+            <div draggable="true" ondragstart="onCatalogDragStart(event, 'groups', ${i})" ondragover="event.preventDefault()" ondrop="onCatalogDrop(event, 'groups', ${i})" class="bg-[#18181f] border border-white/10 px-3 py-2 rounded-2xl text-white flex items-center justify-between text-xs select-none">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="cursor-grab active:cursor-grabbing text-zinc-500 hover:text-zinc-300 font-bold text-sm">☰</span>
+                    <span class="font-bold truncate">${g}</span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button type="button" onclick="moveCatalogItem('groups', ${i}, -1)" ${i === 0 ? 'disabled class="opacity-20 text-zinc-600"' : 'class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center font-bold text-xs btn-press shadow"'} title="Вверх">▲</button>
+                    <button type="button" onclick="moveCatalogItem('groups', ${i}, 1)" ${i === appState.groups.length - 1 ? 'disabled class="opacity-20 text-zinc-600"' : 'class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center font-bold text-xs btn-press shadow"'} title="Вниз">▼</button>
+                    <button type="button" onclick="removeCatalogItem('groups', ${i})" class="w-8 h-8 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 flex items-center justify-center font-bold text-sm ml-1 btn-press">×</button>
                 </div>
             </div>
         `).join('');

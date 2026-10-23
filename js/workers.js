@@ -169,7 +169,9 @@ function renderWorkerProfileContent() {
     const elDonePct = document.getElementById('wpStatDonePct');
 
     if (elEarnedDone) elEarnedDone.textContent = `${earnedDone.toLocaleString()} ₸`;
-    if (elPlanned) elPlanned.textContent = `Всего запланировано: ${earnedPlanned.toLocaleString()} ₸`;
+    if (elPlanned) elPlanned.textContent = `${earnedPlanned.toLocaleString()} ₸`;
+    const elQueueInfo = document.getElementById('wpStatQueueInfo');
+    if (elQueueInfo) elQueueInfo.textContent = `${totalItems - doneItems} поз. в очереди`;
     if (elDuctsArea) elDuctsArea.textContent = `${ductsArea.toFixed(1)} м²`;
     if (elDuctsCount) elDuctsCount.textContent = `${ductsCount} шт деталей`;
     if (elFitCount) elFitCount.textContent = `${fittingsCount} шт`;
