@@ -20,18 +20,30 @@ function triggerHaptic(type = 'light') {
 // ==========================================
 // SCROLL LOCKING HELPERS
 // ==========================================
-let activeModalCount = 0;
-function lockScroll() {
-    activeModalCount++;
-    document.body.classList.add('overflow-hidden');
-    document.documentElement.classList.add('overflow-hidden');
-}
-function unlockScroll() {
-    activeModalCount = Math.max(0, activeModalCount - 1);
-    if (activeModalCount === 0) {
+function updateScrollLockState() {
+    const openModals = document.querySelectorAll(
+        '#itemFormModal:not(.hidden), #profileModal:not(.hidden), #projectModal:not(.hidden), ' +
+        '#projectSettingsModal:not(.hidden), #subprojectModal:not(.hidden), #projectSeamsModal:not(.hidden), ' +
+        '#flangeSettingsModal:not(.hidden), #flangeAddScrapModal:not(.hidden), #nestingAddScrapModal:not(.hidden), ' +
+        '#bulkEditModal:not(.hidden), #projectFinanceModal:not(.hidden), .modal-sheet-wrap:not(.hidden)'
+    );
+    if (openModals.length > 0) {
+        document.body.classList.add('overflow-hidden');
+        document.documentElement.classList.add('overflow-hidden');
+    } else {
         document.body.classList.remove('overflow-hidden');
         document.documentElement.classList.remove('overflow-hidden');
     }
+}
+
+function lockScroll() {
+    document.body.classList.add('overflow-hidden');
+    document.documentElement.classList.add('overflow-hidden');
+}
+
+function unlockScroll() {
+    updateScrollLockState();
+    setTimeout(updateScrollLockState, 50);
 }
 
 // ==========================================

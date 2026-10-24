@@ -41,6 +41,7 @@ function navigateTo(screenId, options = {}) {
     }
 
     currentScreenId = screenId;
+    if (typeof unlockScroll === 'function') unlockScroll();
 
     // Вызываем хуки входа на экран
     onScreenEnter(screenId, options);

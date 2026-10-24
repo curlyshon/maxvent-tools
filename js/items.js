@@ -994,6 +994,7 @@ function renderSpecification() {
     });
 
     attachSpecSwipeHandlers();
+    if (typeof unlockScroll === 'function') unlockScroll();
 }
 
 function toggleSectionAccordion(secId) {
@@ -1066,10 +1067,10 @@ function renderSpecItemRow(it) {
             </div>
 
             <!-- Фоновый индикатор свайпа влево (Действия: Дубликат, Редактировать, Удалить) -->
-            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-44 bg-[#18181f] border border-white/10 rounded-2xl flex items-center justify-end px-3 gap-1.5 opacity-0 transition-opacity z-0">
-                <button type="button" onclick="triggerHaptic('light'); duplicateWithModal(${it.id})" title="Дублировать" class="px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold btn-press">⧉</button>
-                <button type="button" onclick="triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold btn-press">✎</button>
-                <button type="button" onclick="triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="px-2.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold btn-press">✕</button>
+            <div class="swipe-hint-actions absolute inset-y-0 right-0 w-44 bg-[#18181f] border border-white/10 rounded-2xl flex items-center justify-end px-3 gap-1.5 opacity-0 transition-opacity z-0 pointer-events-none">
+                <button type="button" onclick="event.stopPropagation(); triggerHaptic('light'); duplicateWithModal(${it.id})" title="Дублировать" class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white text-base font-bold flex items-center justify-center btn-press">⧉</button>
+                <button type="button" onclick="event.stopPropagation(); triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white text-base font-bold flex items-center justify-center btn-press">✎</button>
+                <button type="button" onclick="event.stopPropagation(); triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="w-10 h-10 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-base font-bold flex items-center justify-center btn-press">🗑</button>
             </div>
 
             <!-- Основная карточка позиции -->
@@ -1088,12 +1089,7 @@ function renderSpecItemRow(it) {
                     </div>
                 </div>
                 <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                    <div class="text-sm font-black mono text-white">${it.qty} шт</div>
-                    <div class="flex gap-1.5">
-                        <button onclick="triggerHaptic('light'); duplicateWithModal(${it.id})" title="Дублировать" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-white/5 transition btn-press">⧉</button>
-                        <button onclick="triggerHaptic('light'); editProjectItem(${it.id})" title="Редактировать" class="bg-white/5 hover:bg-white/10 text-zinc-200 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition btn-press">✎</button>
-                        <button onclick="triggerHaptic('warning'); deleteSingleItem(${it.id})" title="Удалить" class="bg-white/5 hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 px-2.5 py-1.5 rounded-xl text-xs border border-white/5 transition btn-press">✕</button>
-                    </div>
+                    <div class="text-sm font-black mono text-white bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl shrink-0">${it.qty} шт</div>
                 </div>
             </div>
         </div>
@@ -1133,12 +1129,16 @@ function attachSpecSwipeHandlers() {
             const dy = y - startY;
 
             if (!isDecided) {
-                if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+                const absX = Math.abs(dx);
+                const absY = Math.abs(dy);
+                // Если вертикальный сдвиг больше горизонтального — это скролл страницы, немедленно пропускаем
+                if (absY > 6 && absY > absX) {
                     isDecided = true;
                     isSwiping = false;
                     return;
                 }
-                if (Math.abs(dx) > 10) {
+                // Для свайпа позиции нужно уверенное горизонтальное движение
+                if (absX > 10 && absX > absY * 1.3) {
                     isDecided = true;
                     isSwiping = true;
                 }
@@ -1153,13 +1153,22 @@ function attachSpecSwipeHandlers() {
 
             if (dx > 25) {
                 if (hintDone) hintDone.style.opacity = Math.min(1, (dx - 25) / 40);
-                if (hintActions) hintActions.style.opacity = 0;
+                if (hintActions) {
+                    hintActions.style.opacity = '0';
+                    hintActions.style.pointerEvents = 'none';
+                }
             } else if (dx < -25) {
-                if (hintActions) hintActions.style.opacity = Math.min(1, (-dx - 25) / 40);
-                if (hintDone) hintDone.style.opacity = 0;
+                if (hintActions) {
+                    hintActions.style.opacity = Math.min(1, (-dx - 25) / 40);
+                    hintActions.style.pointerEvents = 'auto';
+                }
+                if (hintDone) hintDone.style.opacity = '0';
             } else {
-                if (hintDone) hintDone.style.opacity = 0;
-                if (hintActions) hintActions.style.opacity = 0;
+                if (hintDone) hintDone.style.opacity = '0';
+                if (hintActions) {
+                    hintActions.style.opacity = '0';
+                    hintActions.style.pointerEvents = 'none';
+                }
             }
         }, { passive: true });
 
@@ -1171,23 +1180,43 @@ function attachSpecSwipeHandlers() {
                 // Свайп вправо: переключить статус Готово / Не готово
                 toggleItemStatus(itemId);
                 row.style.transform = 'translateX(0px)';
-                if (hintDone) hintDone.style.opacity = 0;
-                if (hintActions) hintActions.style.opacity = 0;
-            } else if (currentX < -60) {
+                if (hintDone) hintDone.style.opacity = '0';
+                if (hintActions) {
+                    hintActions.style.opacity = '0';
+                    hintActions.style.pointerEvents = 'none';
+                }
+                card.dataset.isOpen = 'false';
+            } else if (currentX < -50) {
                 // Свайп влево: приоткрыть действия
-                row.style.transform = 'translateX(-140px)';
-                if (hintActions) hintActions.style.opacity = 1;
-                setTimeout(() => {
-                    if (row) row.style.transform = 'translateX(0px)';
-                    if (hintActions) hintActions.style.opacity = 0;
-                }, 4000);
+                row.style.transform = 'translateX(-150px)';
+                if (hintActions) {
+                    hintActions.style.opacity = '1';
+                    hintActions.style.pointerEvents = 'auto';
+                }
+                card.dataset.isOpen = 'true';
             } else {
                 row.style.transform = 'translateX(0px)';
-                if (hintDone) hintDone.style.opacity = 0;
-                if (hintActions) hintActions.style.opacity = 0;
+                if (hintDone) hintDone.style.opacity = '0';
+                if (hintActions) {
+                    hintActions.style.opacity = '0';
+                    hintActions.style.pointerEvents = 'none';
+                }
+                card.dataset.isOpen = 'false';
             }
             isSwiping = false;
         }, { passive: true });
+
+        card.addEventListener('click', (e) => {
+            if (card.dataset.isOpen === 'true') {
+                if (e.target.closest('.swipe-hint-actions')) return;
+                if (row) row.style.transform = 'translateX(0px)';
+                if (hintActions) {
+                    hintActions.style.opacity = '0';
+                    hintActions.style.pointerEvents = 'none';
+                }
+                card.dataset.isOpen = 'false';
+            }
+        });
     });
 }
 
@@ -1430,7 +1459,6 @@ function duplicateWithModal(id) {
     const it = appState.activeProjectItems.find(x => x.id === id);
     if (!it) return;
 
-    openItemAddSheet();
     editProjectItem(id);
     document.getElementById('editItemId').value = '';
     document.getElementById('formHeaderTitle').textContent = `Дубликат: ${it.title}`;
