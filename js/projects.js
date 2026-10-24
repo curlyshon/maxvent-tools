@@ -58,7 +58,7 @@ function getProjectStatusKey(statusText) {
 async function cycleProjectStatus(id, e) {
     if (e) e.stopPropagation();
     triggerHaptic('medium');
-    const p = appState.projects.find(x => x.id === id);
+    const p = appState.projects.find(x => Number(x.id) === Number(id));
     if (!p) return;
 
     const curKey = getProjectStatusKey(p.status_text);
@@ -573,7 +573,7 @@ async function saveProjectModal() {
 }
 
 async function archiveProjectSafe(id) {
-    const p = appState.projects.find(x => x.id === id);
+    const p = appState.projects.find(x => Number(x.id) === Number(id));
     if (!p) return;
 
     if (p.archive_state !== 'archived') {
@@ -781,7 +781,7 @@ async function openInsideProject(id) {
     session.specSelectionMode = false;
     session.selectedSpecIds = [];
 
-    const p = appState.projects.find(x => x.id === id);
+    const p = appState.projects.find(x => Number(x.id) === Number(id));
     const titleHeader = document.getElementById('activeProjTitleHeader');
     if (titleHeader) titleHeader.textContent = p ? p.title : 'Проект';
 
@@ -1019,8 +1019,14 @@ async function saveProjectsOrder() {
     try {
         const orderMap = appState.projects.map((p, idx) => ({ id: p.id, order_index: idx }));
         localStorage.setItem('mv_projects_order', JSON.stringify(orderMap));
-        for (const item of orderMap) {
-            supabaseClient.from('projects').update({ order_index: item.order_index }).eq('id', item.id).then(() => {});
+        const { data: cfg } = await supabaseClient.from('app_settings').select('*').eq('id', 'global_config').single();
+        if (cfg) {
+            await supabaseClient.from('app_settings').update({
+                standalone_flange: {
+                    ...(cfg.standalone_flange || {}),
+                    projects_order: orderMap
+                }
+            }).eq('id', 'global_config');
         }
     } catch (_) {}
 }

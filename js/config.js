@@ -479,29 +479,66 @@ async function loadInitialData() {
 
         // 3. Загрузка всех проектов, позиций и платежей
         const [pRes, itRes, payRes] = await Promise.all([
-            supabaseClient.from('projects').select('*').order('order_index', { ascending: true, nullsFirst: false }),
+            supabaseClient.from('projects').select('*').order('id', { ascending: false }),
             supabaseClient.from('items').select('*').order('id', { ascending: true }),
             supabaseClient.from('payments').select('*').order('id', { ascending: true })
         ]);
 
-        let projs = pRes.data || [];
-        try {
-            const savedOrder = JSON.parse(localStorage.getItem('mv_projects_order') || '[]');
-            if (Array.isArray(savedOrder) && savedOrder.length > 0) {
-                const orderMap = new Map(savedOrder.map(x => [x.id, x.order_index]));
-                projs.forEach(p => {
-                    if (orderMap.has(p.id)) p.order_index = orderMap.get(p.id);
-                });
-            }
-        } catch (_) {}
-        projs.sort((a, b) => (a.order_index ?? 999999) - (b.order_index ?? 999999));
-        appState.projects = projs;
-        appState.allItems = (itRes.data || []).map(i => ({
-            ...i,
-            ...(i.dimensions || {}),
-            phase_id: i.dimensions?.phase_id || 'main',
-            item_status: i.dimensions?.item_status || 'queue'
-        }));
+        if (pRes.error) {
+            console.error('Projects load error:', pRes.error);
+        }
+        if (itRes.error) {
+            console.error('Items load error:', itRes.error);
+        }
+        if (payRes.error) {
+            console.error('Payments load error:', payRes.error);
+        }
+
+        let projs = pRes.data;
+        if (Array.isArray(projs)) {
+            try {
+                const savedOrder = JSON.parse(localStorage.getItem('mv_projects_order') || 'null')
+                    || setts?.standalone_flange?.projects_order || [];
+                if (Array.isArray(savedOrder) && savedOrder.length > 0) {
+                    const orderMap = new Map(savedOrder.map(x => [Number(x.id), Number(x.order_index)]));
+                    projs.sort((a, b) => {
+                        const hasA = orderMap.has(Number(a.id));
+                        const hasB = orderMap.has(Number(b.id));
+                        if (hasA && hasB) return orderMap.get(Number(a.id)) - orderMap.get(Number(b.id));
+                        if (hasA) return -1;
+                        if (hasB) return 1;
+                        return Number(b.id) - Number(a.id);
+                    });
+                }
+            } catch (_) {}
+            appState.projects = projs;
+            try {
+                localStorage.setItem('mv_cached_projects', JSON.stringify(projs));
+            } catch (_) {}
+        } else if (!appState.projects || appState.projects.length === 0) {
+            try {
+                const cached = JSON.parse(localStorage.getItem('mv_cached_projects') || '[]');
+                if (cached.length > 0) appState.projects = cached;
+            } catch (_) {}
+        }
+
+        if (Array.isArray(itRes.data)) {
+            appState.allItems = (itRes.data || []).map(i => ({
+                ...i,
+                ...(i.dimensions || {}),
+                phase_id: i.dimensions?.phase_id || 'main',
+                item_status: i.dimensions?.item_status || 'queue'
+            }));
+            try {
+                localStorage.setItem('mv_cached_items', JSON.stringify(appState.allItems));
+            } catch (_) {}
+        } else if (!appState.allItems || appState.allItems.length === 0) {
+            try {
+                const cached = JSON.parse(localStorage.getItem('mv_cached_items') || '[]');
+                if (cached.length > 0) appState.allItems = cached;
+            } catch (_) {}
+        }
+
         appState.allPayments = payRes.data || [];
 
         updateCloudIndicatorUI('online');
@@ -542,8 +579,8 @@ async function loadProjectDetails(projectId) {
         appState.activeProjectPayments = payRes.data || [];
 
         // Синхронизируем с глобальным кэшем
-        appState.allItems = appState.allItems.filter(x => x.project_id !== projectId).concat(appState.activeProjectItems);
-        appState.allPayments = appState.allPayments.filter(x => x.project_id !== projectId).concat(appState.activeProjectPayments);
+        appState.allItems = appState.allItems.filter(x => Number(x.project_id) !== Number(projectId)).concat(appState.activeProjectItems);
+        appState.allPayments = appState.allPayments.filter(x => Number(x.project_id) !== Number(projectId)).concat(appState.activeProjectPayments);
 
         appState.activeProjectNestings = {};
         (nestRes.data || []).forEach(n => {
